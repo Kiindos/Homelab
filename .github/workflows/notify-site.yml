@@ -1,0 +1,27 @@
+# Lien avec le site vitrine : quand la doc change sur main,
+# on demande au dépôt du site (maximebertrand.eu) de se reconstruire.
+name: Publier la doc sur le site vitrine
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "README.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher la reconstruction du site
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.SITE_DISPATCH_TOKEN }}
+          repository: ${{ vars.SITE_REPOSITORY }}   # ex. ton-user/maximebertrand.eu
+          event-type: homelab-docs-updated
+          client-payload: >-
+            {"ref": "${{ github.sha }}", "repo": "${{ github.repository }}"}

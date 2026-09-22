@@ -1,0 +1,30 @@
+# OpenTofu / Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+*.auto.tfvars
+terraform.tfvars
+!*.tfvars.example
+
+# Secrets (seuls les fichiers *.enc.* chiffrés par SOPS sont versionnés)
+*.key
+*.pem
+age.txt
+.env
+.env.*
+!.env.example
+secrets/*
+!secrets/*.enc.*
+
+# Ansible
+*.retry
+.vault_pass*
+
+# Divers
+.DS_Store
+.idea/
+.vscode/
+*.swp
+infra/ansible/inventory/hosts.yml

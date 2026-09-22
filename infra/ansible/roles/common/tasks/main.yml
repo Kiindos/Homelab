@@ -1,0 +1,26 @@
+- name: Mettre à jour le cache APT
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Installer les paquets de base
+  ansible.builtin.apt:
+    name:
+      - vim
+      - htop
+      - curl
+      - smartmontools
+      - unattended-upgrades
+    state: present
+
+- name: Définir le fuseau horaire
+  community.general.timezone:
+    name: Europe/Paris
+
+- name: Interdire la connexion SSH par mot de passe
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: 'PasswordAuthentication no'
+    validate: 'sshd -t -f %s'
+  notify: Redémarrer SSH
