@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    name: Détection de secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  opentofu:
+    name: OpenTofu (fmt + validate)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack: [proxmox, cloudflare]
+    defaults:
+      run:
+        working-directory: infra/tofu/${{ matrix.stack }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+      - run: tofu fmt -check -recursive
+      - run: tofu init -backend=false -input=false
+      - run: tofu validate
+
+  ansible:
+    name: Ansible lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ansible-core ansible-lint yamllint
+      - run: yamllint .
+      - working-directory: infra/ansible
+        run: |
+          ansible-galaxy collection install -r requirements.yml
+          ansible-lint
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v17
+        with:
+          globs: "**/*.md"
+      - name: Vérifier le frontmatter (contrat avec le site vitrine)
+        run: |
+          status=0
+          for f in $(find docs -name '*.md' ! -name '_*' ! -name 'README.md'); do
+            head -1 "$f" | grep -q '^---$' || { echo "::error file=$f::frontmatter manquant"; status=1; continue; }
+            for key in title description; do
+              sed -n '2,/^---$/p' "$f" | grep -q "^$key:" || { echo "::error file=$f::champ '$key' manquant"; status=1; }
+            done
+          done
+          exit $status

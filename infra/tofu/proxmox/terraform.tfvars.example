@@ -1,0 +1,2 @@
+proxmox_endpoint = "https://prd-pve-01.example.internal:8006/"
+# proxmox_api_token : export TF_VAR_proxmox_api_token="tofu@pve!homelab=xxxxxxxx"

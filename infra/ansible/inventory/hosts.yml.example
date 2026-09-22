@@ -1,0 +1,17 @@
+# Exemple générique. L'inventaire réel est tenu dans le dépôt privé
+# (puis généré depuis NetBox via l'inventaire dynamique).
+all:
+  children:
+    proxmox_prod:
+      hosts:
+        prd-pve-01: { ansible_host: 192.0.2.11 }
+        prd-pve-02: { ansible_host: 192.0.2.12 }
+        prd-pve-03: { ansible_host: 192.0.2.13 }
+    stockage:
+      hosts:
+        prd-sto-01: { ansible_host: 192.0.2.20 }
+    lab:
+      hosts:
+        lab-pve-01: { ansible_host: 192.0.2.30 }
+  vars:
+    ansible_user: root

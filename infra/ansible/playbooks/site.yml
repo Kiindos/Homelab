@@ -1,0 +1,5 @@
+- name: Configuration de base de tous les hôtes
+  hosts: all
+  become: true
+  roles:
+    - common
