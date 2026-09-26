@@ -1,0 +1,6 @@
+{{ define "main" }}
+<section class="entete-page"><div class="enveloppe"><p class="surtitre">Homelab</p><h1>Étiquettes</h1></div></section>
+<section class="bloc bloc--serre"><div class="enveloppe nuage">
+  {{ range .Data.Terms.ByCount }}<a class="etiquette etiquette--grande" href="{{ .Page.RelPermalink }}">#{{ .Page.Title }} <span>{{ .Count }}</span></a>{{ end }}
+</div></section>
+{{ end }}

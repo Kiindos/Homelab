@@ -1,0 +1,71 @@
+- name: "Construire les sites sur le poste d'admin (mode strict : un avertissement arrête la construction)"
+  ansible.builtin.command:
+    cmd: >-
+      {% if item.value.generateur | default('mkdocs') == 'hugo' %}
+      {{ web_hugo }} --source {{ item.value.source }} --destination {{ web_construction }}/{{ item.key }}
+      --cleanDestinationDir --gc --minify --panicOnWarning
+      {% else %}
+      {{ web_mkdocs }} build --strict --clean -f {{ item.value.source }}/mkdocs.yml -d {{ web_construction }}/{{ item.key }}
+      {% endif %}
+  delegate_to: localhost
+  become: false
+  run_once: true
+  loop: "{{ web_sites | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  changed_when: true
+  vars:
+    web_construction: "{{ lookup('env', 'HOME') }}/.cache/homelab/sites"
+
+- name: Créer les dossiers des sites
+  ansible.builtin.file:
+    path: "{{ web_dossier }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ ['', 'secrets'] + (web_sites.keys() | list) }}"
+
+- name: Publier les fichiers statiques
+  ansible.builtin.copy:
+    src: "{{ lookup('env', 'HOME') }}/.cache/homelab/sites/{{ item }}/"
+    dest: "{{ web_dossier }}/{{ item }}/"
+    owner: root
+    group: root
+    mode: "u=rwX,go=rX"
+  loop: "{{ web_sites.keys() | list }}"
+
+- name: Configurer nginx
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: "{{ web_dossier }}/nginx.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  register: web_nginx
+
+- name: Écrire le jeton du tunnel Cloudflare
+  ansible.builtin.copy:
+    dest: "{{ web_dossier }}/secrets/tunnel_token"
+    content: "{{ web_tunnel_token }}"
+    owner: root
+    group: root
+    mode: "0444"
+  when: web_tunnel_token | length > 0
+  no_log: true
+
+- name: Déposer le fichier Compose
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ web_dossier }}/compose.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Démarrer les sites
+  community.docker.docker_compose_v2:
+    project_src: "{{ web_dossier }}"
+    state: present
+    pull: missing
+    remove_orphans: true
+    recreate: "{{ 'always' if web_nginx.changed else 'auto' }}"

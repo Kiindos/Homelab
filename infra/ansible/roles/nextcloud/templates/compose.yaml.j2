@@ -1,0 +1,71 @@
+# {{ ansible_managed }}
+# Nextcloud (image officielle Apache), PostgreSQL et Valkey ; tâches de fond dans un conteneur cron.
+name: nextcloud
+
+x-nextcloud: &nextcloud
+  image: {{ nextcloud_image }}
+  restart: unless-stopped
+  depends_on: [db, redis]
+  volumes:
+    - html:/var/www/html
+    - {{ nextcloud_donnees }}:/var/www/html/data
+  secrets: [postgres_password, admin_password, redis_password]
+  environment:
+    TZ: Europe/Paris
+    POSTGRES_HOST: db
+    POSTGRES_DB: nextcloud
+    POSTGRES_USER: nextcloud
+    POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    NEXTCLOUD_ADMIN_USER: admin
+    NEXTCLOUD_ADMIN_PASSWORD_FILE: /run/secrets/admin_password
+    NEXTCLOUD_TRUSTED_DOMAINS: "{{ nextcloud_domaine }}"
+    REDIS_HOST: redis
+    REDIS_HOST_PASSWORD_FILE: /run/secrets/redis_password
+    # Derrière le WAF : Nextcloud doit savoir qu'il est servi en HTTPS sur son nom public.
+    OVERWRITEPROTOCOL: https
+    OVERWRITEHOST: "{{ nextcloud_domaine }}"
+    OVERWRITECLIURL: "https://{{ nextcloud_domaine }}"
+    TRUSTED_PROXIES: "{{ hostvars['waf01'].adresse_ipv4 }}"
+    PHP_UPLOAD_LIMIT: 16G
+    PHP_MEMORY_LIMIT: 1G
+
+services:
+  app:
+    <<: *nextcloud
+    ports:
+      - "8080:80"   # joignable uniquement depuis le WAF (filtré par OPNsense)
+
+  cron:
+    <<: *nextcloud
+    entrypoint: /cron.sh
+
+  db:
+    image: {{ nextcloud_image_postgres }}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes:
+      - db:/var/lib/postgresql/data
+    security_opt: ["no-new-privileges:true"]
+
+  redis:
+    image: {{ nextcloud_image_valkey }}
+    restart: unless-stopped
+    command: ["sh", "-c", "exec valkey-server --requirepass \"$$(cat /run/secrets/redis_password)\""]
+    secrets: [redis_password]
+    security_opt: ["no-new-privileges:true"]
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password
+  admin_password:
+    file: ./secrets/admin_password
+  redis_password:
+    file: ./secrets/redis_password
+
+volumes:
+  html:
+  db:

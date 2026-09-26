@@ -1,0 +1,120 @@
+- name: Créer les dossiers de Nextcloud
+  ansible.builtin.file:
+    path: "{{ item.chemin }}"
+    state: directory
+    owner: "{{ item.proprietaire | default('root') }}"
+    group: "{{ item.proprietaire | default('root') }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { chemin: "{{ nextcloud_dossier }}", mode: "0750" }
+    - { chemin: "{{ nextcloud_dossier }}/secrets", mode: "0700" }
+    # www-data (33) dans l'image officielle ; les données sont sur le dataset ZFS partagé par virtiofs.
+    - { chemin: "{{ nextcloud_donnees }}", mode: "0770", proprietaire: "33" }
+
+- name: Écrire les secrets de Nextcloud
+  ansible.builtin.copy:
+    dest: "{{ nextcloud_dossier }}/secrets/{{ item.nom }}"
+    content: "{{ item.valeur }}"
+    owner: root
+    group: root
+    mode: "0444"
+  loop:
+    - { nom: postgres_password, valeur: "{{ nextcloud.db_password }}" }
+    - { nom: admin_password, valeur: "{{ nextcloud.admin_password }}" }
+    - { nom: redis_password, valeur: "{{ nextcloud.redis_password }}" }
+  loop_control:
+    label: "{{ item.nom }}"
+  no_log: true
+
+- name: Déposer le fichier Compose de Nextcloud
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ nextcloud_dossier }}/compose.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Démarrer Nextcloud
+  community.docker.docker_compose_v2:
+    project_src: "{{ nextcloud_dossier }}"
+    state: present
+    pull: missing
+    remove_orphans: true
+
+- name: Attendre la fin de l'installation de Nextcloud
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u www-data app php occ status --output=json
+    chdir: "{{ nextcloud_dossier }}"
+  register: nextcloud_statut
+  until: nextcloud_statut.rc == 0 and (nextcloud_statut.stdout | from_json).installed | default(false)
+  retries: 30
+  delay: 10
+  changed_when: false
+
+- name: Désactiver les applications inutiles
+  ansible.builtin.command:
+    cmd: "docker compose exec -T -u www-data app php occ app:disable {{ item }}"
+    chdir: "{{ nextcloud_dossier }}"
+  loop: "{{ nextcloud_applis_desactivees }}"
+  register: nextcloud_desactivation
+  changed_when: "'disabled' in nextcloud_desactivation.stdout"
+  failed_when: false
+
+- name: Installer l'application OpenID Connect
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u www-data app php occ app:install user_oidc
+    chdir: "{{ nextcloud_dossier }}"
+  register: nextcloud_oidc_appli
+  changed_when: "'already installed' not in nextcloud_oidc_appli.stdout"
+  failed_when: nextcloud_oidc_appli.rc != 0 and 'already installed' not in nextcloud_oidc_appli.stdout
+
+- name: Lister les fournisseurs d'identité déclarés
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u www-data app php occ user_oidc:provider --output=json
+    chdir: "{{ nextcloud_dossier }}"
+  register: nextcloud_fournisseurs
+  changed_when: false
+
+# Déclaré une seule fois ; pour changer un réglage ou le secret, relancer avec -e nextcloud_oidc_forcer=true.
+- name: Déclarer Authelia comme fournisseur d'identité
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - exec
+      - -T
+      - -u
+      - www-data
+      - app
+      - php
+      - occ
+      - user_oidc:provider
+      - Authelia
+      - --clientid=nextcloud
+      - "--clientsecret={{ oidc_clients.nextcloud.secret }}"
+      - "--discoveryuri={{ nextcloud_issuer }}/.well-known/openid-configuration"
+      - --scope=openid email profile groups
+      - --unique-uid=0
+      - --mapping-uid=preferred_username
+      - --mapping-display-name=name
+      - --mapping-email=email
+      - --mapping-groups=groups
+      - --group-provisioning=1
+      - --check-bearer=0
+      - --send-id-token-hint=1
+    chdir: "{{ nextcloud_dossier }}"
+  when: nextcloud_oidc_forcer | default(false) or 'Authelia' not in nextcloud_fournisseurs.stdout
+  no_log: true
+  changed_when: true
+
+- name: Activer PKCE pour la connexion OpenID Connect
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u www-data app php occ config:app:set user_oidc use_pkce --value=1
+    chdir: "{{ nextcloud_dossier }}"
+  changed_when: false
+
+- name: Lancer les tâches de fond par cron (conteneur dédié)
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u www-data app php occ background:cron
+    chdir: "{{ nextcloud_dossier }}"
+  changed_when: false

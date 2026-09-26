@@ -1,4 +1,4 @@
-# Remplace la clé publique par la tienne : age-keygen -o ~/.config/sops/age/keys.txt
+# Clé publique age du poste d'admin (la clé privée n'est jamais versionnée).
 creation_rules:
   - path_regex: .*\.enc\.(ya?ml|json|env)$
-    age: age1REMPLACE_PAR_TA_CLE_PUBLIQUE
+    age: age17cyzaurkfegzfwzx7gm8kx87gpj2m2xfud0un2fkkyh3x22n4daqm873mw

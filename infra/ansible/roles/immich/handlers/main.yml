@@ -1,0 +1,4 @@
+- name: Redémarrer Immich
+  community.docker.docker_compose_v2:
+    project_src: "{{ immich_dossier }}"
+    state: restarted

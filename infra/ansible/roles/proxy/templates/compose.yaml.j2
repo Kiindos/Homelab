@@ -1,0 +1,52 @@
+# {{ ansible_managed }}
+# Proxy interne : HTTPS pour les outils d'administration (*.{{ domaine_interne }}), certificat wildcard
+# Let's Encrypt par challenge DNS Cloudflare. Joignable uniquement depuis le VPN d'administration.
+name: proxy
+
+services:
+  traefik:
+    image: {{ proxy_image }}
+    restart: unless-stopped
+    command:
+      - --entrypoints.websecure.address=:443
+      # TLS toujours actif (certificat par défaut de Traefik tant qu'il n'y a pas de jeton DNS).
+      - --entrypoints.websecure.http.tls=true
+{% if proxy_jeton_dns | length > 0 %}
+      - --entrypoints.websecure.http.tls.certresolver=letsencrypt
+      - --entrypoints.websecure.http.tls.domains[0].main=*.{{ domaine_interne }}
+      - --certificatesresolvers.letsencrypt.acme.email={{ proxy_email_acme }}
+      - --certificatesresolvers.letsencrypt.acme.storage=/certificats/acme.json
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.letsencrypt.acme.dnschallenge.resolvers=1.1.1.1:53,9.9.9.9:53
+{% endif %}
+      - --providers.file.directory=/dynamique
+      - --providers.file.watch=true
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.level=INFO
+      - --accesslog=true
+{% if proxy_jeton_dns | length > 0 %}
+    environment:
+      CF_DNS_API_TOKEN_FILE: /run/secrets/cloudflare_dns
+    secrets: [cloudflare_dns]
+{% endif %}
+    ports:
+      - "443:443"
+    volumes:
+      - ./dynamique:/dynamique:ro
+      - certificats:/certificats
+    networks: [proxy]
+    security_opt: ["no-new-privileges:true"]
+
+{% if proxy_jeton_dns | length > 0 %}
+secrets:
+  cloudflare_dns:
+    file: ./secrets/cloudflare_dns
+{% endif %}
+
+networks:
+  proxy:
+    external: true
+
+volumes:
+  certificats:

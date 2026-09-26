@@ -1,0 +1,12 @@
+web_dossier: /opt/piles/web
+web_image_nginx: nginx:1.30.5-alpine
+web_image_cloudflared: cloudflare/cloudflared:2026.9.3
+# Sites statiques construits sur le poste d'admin : nom => source, générateur (mkdocs ou hugo), port,
+# et éventuellement une politique de sécurité du contenu (en-tête Content-Security-Policy).
+web_sites: {}
+#  public:  { source: /chemin/vers/Homelab/site, generateur: hugo, port: 8080, csp: "default-src 'self'" }
+#  interne: { source: /chemin/vers/Homelab-interne, generateur: mkdocs, port: 8081 }
+web_mkdocs: "{{ lookup('env', 'HOME') }}/.local/share/homelab/venv/bin/mkdocs"
+web_hugo: "{{ lookup('env', 'HOME') }}/.local/bin/hugo"
+# Jeton du tunnel Cloudflare (sortie de la pile OpenTofu cloudflare) : si absent, pas de tunnel.
+web_tunnel_token: ""

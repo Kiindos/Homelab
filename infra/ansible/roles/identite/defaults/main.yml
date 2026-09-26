@@ -1,0 +1,16 @@
+identite_dossier: /opt/piles/identite
+identite_image_lldap: lldap/lldap:v0.6.3-debian
+identite_image_authelia: authelia/authelia:4.39.28
+identite_image_valkey: valkey/valkey:9.1.2-alpine
+identite_base_dn: "dc={{ domaine_public | split('.') | join(',dc=') }}"
+identite_url_portail: "https://auth.{{ domaine_public }}"
+
+# Comptes de service (lecture seule sur l'annuaire) : identifiant => mot de passe (tiré des secrets chiffrés).
+# L'inventaire peut en ajouter d'autres.
+identite_comptes_service:
+  authelia: "{{ authelia.ldap_bind_password }}"
+
+identite_groupes: [famille, admins]
+
+# Clients OpenID Connect (le condensat du secret vient des secrets chiffrés).
+identite_clients_oidc: []

@@ -1,0 +1,115 @@
+- name: Créer les dossiers de la pile identité
+  ansible.builtin.file:
+    path: "{{ item.chemin }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { chemin: "{{ identite_dossier }}", mode: "0750" }
+    - { chemin: "{{ identite_dossier }}/authelia", mode: "0750" }
+    - { chemin: "{{ identite_dossier }}/secrets", mode: "0700" }
+    - { chemin: "{{ identite_dossier }}/amorcage/utilisateurs", mode: "0700" }
+    - { chemin: "{{ identite_dossier }}/amorcage/groupes", mode: "0700" }
+
+# Les fichiers de secrets sont lisibles dans le conteneur (0444) mais inaccessibles sur l'hôte :
+# le dossier parent est réservé à root (0700).
+- name: Écrire les secrets
+  ansible.builtin.copy:
+    dest: "{{ identite_dossier }}/secrets/{{ item.nom }}"
+    content: "{{ item.valeur }}"
+    owner: root
+    group: root
+    mode: "0444"
+  loop:
+    - { nom: lldap_jwt_secret, valeur: "{{ lldap.jwt_secret }}" }
+    - { nom: lldap_admin_password, valeur: "{{ lldap.admin_password }}" }
+    - { nom: ldaps.crt, valeur: "{{ ldaps.certificat }}" }
+    - { nom: ldaps.key, valeur: "{{ ldaps.cle }}" }
+    - { nom: authelia_reset_jwt, valeur: "{{ authelia.reset_password_jwt_secret }}" }
+    - { nom: authelia_session, valeur: "{{ authelia.session_secret }}" }
+    - { nom: authelia_storage, valeur: "{{ authelia.storage_encryption_key }}" }
+    - { nom: authelia_ldap, valeur: "{{ authelia.ldap_bind_password }}" }
+    - { nom: authelia_oidc_hmac, valeur: "{{ authelia.oidc_hmac_secret }}" }
+    - { nom: authelia_oidc_jwks, valeur: "{{ authelia.oidc_jwks_key }}" }
+  loop_control:
+    label: "{{ item.nom }}"
+  no_log: true
+  notify: Redémarrer la pile identité
+
+- name: Écrire la graine de clé de LLDAP (variable d'environnement uniquement)
+  ansible.builtin.copy:
+    dest: "{{ identite_dossier }}/.env"
+    content: "LLDAP_KEY_SEED={{ lldap.key_seed }}\n"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Redémarrer la pile identité
+
+- name: Déposer la configuration d'Authelia
+  ansible.builtin.template:
+    src: authelia.yml.j2
+    dest: "{{ identite_dossier }}/authelia/configuration.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Redémarrer la pile identité
+
+- name: Déposer le fichier Compose
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ identite_dossier }}/compose.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Démarrer l'annuaire en premier (Authelia a besoin de son compte de service)
+  community.docker.docker_compose_v2:
+    project_src: "{{ identite_dossier }}"
+    services: [lldap]
+    state: present
+    pull: missing
+    wait: true
+    wait_timeout: 120
+
+# --- Annuaire : groupes et comptes de service ------------------------------------------------------
+
+- name: Décrire les groupes
+  ansible.builtin.copy:
+    dest: "{{ identite_dossier }}/amorcage/groupes/{{ item }}.json"
+    content: "{{ {'name': item} | to_json }}\n"
+    mode: "0600"
+  loop: "{{ identite_groupes }}"
+
+- name: Décrire les comptes de service (lecture seule sur l'annuaire)
+  ansible.builtin.copy:
+    dest: "{{ identite_dossier }}/amorcage/utilisateurs/{{ item.key }}.json"
+    content: "{{ {'id': item.key, 'email': item.key ~ '@' ~ domaine_public, 'displayName': 'Service ' ~ item.key,
+      'password': item.value, 'groups': ['lldap_strict_readonly']} | to_json }}\n"
+    mode: "0600"
+  loop: "{{ identite_comptes_service | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  no_log: true
+
+- name: Créer les groupes et comptes dans LLDAP (script d'amorçage fourni par LLDAP, idempotent)
+  ansible.builtin.command:
+    # Le script n'accepte pas de fichier pour le mot de passe administrateur : on le lit dans le
+    # conteneur, depuis le secret monté, pour qu'il n'apparaisse jamais sur la ligne de commande de l'hôte.
+    cmd: >-
+      docker compose exec -T
+      -e USER_CONFIGS_DIR=/amorcage/utilisateurs -e GROUP_CONFIGS_DIR=/amorcage/groupes
+      lldap sh -c 'LLDAP_ADMIN_PASSWORD="$(cat /run/secrets/lldap_admin_password)" exec /app/bootstrap.sh'
+    chdir: "{{ identite_dossier }}"
+  register: identite_amorcage
+  # Le script réécrit toujours les mots de passe ; seul un compte, un groupe ou une appartenance créés comptent.
+  changed_when: identite_amorcage.stdout is search('(?i)successfully created|added to group')
+  no_log: true
+
+- name: Démarrer la pile identité
+  community.docker.docker_compose_v2:
+    project_src: "{{ identite_dossier }}"
+    state: present
+    pull: missing
+    remove_orphans: true

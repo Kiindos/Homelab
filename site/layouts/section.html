@@ -1,0 +1,55 @@
+{{ define "main" }}
+<section class="entete-page">
+  <div class="enveloppe">
+    <p class="surtitre">{{ with .Parent }}{{ if not .IsHome }}{{ .Title }}{{ else }}Homelab{{ end }}{{ end }}</p>
+    <h1>{{ .Title }}</h1>
+    {{ with .Description }}<p class="entete-page__lead">{{ . }}</p>{{ end }}
+  </div>
+</section>
+<section class="bloc bloc--serre">
+  <div class="enveloppe">
+    {{ if eq .Section "journal" }}
+      <ol class="frise frise--large">
+        {{ range .RegularPages.ByDate.Reverse }}
+        <li class="revele">
+          <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date | time.Format ":date_long" }}</time>
+          <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+          <p>{{ .Description }}</p>
+        </li>
+        {{ end }}
+      </ol>
+    {{ else if eq .Section "adr" }}
+      {{ $pages := .RegularPages.ByTitle.Reverse }}
+      <div class="filtres" role="group" aria-label="Filtrer les décisions">
+        <button type="button" class="filtre" data-filtre="tout" aria-pressed="true">Toutes <span>{{ len $pages }}</span></button>
+        {{ range ($pages.GroupByParam "status") }}
+        <button type="button" class="filtre" data-filtre="{{ .Key | lower | replaceRE "[éèê]" "e" }}" aria-pressed="false">{{ .Key }} <span>{{ len .Pages }}</span></button>
+        {{ end }}
+      </div>
+      <div class="grille grille--2 cartes-adr">
+        {{ range $pages }}
+        <a class="carte carte--adr revele" href="{{ .RelPermalink }}" data-statut="{{ .Params.status | lower | replaceRE "[éèê]" "e" }}">
+          <div class="carte--adr__haut">
+            <span class="liste-adr__num">ADR {{ index (split .File.BaseFileName "-") 0 }}</span>
+            {{ partial "badge-statut.html" . }}
+          </div>
+          <h2>{{ replaceRE `^ADR \d+ : ` "" .Title }}</h2>
+          <p>{{ .Description }}</p>
+          {{ with .Date }}<time datetime="{{ .Format "2006-01-02" }}">{{ . | time.Format ":date_medium" }}</time>{{ end }}
+        </a>
+        {{ end }}
+      </div>
+    {{ else }}
+      <div class="grille grille--2">
+        {{ range .RegularPages }}
+        <a class="carte carte--lien revele" href="{{ .RelPermalink }}">
+          <h2>{{ .Title }}</h2>
+          <p>{{ .Description }}</p>
+          <span class="lien-fleche">Lire</span>
+        </a>
+        {{ end }}
+      </div>
+    {{ end }}
+  </div>
+</section>
+{{ end }}

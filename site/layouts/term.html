@@ -1,0 +1,6 @@
+{{ define "main" }}
+<section class="entete-page"><div class="enveloppe"><p class="surtitre"><a href="{{ "/tags/" | relURL }}">Étiquettes</a></p><h1>#{{ .Title }}</h1></div></section>
+<section class="bloc bloc--serre"><div class="enveloppe grille grille--2">
+  {{ range .Pages }}<a class="carte carte--lien revele" href="{{ .RelPermalink }}"><h2>{{ .Title }}</h2><p>{{ .Description }}</p></a>{{ end }}
+</div></section>
+{{ end }}

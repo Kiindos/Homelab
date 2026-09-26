@@ -1,0 +1,10 @@
+# Hyperviseur Proxmox : durcissement commun + configuration propre à Proxmox.
+- name: Configurer l'hyperviseur
+  hosts: hyperviseurs
+  become: false
+  roles:
+    - role: common
+      vars:
+        # needrestart pourrait redémarrer des services Proxmox en pleine journée : exclu ici.
+        common_paquets: [curl, vim, htop, jq, ca-certificates, unattended-upgrades, apt-listchanges, smartmontools]
+    - hyperviseur

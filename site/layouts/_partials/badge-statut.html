@@ -1,0 +1,1 @@
+{{ with .Params.status }}<span class="badge badge--{{ . | lower | replaceRE "[éèê]" "e" }}">{{ . }}</span>{{ end }}

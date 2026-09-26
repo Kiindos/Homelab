@@ -1,0 +1,73 @@
+# {{ ansible_managed }}
+# Identité : annuaire LLDAP, portail SSO Authelia et son cache de sessions.
+name: identite
+
+services:
+  lldap:
+    image: {{ identite_image_lldap }}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: Europe/Paris
+      LLDAP_LDAP_BASE_DN: "{{ identite_base_dn }}"
+      LLDAP_HTTP_URL: "https://ldap.{{ domaine_interne }}"
+      LLDAP_JWT_SECRET_FILE: /run/secrets/lldap_jwt_secret
+      LLDAP_LDAP_USER_PASS_FILE: /run/secrets/lldap_admin_password
+      LLDAP_LDAPS_OPTIONS__ENABLED: "true"
+      LLDAP_LDAPS_OPTIONS__PORT: "6360"
+      LLDAP_LDAPS_OPTIONS__CERT_FILE: /run/secrets/ldaps.crt
+      LLDAP_LDAPS_OPTIONS__KEY_FILE: /run/secrets/ldaps.key
+    ports:
+      # LDAPS pour les autres VM et interface web pour le proxy interne ; filtrés par OPNsense.
+      - "6360:6360"
+      - "17170:17170"
+    volumes:
+      - lldap:/data
+      - ./amorcage:/amorcage:ro
+    secrets: [lldap_jwt_secret, lldap_admin_password, ldaps.crt, ldaps.key]
+
+  authelia:
+    image: {{ identite_image_authelia }}
+    restart: unless-stopped
+    depends_on:
+      # Authelia vérifie l'annuaire au démarrage : il attend que LLDAP soit prêt.
+      lldap:
+        condition: service_healthy
+      valkey:
+        condition: service_started
+    environment:
+      TZ: Europe/Paris
+      # Autorise {{ '{{' }} secret "…" {{ '}}' }} dans la configuration (clé OIDC multiligne).
+      X_AUTHELIA_CONFIG_FILTERS: template
+      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE: /run/secrets/authelia_reset_jwt
+      AUTHELIA_SESSION_SECRET_FILE: /run/secrets/authelia_session
+      AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE: /run/secrets/authelia_storage
+      AUTHELIA_AUTHENTICATION_BACKEND_LDAP_PASSWORD_FILE: /run/secrets/authelia_ldap
+      AUTHELIA_IDENTITY_PROVIDERS_OIDC_HMAC_SECRET_FILE: /run/secrets/authelia_oidc_hmac
+    ports:
+      # Portail, joignable uniquement depuis le WAF (filtré par OPNsense).
+      - "9091:9091"
+    volumes:
+      - ./authelia/configuration.yml:/config/configuration.yml:ro
+      - authelia:/config/data
+    secrets: [authelia_reset_jwt, authelia_session, authelia_storage, authelia_ldap, authelia_oidc_hmac, authelia_oidc_jwks]
+    security_opt: ["no-new-privileges:true"]
+
+  valkey:
+    image: {{ identite_image_valkey }}
+    restart: unless-stopped
+    command: ["valkey-server", "--save", "300", "1"]
+    volumes:
+      - valkey:/data
+    security_opt: ["no-new-privileges:true"]
+
+secrets:
+{% for s in ['lldap_jwt_secret', 'lldap_admin_password', 'ldaps.crt', 'ldaps.key', 'authelia_reset_jwt', 'authelia_session', 'authelia_storage', 'authelia_ldap', 'authelia_oidc_hmac', 'authelia_oidc_jwks'] %}
+  {{ s }}:
+    file: ./secrets/{{ s }}
+{% endfor %}
+
+volumes:
+  lldap:
+  authelia:
+  valkey:

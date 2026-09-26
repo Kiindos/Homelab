@@ -5,22 +5,81 @@
 
 - name: Installer les paquets de base
   ansible.builtin.apt:
-    name:
-      - vim
-      - htop
-      - curl
-      - smartmontools
-      - unattended-upgrades
+    name: "{{ common_paquets }}"
     state: present
+
+- name: Installer l'agent QEMU (VM uniquement)
+  ansible.builtin.apt:
+    name: qemu-guest-agent
+    state: present
+  when: ansible_virtualization_role == "guest"
+
+- name: Démarrer l'agent QEMU
+  ansible.builtin.service:
+    name: qemu-guest-agent
+    state: started
+    enabled: true
+  when: ansible_virtualization_role == "guest"
 
 - name: Définir le fuseau horaire
   community.general.timezone:
-    name: Europe/Paris
+    name: "{{ common_fuseau }}"
 
-- name: Interdire la connexion SSH par mot de passe
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: '^#?PasswordAuthentication'
-    line: 'PasswordAuthentication no'
-    validate: 'sshd -t -f %s'
-  notify: Redémarrer SSH
+- name: Créer les dossiers de configuration systemd
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /etc/systemd/timesyncd.conf.d
+    - /etc/systemd/journald.conf.d
+
+- name: Synchroniser l'heure sur le pare-feu de la zone
+  ansible.builtin.copy:
+    dest: /etc/systemd/timesyncd.conf.d/homelab.conf
+    content: |
+      # Géré par Ansible (rôle common)
+      [Time]
+      NTP={{ common_ntp }}
+    mode: "0644"
+  when: common_ntp | length > 0 and ansible_virtualization_role == "guest"
+  notify: Redémarrer timesyncd
+
+- name: Appliquer automatiquement les correctifs de sécurité
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/52homelab-unattended
+    content: |
+      // Géré par Ansible (rôle common) : correctifs de sécurité Debian uniquement, sans redémarrage automatique.
+      Unattended-Upgrade::Origins-Pattern {
+        "origin=Debian,codename=${distro_codename}-security,label=Debian-Security";
+      };
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+      Unattended-Upgrade::Automatic-Reboot "false";
+    mode: "0644"
+
+- name: Activer les mises à jour automatiques
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    mode: "0644"
+
+- name: Durcir le serveur SSH (clé uniquement)
+  ansible.builtin.template:
+    src: sshd-durcissement.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-durcissement.conf
+    mode: "0644"
+    validate: "sshd -t -f %s"
+  notify: Recharger SSH
+
+- name: Limiter la taille des journaux système
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/homelab.conf
+    content: |
+      # Géré par Ansible (rôle common)
+      [Journal]
+      Storage=persistent
+      SystemMaxUse=500M
+    mode: "0644"
+  notify: Redémarrer journald

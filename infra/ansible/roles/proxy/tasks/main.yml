@@ -1,0 +1,47 @@
+- name: Créer les dossiers du proxy interne
+  ansible.builtin.file:
+    path: "{{ item.chemin }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { chemin: "{{ proxy_dossier }}", mode: "0750" }
+    - { chemin: "{{ proxy_dossier }}/secrets", mode: "0700" }
+    - { chemin: "{{ proxy_dossier }}/dynamique", mode: "0755" }
+
+- name: Écrire le jeton Cloudflare (DNS uniquement, pour le certificat wildcard interne)
+  ansible.builtin.copy:
+    dest: "{{ proxy_dossier }}/secrets/cloudflare_dns"
+    content: "{{ proxy_jeton_dns }}"
+    owner: root
+    group: root
+    mode: "0444"
+  when: proxy_jeton_dns | length > 0
+  no_log: true
+
+- name: Créer le réseau Docker partagé avec les services internes
+  community.docker.docker_network:
+    name: proxy
+
+- name: Déposer la configuration des routes
+  ansible.builtin.template:
+    src: routes.yml.j2
+    dest: "{{ proxy_dossier }}/dynamique/routes.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Déposer le fichier Compose de Traefik
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ proxy_dossier }}/compose.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Démarrer le proxy interne
+  community.docker.docker_compose_v2:
+    project_src: "{{ proxy_dossier }}"
+    state: present
+    pull: missing

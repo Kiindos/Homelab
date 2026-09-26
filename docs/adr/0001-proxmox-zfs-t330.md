@@ -2,11 +2,14 @@
 title: "ADR 0001 : Le Dell T330 dédié au stockage"
 description: Le T330 devient la machine de stockage (ZFS RAIDZ2, PBS), le calcul part sur un cluster dédié.
 date: 2026-09-22
-status: accepté
+status: remplacé
 tags: [proxmox, zfs, stockage]
 ---
 
 # ADR 0001 : Le Dell T330 dédié au stockage
+
+> **Décision remplacée.** Cette décision a été remplacée par l'[ADR 0010](0010-serveur-unique.md) le 26/09/2026. Elle est conservée pour l'historique.
+
 
 ## Contexte
 

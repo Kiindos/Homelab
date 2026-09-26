@@ -1,0 +1,35 @@
+# {{ ansible_managed }}
+# Sites statiques (documentation) servis par nginx ; tunnel Cloudflare sortant pour le site public.
+name: web
+
+services:
+  nginx:
+    image: {{ web_image_nginx }}
+    restart: unless-stopped
+    ports:
+{% for nom, site in web_sites.items() %}
+      - "{{ site.port }}:{{ site.port }}"
+{% endfor %}
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+{% for nom in web_sites %}
+      - ./{{ nom }}:/usr/share/nginx/{{ nom }}:ro
+{% endfor %}
+    read_only: true
+    tmpfs: [/var/cache/nginx, /var/run, /tmp]
+    security_opt: ["no-new-privileges:true"]
+{% if web_tunnel_token | length > 0 %}
+
+  cloudflared:
+    image: {{ web_image_cloudflared }}
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN_FILE: /run/secrets/tunnel_token
+    secrets: [tunnel_token]
+    security_opt: ["no-new-privileges:true"]
+
+secrets:
+  tunnel_token:
+    file: ./secrets/tunnel_token
+{% endif %}

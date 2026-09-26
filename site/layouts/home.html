@@ -1,0 +1,139 @@
+{{ define "main" }}
+{{ $d := hugo.Data.homelab }}
+{{ $adr := where site.RegularPages "Section" "adr" }}
+{{ $journal := where site.RegularPages "Section" "journal" }}
+
+<section class="accroche">
+  <div class="accroche__grille-fond" aria-hidden="true"></div>
+  <div class="enveloppe accroche__contenu">
+    <div class="accroche__texte revele">
+      <p class="surtitre">{{ $d.accroche.surtitre }}</p>
+      <h1>{{ $d.accroche.titre }}</h1>
+      <p class="accroche__lead">{{ $d.accroche.texte }}</p>
+      <div class="actions">
+        <a class="bouton bouton--plein" href="{{ "/architecture/" | relURL }}">Voir l'architecture</a>
+        <a class="bouton" href="{{ "/adr/" | relURL }}">Lire les {{ len $adr }} décisions</a>
+      </div>
+    </div>
+
+    <div class="terminal revele" role="img" aria-label="Sortie de commandes : l'infrastructure correspond au code">
+      <div class="terminal__barre"><span></span><span></span><span></span><em>poste-admin — homelab</em></div>
+      <div class="terminal__corps">
+        {{ range $i, $l := $d.terminal }}
+        <p class="terminal__ligne" style="--delai: {{ mul $i 0.55 }}s">
+          <span class="terminal__invite">{{ $l.invite }}</span> <span class="terminal__commande">{{ $l.commande }}</span>
+          <span class="terminal__sortie terminal__sortie--{{ $l.etat }}">✓ {{ $l.sortie }}</span>
+        </p>
+        {{ end }}
+        <p class="terminal__ligne" style="--delai: {{ mul (len $d.terminal) 0.55 }}s"><span class="terminal__invite">$</span> <span class="curseur" aria-hidden="true"></span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="chiffres" aria-label="Chiffres clés">
+  <div class="enveloppe chiffres__grille">
+    {{ range $d.chiffres }}
+    <div class="chiffre revele">
+      <p class="chiffre__valeur">{{ .valeur }}</p>
+      <p class="chiffre__libelle">{{ .libelle }}</p>
+      <p class="chiffre__detail">{{ .detail }}</p>
+    </div>
+    {{ end }}
+  </div>
+</section>
+
+<section class="bloc">
+  <div class="enveloppe">
+    <header class="bloc__entete revele">
+      <p class="surtitre">Défense en profondeur</p>
+      <h2>Le parcours d'une requête</h2>
+      <p>Chaque couche arrête ce que la précédente a laissé passer. Si l'une cède, la suivante tient.</p>
+    </header>
+    <ol class="parcours revele">
+      {{ range $i, $e := $d.parcours }}
+      <li class="parcours__etape" style="--rang: {{ $i }}">
+        <span class="parcours__num">{{ add $i 1 }}</span>
+        <strong>{{ $e.etape }}</strong>
+        <span>{{ $e.detail }}</span>
+      </li>
+      {{ end }}
+    </ol>
+  </div>
+</section>
+
+<section class="bloc bloc--teinte">
+  <div class="enveloppe">
+    <header class="bloc__entete revele">
+      <p class="surtitre">Méthode</p>
+      <h2>Quatre principes, appliqués partout</h2>
+    </header>
+    <div class="grille grille--4">
+      {{ range $d.principes }}
+      <article class="carte carte--principe revele">
+        <div class="carte__icone">{{ partial "icone.html" .icone }}</div>
+        <h3>{{ .titre }}</h3>
+        <p>{{ .texte }}</p>
+      </article>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<section class="bloc">
+  <div class="enveloppe">
+    <header class="bloc__entete revele">
+      <p class="surtitre">Outils</p>
+      <h2>La pile technique</h2>
+      <p>Des outils libres, choisis pour une raison écrite — les ADR expliquent chaque choix.</p>
+    </header>
+    <div class="pile">
+      {{ range $d.pile }}
+      <div class="pile__groupe revele">
+        <h3>{{ .categorie }}</h3>
+        <ul>{{ range .outils }}<li>{{ . }}</li>{{ end }}</ul>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<section class="bloc bloc--teinte">
+  <div class="enveloppe deux-colonnes">
+    <div>
+      <header class="bloc__entete bloc__entete--gauche revele">
+        <p class="surtitre">Décisions</p>
+        <h2>Les derniers choix</h2>
+      </header>
+      <ul class="liste-adr">
+        {{ range first 6 ($adr.ByTitle.Reverse) }}
+        <li class="revele">
+          <a href="{{ .RelPermalink }}">
+            <span class="liste-adr__num">{{ index (split .File.BaseFileName "-") 0 }}</span>
+            <span class="liste-adr__titre">{{ replaceRE `^ADR \d+ : ` "" .Title }}</span>
+            {{ partial "badge-statut.html" . }}
+          </a>
+        </li>
+        {{ end }}
+      </ul>
+      <a class="lien-fleche" href="{{ "/adr/" | relURL }}">Toutes les décisions</a>
+    </div>
+    <div>
+      <header class="bloc__entete bloc__entete--gauche revele">
+        <p class="surtitre">Journal</p>
+        <h2>Au fil du projet</h2>
+      </header>
+      <ol class="frise">
+        {{ range first 4 $journal.ByDate.Reverse }}
+        <li class="revele">
+          <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date | time.Format ":date_long" }}</time>
+          <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+          <p>{{ .Description }}</p>
+        </li>
+        {{ end }}
+      </ol>
+      <a class="lien-fleche" href="{{ "/journal/" | relURL }}">Tout le journal</a>
+    </div>
+  </div>
+</section>
+{{ end }}

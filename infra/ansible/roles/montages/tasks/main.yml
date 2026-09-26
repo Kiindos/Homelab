@@ -1,0 +1,22 @@
+# Une fois monté, le dossier prend les droits de la racine du partage : ils sont gérés par le service qui
+# l'utilise (ex. www-data pour Nextcloud), pas ici.
+- name: Créer les points de montage (droits laissés au service utilisateur)
+  ansible.builtin.file:
+    path: "{{ item.value.chemin }}"
+    state: directory
+    mode: "{{ item.value.mode | default(omit) }}"
+  loop: "{{ montages_virtiofs | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Monter les dossiers partagés (virtiofs)
+  ansible.posix.mount:
+    src: "{{ item.key }}"
+    path: "{{ item.value.chemin }}"
+    fstype: virtiofs
+    # nofail : la VM démarre même si un partage manque ; noexec/nosuid : rien d'exécutable depuis les données.
+    opts: "{{ 'defaults,nofail,noexec,nosuid,nodev' ~ (',ro' if item.value.lecture_seule | default(false) else '') }}"
+    state: mounted
+  loop: "{{ montages_virtiofs | dict2items }}"
+  loop_control:
+    label: "{{ item.key }} → {{ item.value.chemin }}"

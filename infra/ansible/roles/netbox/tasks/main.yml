@@ -1,0 +1,40 @@
+# Déploiement recommandé par netbox-docker : le dépôt à une version figée + un fichier d'override.
+- name: Récupérer netbox-docker (version figée)
+  ansible.builtin.git:
+    repo: https://github.com/netbox-community/netbox-docker.git
+    dest: "{{ netbox_dossier }}"
+    version: "{{ netbox_version_docker }}"
+    force: false
+  notify: Redémarrer NetBox
+
+- name: Configurer la connexion OIDC par Authelia
+  ansible.builtin.template:
+    src: sso.py.j2
+    dest: "{{ netbox_dossier }}/configuration/sso.py"
+    owner: root
+    group: root
+    # Contient le secret OIDC : lisible par le groupe root, celui du conteneur (user « netbox:root »).
+    mode: "0640"
+  no_log: true
+  notify: Redémarrer NetBox
+
+# Le dépôt cloné n'est jamais modifié (sinon le module git refuse les mises à jour) : nos réglages, secrets
+# compris, sont dans le fichier d'override, qui surcharge les fichiers env/*.env d'exemple.
+- name: Déposer l'override Compose (image figée, réglages, secrets, réseau du proxy interne)
+  ansible.builtin.template:
+    src: override.yml.j2
+    dest: "{{ netbox_dossier }}/docker-compose.override.yml"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Redémarrer NetBox
+
+- name: Démarrer NetBox
+  community.docker.docker_compose_v2:
+    project_src: "{{ netbox_dossier }}"
+    state: present
+    pull: missing
+    wait: true
+    # Premier démarrage : plusieurs centaines de migrations de base de données.
+    wait_timeout: 1500

@@ -1,0 +1,6 @@
+# Géré par Ansible (rôle common) — connexion par clé uniquement.
+PermitRootLogin {{ common_ssh_root }}
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+X11Forwarding no
+MaxAuthTries 3

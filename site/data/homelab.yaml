@@ -1,0 +1,55 @@
+# Contenu de la page d'accueil. Règle du dépôt public : ni adresse IP, ni VLAN, ni version, ni procédure d'accès.
+
+accroche:
+  surtitre: Homelab · Infrastructure as Code
+  titre: Une infrastructure personnelle, gérée comme en production.
+  texte: >-
+    Un serveur, un pare-feu, des zones réseau étanches et des services utilisés tous les jours par ma famille.
+    Tout est décrit en code, relu avant d'être appliqué, et documenté — y compris les erreurs.
+
+terminal:
+  - { invite: "$", commande: "tofu plan", sortie: "No changes. Your infrastructure matches the configuration.", etat: ok }
+  - { invite: "$", commande: "ansible-playbook plateforme.yml", sortie: "changed=0  failed=0", etat: ok }
+  - { invite: "$", commande: "curl -I https://photos.…", sortie: "WAF → SSO → application · TLS vérifié", etat: ok }
+  - { invite: "$", commande: "netbox-synchro --simulation", sortie: "0 créé(s), 0 modifié(s)", etat: ok }
+
+chiffres:
+  - { valeur: "1", libelle: "serveur", detail: "hyperviseur, stockage et pare-feu" }
+  - { valeur: "7", libelle: "zones réseau", detail: "tout est interdit entre elles par défaut" }
+  - { valeur: "100 %", libelle: "en code", detail: "machines, pare-feu, DNS, services" }
+  - { valeur: "2FA", libelle: "partout où c'est possible", detail: "portail d'authentification unique" }
+
+parcours:
+  - { etape: "Internet", detail: "Un seul port entrant, aucune autre porte ouverte." }
+  - { etape: "Pare-feu", detail: "Redirige uniquement vers le WAF, isole chaque zone." }
+  - { etape: "WAF", detail: "Règles OWASP, filtrage par pays, limitation de débit." }
+  - { etape: "SSO", detail: "Annuaire unique, double authentification." }
+  - { etape: "Application", detail: "Dans sa propre zone, sans accès au reste." }
+
+principes:
+  - titre: Tout en code
+    texte: Aucune machine ni règle créée à la main. OpenTofu décrit l'infrastructure, Ansible la configure ; un second passage ne doit rien changer.
+    icone: code
+  - titre: Exposition minimale
+    texte: Ce qui est public passe par un pare-feu, un WAF et un portail d'authentification. L'administration n'est joignable que par VPN.
+    icone: bouclier
+  - titre: Zones étanches
+    texte: Chaque service vit dans sa zone. Une compromission reste confinée ; chaque flux autorisé est justifié dans une matrice.
+    icone: zones
+  - titre: Tout se restaure
+    texte: Instantanés automatiques, secrets chiffrés et versionnés, procédures écrites — pour ne dépendre ni de la mémoire, ni d'une seule personne.
+    icone: restauration
+
+pile:
+  - categorie: Hyperviseur & stockage
+    outils: [Proxmox VE, ZFS RAIDZ2, virtiofs, sanoid]
+  - categorie: Réseau & sécurité
+    outils: [OPNsense, WireGuard, BunkerWeb, CrowdSec, DNSSEC]
+  - categorie: Identité
+    outils: [LLDAP, Authelia, OpenID Connect, WebAuthn]
+  - categorie: Infrastructure as Code
+    outils: [OpenTofu, Ansible, SOPS + age, GitHub Actions]
+  - categorie: Services
+    outils: [Docker Compose, Traefik, Let's Encrypt, NetBox]
+  - categorie: Publication
+    outils: [Cloudflare DNS, Cloudflare Tunnel, Hugo]
