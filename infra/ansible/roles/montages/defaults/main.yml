@@ -1,0 +1,2 @@
+# Dossiers de l'hôte partagés par virtiofs : étiquette (= nom de la correspondance Proxmox) => point de montage.
+montages_virtiofs: {}

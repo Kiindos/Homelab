@@ -28,3 +28,11 @@ secrets/*
 .vscode/
 *.swp
 infra/ansible/inventory/hosts.yml
+
+# Contexte local Claude Code (détails internes, jamais versionné)
+CLAUDE.local.md
+# Permissions Claude Code propres au poste (jamais versionnées)
+.claude/settings.local.json
+
+# Python
+__pycache__/

@@ -1,0 +1,27 @@
+{{ define "main" }}
+<article class="article">
+  <header class="entete-page entete-page--article">
+    <div class="enveloppe">
+      <p class="surtitre"><a href="{{ .Parent.RelPermalink }}">{{ if eq .Section "adr" }}Décisions{{ else }}{{ .Parent.Title }}{{ end }}</a></p>
+      <h1>{{ .Title }}</h1>
+      {{ with .Description }}<p class="entete-page__lead">{{ . }}</p>{{ end }}
+      <p class="meta">
+        {{ with .Date }}{{ if not .IsZero }}<time datetime="{{ .Format "2006-01-02" }}">{{ . | time.Format ":date_long" }}</time>{{ end }}{{ end }}
+        {{ partial "badge-statut.html" . }}
+        {{ with .Params.tags }}{{ range . }}<span class="etiquette">#{{ . }}</span>{{ end }}{{ end }}
+        <span class="meta__lecture">{{ .ReadingTime }} min de lecture</span>
+      </p>
+    </div>
+  </header>
+  <div class="enveloppe article__grille">
+    <div class="prose">{{ .Content }}</div>
+    {{ with .TableOfContents }}{{ if gt (len (findRE "<li>" .)) 1 }}
+    <aside class="sommaire" aria-label="Sommaire"><p>Sur cette page</p>{{ . }}</aside>
+    {{ end }}{{ end }}
+  </div>
+  <nav class="enveloppe suite" aria-label="Pages voisines">
+    {{ with .PrevInSection }}<a class="suite__lien" href="{{ .RelPermalink }}"><span>Précédent</span>{{ .Title }}</a>{{ end }}
+    {{ with .NextInSection }}<a class="suite__lien suite__lien--droite" href="{{ .RelPermalink }}"><span>Suivant</span>{{ .Title }}</a>{{ end }}
+  </nav>
+</article>
+{{ end }}

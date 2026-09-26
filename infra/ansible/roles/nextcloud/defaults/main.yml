@@ -1,0 +1,9 @@
+nextcloud_dossier: /opt/piles/nextcloud
+nextcloud_image: nextcloud:35.0.1-apache
+nextcloud_image_postgres: postgres:17.11-trixie
+nextcloud_image_valkey: valkey/valkey:9.1.2-alpine
+nextcloud_donnees: /srv/drive
+nextcloud_domaine: "drive.{{ domaine_public }}"
+nextcloud_issuer: "https://auth.{{ domaine_public }}"
+# Applications désactivées : chaque application active élargit la surface d'attaque.
+nextcloud_applis_desactivees: [dashboard, weather_status, firstrunwizard, recommendations, survey_client, support, app_api, photos]

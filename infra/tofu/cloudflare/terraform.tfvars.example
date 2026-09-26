@@ -1,3 +1,6 @@
-account_id      = "ton-account-id"
-vitrine_zone_id = "zone-id-de-maximebertrand.eu"
-# cloudflare_api_token : export TF_VAR_cloudflare_api_token="..."
+# Exemple générique : les vraies valeurs sont tenues dans le dépôt privé.
+# Secrets (jamais dans un fichier) : TF_VAR_cloudflare_api_token, TF_VAR_etat_passphrase.
+account_id       = "identifiant-du-compte"
+vitrine_zone_id  = "identifiant-de-la-zone"
+ip_publique      = "192.0.2.1"
+services_publics = ["photos", "drive"]

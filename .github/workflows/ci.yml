@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        stack: [proxmox, cloudflare]
+        stack: [proxmox, opnsense, cloudflare]
     defaults:
       run:
         working-directory: infra/tofu/${{ matrix.stack }}
@@ -69,3 +69,14 @@ jobs:
             done
           done
           exit $status
+
+  site:
+    name: Site public (Hugo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "0.166.0"
+      - name: Construire en mode strict (un avertissement arrête la construction)
+        run: hugo --source site --destination public --gc --minify --panicOnWarning

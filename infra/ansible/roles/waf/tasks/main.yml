@@ -1,0 +1,23 @@
+- name: Créer le dossier de la pile WAF
+  ansible.builtin.file:
+    path: "{{ waf_dossier }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Déposer le fichier Compose de BunkerWeb
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ waf_dossier }}/compose.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+  register: waf_compose
+
+- name: Démarrer BunkerWeb
+  community.docker.docker_compose_v2:
+    project_src: "{{ waf_dossier }}"
+    state: present
+    pull: missing
+    recreate: "{{ 'always' if waf_compose.changed else 'auto' }}"

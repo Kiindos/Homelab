@@ -1,0 +1,112 @@
+# {{ ansible_managed }}
+# Secrets : fournis par fichiers (variables *_FILE du Compose), jamais dans ce fichier.
+theme: auto
+
+server:
+  address: "tcp://:9091/"
+
+log:
+  level: info
+
+# Contrôle de l'horloge sur le pare-feu de la zone (NTP vers Internet bloqué par OPNsense).
+ntp:
+  address: "udp://{{ ansible_default_ipv4.gateway }}:123"
+
+totp:
+  issuer: "{{ domaine_public }}"
+
+webauthn:
+  display_name: "Homelab {{ domaine_public }}"
+
+authentication_backend:
+  password_reset:
+    disable: false
+  ldap:
+    address: "ldap://lldap:3890"
+    implementation: lldap
+    base_dn: "{{ identite_base_dn }}"
+    user: "uid=authelia,ou=people,{{ identite_base_dn }}"
+
+password_policy:
+  zxcvbn:
+    enabled: true
+    min_score: 3
+
+access_control:
+  # Tout ce qui n'est pas explicitement autorisé est refusé.
+  default_policy: deny
+  rules:
+    - domain: "auth.{{ domaine_public }}"
+      policy: bypass
+
+session:
+  cookies:
+    - domain: "{{ domaine_public }}"
+      authelia_url: "{{ identite_url_portail }}"
+      inactivity: "2 hours"
+      expiration: "12 hours"
+      remember_me: "1 month"
+  redis:
+    host: valkey
+    port: 6379
+
+regulation:
+  # Bannissement après 5 échecs en 10 minutes.
+  max_retries: 5
+  find_time: "10 minutes"
+  ban_time: "1 hour"
+
+storage:
+  local:
+    path: /config/data/db.sqlite3
+
+notifier:
+{% if identite_smtp is defined %}
+  smtp:
+    address: "submission://{{ identite_smtp.serveur }}:587"
+    username: "{{ identite_smtp.utilisateur }}"
+    sender: "Homelab <{{ identite_smtp.expediteur }}>"
+{% else %}
+  # En attendant la configuration SMTP (Proton Mail) : messages écrits dans un fichier.
+  filesystem:
+    filename: /config/data/notifications.txt
+{% endif %}
+
+identity_providers:
+  oidc:
+    jwks:
+      - key_id: principale
+        algorithm: RS256
+        use: sig
+        key: {{ '{{' }} secret "/run/secrets/authelia_oidc_jwks" | mindent 10 "|" | msquote {{ '}}' }}
+    authorization_policies:
+      famille:
+        default_policy: deny
+        rules:
+          - policy: two_factor
+            subject: ["group:famille", "group:admins"]
+      admins:
+        default_policy: deny
+        rules:
+          - policy: two_factor
+            subject: "group:admins"
+    clients:
+{% for c in identite_clients_oidc %}
+      - client_id: "{{ c.id }}"
+        client_name: "{{ c.nom }}"
+        client_secret: "{{ c.condensat }}"
+        public: false
+        authorization_policy: "{{ c.politique }}"
+        consent_mode: implicit
+        require_pkce: {{ c.pkce | default(false) | lower }}
+{% if c.pkce | default(false) %}
+        pkce_challenge_method: S256
+{% endif %}
+        redirect_uris:
+{% for u in c.redirections %}
+          - "{{ u }}"
+{% endfor %}
+        scopes: {{ c.scopes | default(['openid', 'profile', 'email', 'groups']) | to_json }}
+        token_endpoint_auth_method: "{{ c.auth_jeton | default('client_secret_post') }}"
+        userinfo_signed_response_alg: none
+{% endfor %}

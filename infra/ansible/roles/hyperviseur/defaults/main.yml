@@ -1,0 +1,8 @@
+# Datasets de données partagés avec les VM (virtiofs) : nom => taille d'enregistrement ZFS en octets.
+hyperviseur_datasets:
+  photos: "1048576"   # 1 Mo : gros fichiers
+  drive: "131072"    # 128 Ko : valeur par défaut
+  medias: "1048576"   # 1 Mo : gros fichiers
+hyperviseur_racine_donnees: rpool/donnees
+# Ordre de démarrage : VMID => réglage Proxmox (order, up = secondes d'attente avant la suivante).
+hyperviseur_demarrage: {}

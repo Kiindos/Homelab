@@ -1,0 +1,2 @@
+{{- .Page.Store.Set "mermaid" true -}}
+<figure class="schema"><pre class="mermaid">{{ .Inner | htmlEscape | safeHTML }}</pre></figure>

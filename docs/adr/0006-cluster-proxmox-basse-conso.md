@@ -2,11 +2,14 @@
 title: "ADR 0006 : Cluster Proxmox de PROD en mini-PC basse consommation"
 description: Trois ThinkCentre Tiny en cluster, avec ZFS local et réplication, dans un budget énergie de 40 €/mois.
 date: 2026-09-22
-status: accepté
+status: remplacé
 tags: [proxmox, cluster, énergie]
 ---
 
 # ADR 0006 : Cluster Proxmox de PROD en mini-PC basse consommation
+
+> **Décision remplacée.** Cette décision a été remplacée par l'[ADR 0010](0010-serveur-unique.md) le 26/09/2026. Elle est conservée pour l'historique.
+
 
 ## Contexte
 

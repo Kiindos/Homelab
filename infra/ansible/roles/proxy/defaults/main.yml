@@ -1,0 +1,9 @@
+proxy_dossier: /opt/piles/proxy
+proxy_image: traefik:v3.7.13
+proxy_email_acme: "admin@{{ domaine_public }}"
+# Seuls les postes du VPN d'administration passent (défense en profondeur : OPNsense filtre déjà).
+proxy_sources_autorisees: []
+# Services internes publiés : nom (sous-domaine de la zone interne) => URL de la cible.
+proxy_services: {}
+# Jeton Cloudflare (DNS Edit sur la zone publique) pour le certificat wildcard ; vide = certificat par défaut de Traefik.
+proxy_jeton_dns: "{{ cloudflare_dns_token | default('') }}"

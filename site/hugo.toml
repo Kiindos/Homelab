@@ -1,0 +1,41 @@
+# Site public (portfolio) du homelab : thème écrit sur mesure, contenu tiré de ../docs.
+# Construction : hugo --source site --destination <dossier>   (voir docs interne, rôle Ansible « web »)
+baseURL = "https://maximebertrand.net/"
+locale = "fr-FR"
+defaultContentLanguage = "fr"
+title = "Homelab — Maxime Bertrand"
+enableRobotsTXT = true
+disableKinds = ["rss"]
+
+[params]
+  description = "Un homelab géré comme une infrastructure de production : code, sécurité, documentation."
+  auteur = "Maxime Bertrand"
+  metier = "Administrateur systèmes et réseaux, orienté DevOps"
+  depot = "https://github.com/kiindos/Homelab"
+  mermaid_version = "12.0.0"
+  mermaid_sri = "sha384-xzghz1GQ5u9HCpVskeDPqMsdogD1yvuMQbEK53+wi+G70+6J1AG0L2cfi9PHjDWI"
+
+[taxonomies]
+  tag = "tags"
+
+[markup.goldmark.renderer]
+  unsafe = false
+[markup.goldmark.renderHooks.link]
+  # Les liens relatifs entre fichiers .md de docs/ deviennent des liens entre pages du site.
+  useEmbedded = "fallback"
+[markup.highlight]
+  noClasses = false
+  style = "github-dark"
+[markup.tableOfContents]
+  startLevel = 2
+  endLevel = 3
+
+# Le contenu vient de ../docs (source unique), complété par les pages propres au site (content/).
+[[module.mounts]]
+  source = "content"
+  target = "content"
+[[module.mounts]]
+  source = "../docs"
+  target = "content"
+  # Hors site : le mode d'emploi du dossier, les modèles et les sections encore vides.
+  files = ["! README.md", "! **/_template.md", "! runbooks/**", "! postmortems/**"]

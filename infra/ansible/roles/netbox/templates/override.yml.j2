@@ -1,0 +1,48 @@
+# {{ ansible_managed }}
+# Surcharge du docker-compose.yml de netbox-docker {{ netbox_version_docker }} : les variables ci-dessous
+# remplacent celles des fichiers env/*.env d'exemple (dont les mots de passe et le « pepper » publics).
+x-netbox-env: &netbox-env
+  API_TOKEN_PEPPER_1: "{{ netbox.api_token_pepper }}"
+  CORS_ORIGIN_ALLOW_ALL: "False"
+  DB_PASSWORD: "{{ netbox.db_password }}"
+  REDIS_PASSWORD: "{{ netbox.redis_password }}"
+  REDIS_CACHE_PASSWORD: "{{ netbox.redis_cache_password }}"
+  SECRET_KEY: "{{ netbox.secret_key }}"
+  # localhost : utilisé par le contrôle de santé du conteneur (health.sh).
+  ALLOWED_HOSTS: "netbox.{{ domaine_interne }} localhost"
+  LOGIN_REQUIRED: "true"
+  RELEASE_CHECK_URL: ""
+  # Compte administrateur local de secours (la connexion normale passe par Authelia).
+  SKIP_SUPERUSER: "false"
+  SUPERUSER_NAME: admin
+  SUPERUSER_EMAIL: "admin@{{ domaine_public }}"
+  SUPERUSER_PASSWORD: "{{ netbox.superuser_password }}"
+
+# Le fichier Compose officiel ne prévoit pas de redémarrage automatique : sans « restart », NetBox ne
+# repart pas après un redémarrage de la VM (constaté le 26/09/2026).
+services:
+  netbox:
+    image: {{ netbox_image }}
+    restart: unless-stopped
+    environment: *netbox-env
+    networks: [default, proxy]
+  netbox-worker:
+    image: {{ netbox_image }}
+    restart: unless-stopped
+    environment: *netbox-env
+  postgres:
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: "{{ netbox.db_password }}"
+  redis:
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: "{{ netbox.redis_password }}"
+  redis-cache:
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: "{{ netbox.redis_cache_password }}"
+
+networks:
+  proxy:
+    external: true

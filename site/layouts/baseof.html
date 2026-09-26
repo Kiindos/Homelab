@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }} · {{ site.Title }}{{ end }}</title>
+  <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ site.Params.description }}{{ end }}">
+  <meta name="author" content="{{ site.Params.auteur }}">
+  <meta property="og:title" content="{{ .Title }}">
+  <meta property="og:description" content="{{ with .Description }}{{ . }}{{ else }}{{ site.Params.description }}{{ end }}">
+  <meta property="og:type" content="{{ if .IsPage }}article{{ else }}website{{ end }}">
+  <meta name="color-scheme" content="dark light">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b1220'/%3E%3Cpath d='M8 22V10l8 7 8-7v12' stroke='%232dd4bf' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  {{ $css := resources.Get "css/site.css" | minify | fingerprint }}
+  <link rel="stylesheet" href="{{ $css.RelPermalink }}" integrity="{{ $css.Data.Integrity }}">
+  {{ $js := resources.Get "js/site.js" | minify | fingerprint }}
+  <script src="{{ $js.RelPermalink }}" integrity="{{ $js.Data.Integrity }}" defer></script>
+</head>
+<body class="{{ if .IsHome }}accueil{{ else }}interne{{ end }}">
+  <a class="evitement" href="#contenu">Aller au contenu</a>
+  {{ partial "entete.html" . }}
+  <main id="contenu">{{ block "main" . }}{{ end }}</main>
+  {{ partial "pied.html" . }}
+  {{ if .Store.Get "mermaid" }}
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@{{ site.Params.mermaid_version }}/dist/mermaid.min.js" integrity="{{ site.Params.mermaid_sri }}" crossorigin="anonymous" defer></script>
+  {{ end }}
+</body>
+</html>

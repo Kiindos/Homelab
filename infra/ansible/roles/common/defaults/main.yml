@@ -1,0 +1,14 @@
+# Connexion root par SSH : « no » sur les VM, « prohibit-password » sur l'hyperviseur (clé uniquement).
+common_ssh_root: "no"
+common_fuseau: Europe/Paris
+# Serveur NTP : la passerelle de la zone (le pare-feu).
+common_ntp: "{{ ansible_default_ipv4.gateway | default('') }}"
+common_paquets:
+  - curl
+  - vim
+  - htop
+  - jq
+  - ca-certificates
+  - unattended-upgrades
+  - apt-listchanges
+  - needrestart

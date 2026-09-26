@@ -2,11 +2,14 @@
 title: "ADR 0003 : OPNsense sur boîtier dédié, en DMZ derrière la Freebox Pop"
 description: La Freebox reste en routeur ; un mini-PC OPNsense dédié reçoit tout le trafic entrant en DMZ.
 date: 2026-09-22
-status: accepté
+status: remplacé
 tags: [réseau, opnsense, freebox]
 ---
 
 # ADR 0003 : OPNsense sur boîtier dédié, en DMZ derrière la Freebox Pop
+
+> **Décision remplacée.** Cette décision a été remplacée par l'[ADR 0010](0010-serveur-unique.md) le 26/09/2026. Elle est conservée pour l'historique.
+
 
 ## Contexte
 

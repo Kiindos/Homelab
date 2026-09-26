@@ -1,0 +1,11 @@
+waf_dossier: /opt/piles/waf
+waf_image: bunkerity/bunkerweb-all-in-one:1.6.15
+# Pays autorisés (codes ISO ou groupes BunkerWeb comme @EU) : tout le reste est refusé.
+waf_pays_autorises: "FR"
+# Sites publiés : nom (sous-domaine public) => cible et réglages propres.
+waf_sites: {}
+#  photos:
+#    cible: http://apps01.example:2283
+#    taille_max: 50G
+#    websocket: true
+#    greffons_crs: ""

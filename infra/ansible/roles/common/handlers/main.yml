@@ -1,4 +1,14 @@
-- name: Redémarrer SSH
+- name: Recharger SSH
   ansible.builtin.service:
     name: ssh
+    state: reloaded
+
+- name: Redémarrer timesyncd
+  ansible.builtin.service:
+    name: systemd-timesyncd
+    state: restarted
+
+- name: Redémarrer journald
+  ansible.builtin.service:
+    name: systemd-journald
     state: restarted

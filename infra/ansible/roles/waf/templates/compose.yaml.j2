@@ -1,0 +1,72 @@
+# {{ ansible_managed }}
+# WAF BunkerWeb (image tout-en-un) : TLS, règles OWASP (ModSecurity + CRS), filtrage par pays, limitation
+# de débit, bannissement des comportements suspects, CrowdSec. Seul point d'entrée depuis Internet.
+name: waf
+
+services:
+  bunkerweb:
+    image: {{ waf_image }}
+    restart: unless-stopped
+    ports:
+      - "80:8080/tcp"   # challenge Let's Encrypt et redirection vers HTTPS
+      - "443:8443/tcp"
+      - "443:8443/udp"  # HTTP/3
+    volumes:
+      - bw-donnees:/data
+    environment:
+      TZ: Europe/Paris
+      # Pas d'interface d'administration exposée : la configuration vient uniquement d'Ansible.
+      SERVICE_UI: "no"
+      # Pas d'envoi de données à l'éditeur.
+      USE_BUNKERNET: "no"
+      SEND_ANONYMOUS_REPORT: "no"
+      USE_CROWDSEC: "yes"
+
+      MULTISITE: "yes"
+      SERVER_NAME: "{{ waf_sites.keys() | map('regex_replace', '$', '.' ~ domaine_public) | join(' ') }}"
+      # Une requête pour un nom inconnu (scan sur l'IP) est rejetée sans réponse.
+      DISABLE_DEFAULT_SERVER: "yes"
+      DISABLE_DEFAULT_SERVER_STRICT_SNI: "yes"
+
+      # Certificats Let's Encrypt par challenge HTTP : aucun jeton DNS sur cette machine exposée.
+      AUTO_LETS_ENCRYPT: "yes"
+      AUTO_REDIRECT_HTTP_TO_HTTPS: "yes"
+      HTTP3: "yes"
+
+      # Réglages communs à tous les sites
+      WHITELIST_COUNTRY: "{{ waf_pays_autorises }}"
+      USE_MODSECURITY: "yes"
+      USE_MODSECURITY_CRS: "yes"
+      USE_BAD_BEHAVIOR: "yes"
+      USE_LIMIT_REQ: "yes"
+      USE_DNSBL: "no"
+      # Les applications gèrent leurs propres sessions et API : pas de défi anti-robot.
+      USE_ANTIBOT: "no"
+      STRICT_TRANSPORT_SECURITY: "max-age=31536000; includeSubDomains"
+      USE_REVERSE_PROXY: "yes"
+      REVERSE_PROXY_URL: "/"
+      REVERSE_PROXY_KEEPALIVE: "yes"
+      # Les applications renvoient des erreurs en JSON (API, applis mobiles) : ne pas les remplacer par des pages HTML.
+      REVERSE_PROXY_INTERCEPT_ERRORS: "no"
+
+      # Réglages propres à chaque site
+{% for nom, site in waf_sites.items() %}
+{% set fqdn = nom ~ '.' ~ domaine_public %}
+      {{ fqdn }}_REVERSE_PROXY_HOST: "{{ site.cible }}"
+      {{ fqdn }}_REVERSE_PROXY_WS: "{{ 'yes' if site.websocket | default(false) else 'no' }}"
+      {{ fqdn }}_MAX_CLIENT_SIZE: "{{ site.taille_max | default('10m') }}"
+      {{ fqdn }}_REVERSE_PROXY_MAX_CLIENT_SIZE: "{{ site.taille_max | default('10m') }}"
+{% if site.greffons_crs | default('') %}
+      {{ fqdn }}_USE_MODSECURITY_CRS_PLUGINS: "yes"
+      {{ fqdn }}_MODSECURITY_CRS_PLUGINS: "{{ site.greffons_crs }}"
+{% endif %}
+{% if site.limite_debit | default('') %}
+      {{ fqdn }}_LIMIT_REQ_RATE: "{{ site.limite_debit }}"
+{% endif %}
+{% for cle, valeur in (site.autres | default({})).items() %}
+      {{ fqdn }}_{{ cle }}: "{{ valeur }}"
+{% endfor %}
+{% endfor %}
+
+volumes:
+  bw-donnees:

@@ -1,0 +1,29 @@
+# {{ ansible_managed }}
+http:
+  middlewares:
+    vpn-uniquement:
+      ipAllowList:
+        sourceRange: {{ proxy_sources_autorisees | to_json }}
+    securite:
+      headers:
+        stsSeconds: 31536000
+        contentTypeNosniff: true
+        frameDeny: true
+        referrerPolicy: same-origin
+
+  routers:
+{% for nom, cible in proxy_services.items() %}
+    {{ nom }}:
+      rule: "Host(`{{ nom }}.{{ domaine_interne }}`)"
+      entryPoints: [websecure]
+      middlewares: [vpn-uniquement, securite]
+      service: {{ nom }}
+{% endfor %}
+
+  services:
+{% for nom, cible in proxy_services.items() %}
+    {{ nom }}:
+      loadBalancer:
+        servers:
+          - url: "{{ cible }}"
+{% endfor %}

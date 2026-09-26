@@ -1,0 +1,52 @@
+- name: Créer le dossier d'Immich
+  ansible.builtin.file:
+    path: "{{ immich_dossier }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+# Propriétaire : l'utilisateur postgres du conteneur (uid 999). Le rendre à root empêche Postgres d'y accéder
+# (incident du 26/09/2026, voir le journal d'exploitation).
+- name: Créer le dossier de la base (propriété de Postgres)
+  ansible.builtin.file:
+    path: "{{ immich_dossier }}/postgres"
+    state: directory
+    owner: "999"
+    group: "999"
+    mode: "0700"
+
+- name: Écrire les variables d'Immich (mot de passe de la base inclus)
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ immich_dossier }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Redémarrer Immich
+
+- name: Écrire la configuration d'Immich (connexion OIDC par Authelia)
+  ansible.builtin.template:
+    src: immich.json.j2
+    dest: "{{ immich_dossier }}/immich.json"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Redémarrer Immich
+
+- name: Déposer le fichier Compose d'Immich
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ immich_dossier }}/compose.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Démarrer Immich
+  community.docker.docker_compose_v2:
+    project_src: "{{ immich_dossier }}"
+    state: present
+    pull: missing
+    remove_orphans: true

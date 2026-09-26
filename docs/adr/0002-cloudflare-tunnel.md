@@ -20,7 +20,7 @@ Le site vitrine et la page de statut doivent être publics. L'infrastructure est
 
 ## Décision
 
-Cloudflare Tunnel (`cloudflared` en deux réplicas dans le VLAN 40), décrit en OpenTofu avec le provider officiel.
+Cloudflare Tunnel (`cloudflared` en deux réplicas dans la DMZ), décrit en OpenTofu avec le provider officiel, **pour le contenu public uniquement** (vitrine, page de statut). Les services personnels sont publiés autrement (voir l'[ADR 0008](0008-exposition-directe-waf.md)).
 
 ## Conséquences
 

@@ -1,0 +1,5 @@
+netbox_dossier: /opt/piles/netbox
+netbox_version_docker: "5.1.1"
+netbox_image: "docker.io/netboxcommunity/netbox:v4.7.1-5.1.1"
+netbox_url: "https://netbox.{{ domaine_interne }}"
+netbox_issuer: "https://auth.{{ domaine_public }}"

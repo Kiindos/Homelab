@@ -1,2 +1,18 @@
-proxmox_endpoint = "https://prd-pve-01.example.internal:8006/"
-# proxmox_api_token : export TF_VAR_proxmox_api_token="tofu@pve!homelab=xxxxxxxx"
+# Exemple générique : les vraies valeurs sont tenues dans le dépôt privé.
+# Secrets (jamais dans un fichier) : TF_VAR_proxmox_api_token, TF_VAR_etat_passphrase.
+proxmox_endpoint = "https://hv01.example.internal:8006/"
+image_debian     = "local:import/debian-13-genericcloud-amd64.qcow2"
+cles_ssh         = ["ssh-ed25519 AAAA... admin@poste"]
+
+vms = {
+  web01 = {
+    vmid        = 511
+    description = "Serveur web d'exemple"
+    vlan        = 51
+    ipv4        = "192.0.2.10/24"
+    passerelle  = "192.0.2.1"
+    coeurs      = 1
+    memoire_mo  = 1024
+    disque_go   = 8
+  }
+}

@@ -1,14 +1,15 @@
 ---
 title: Documentation du homelab
-description: Point d'entrée de la documentation publiée sur maximebertrand.eu
+description: Point d'entrée de la documentation publiée sur maximebertrand.net
 ---
 
 # Documentation
 
-Ce dossier est la **source unique** de la documentation affichée sur [maximebertrand.eu](https://maximebertrand.eu).
-À chaque push sur `main` qui modifie `docs/`, le workflow `notify-site.yml` demande au dépôt du site de se reconstruire.
+Ce dossier est la **source unique** de la documentation affichée sur [maximebertrand.net](https://maximebertrand.net).
+Le site est généré par Hugo depuis le dossier `site/` (thème sur mesure), qui monte ce dossier comme contenu
+(voir l'[ADR 0013](adr/0013-site-public-hugo.md)). La CI vérifie que le site se construit sans avertissement.
 
-## Contrat avec le site vitrine
+## Contrat avec le site
 
 Chaque fichier Markdown commence par un frontmatter YAML que le site exploite :
 

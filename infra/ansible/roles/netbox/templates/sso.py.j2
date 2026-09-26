@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+# Connexion par Authelia (OpenID Connect). Le compte « admin » local reste utilisable en secours.
+REMOTE_AUTH_ENABLED = True
+REMOTE_AUTH_BACKEND = "social_core.backends.open_id_connect.OpenIdConnectAuth"
+REMOTE_AUTH_AUTO_CREATE_USER = True
+SOCIAL_AUTH_OIDC_OIDC_ENDPOINT = "{{ netbox_issuer }}"
+SOCIAL_AUTH_OIDC_KEY = "netbox"
+SOCIAL_AUTH_OIDC_SECRET = "{{ oidc_clients.netbox.secret }}"
+SOCIAL_AUTH_OIDC_SCOPE = ["openid", "profile", "email", "groups"]
