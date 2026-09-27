@@ -2,6 +2,8 @@ waf_dossier: /opt/piles/waf
 waf_image: bunkerity/bunkerweb-all-in-one:1.6.15
 # Pays autorisés (codes ISO ou groupes BunkerWeb comme @EU) : tout le reste est refusé.
 waf_pays_autorises: "FR"
+# Codes HTTP comptés comme « comportement suspect » (10 en 60 s = bannissement de 24 h).
+waf_codes_suspects: "400 403 405 429 444"
 # Sites publiés : nom (sous-domaine public) => cible et réglages propres.
 waf_sites: {}
 #  photos:
@@ -9,3 +11,5 @@ waf_sites: {}
 #    taille_max: 50G
 #    websocket: true
 #    greffons_crs: ""
+#    methodes: "GET|POST|HEAD"            # méthodes HTTP autorisées (BunkerWeb : GET|POST|HEAD par défaut)
+#    exclusions_modsec: []                # règles SecRule ajoutées avant le CRS (faux positifs)

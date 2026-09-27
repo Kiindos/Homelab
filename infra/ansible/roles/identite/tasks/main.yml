@@ -32,6 +32,8 @@
     - { nom: authelia_ldap, valeur: "{{ authelia.ldap_bind_password }}" }
     - { nom: authelia_oidc_hmac, valeur: "{{ authelia.oidc_hmac_secret }}" }
     - { nom: authelia_oidc_jwks, valeur: "{{ authelia.oidc_jwks_key }}" }
+    - { nom: authelia_smtp, valeur: "{{ authelia.smtp_password | default('') }}", si: "{{ identite_smtp is defined }}" }
+  when: item.si | default(true) | bool
   loop_control:
     label: "{{ item.nom }}"
   no_log: true

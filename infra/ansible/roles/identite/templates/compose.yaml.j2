@@ -44,13 +44,16 @@ services:
       AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE: /run/secrets/authelia_storage
       AUTHELIA_AUTHENTICATION_BACKEND_LDAP_PASSWORD_FILE: /run/secrets/authelia_ldap
       AUTHELIA_IDENTITY_PROVIDERS_OIDC_HMAC_SECRET_FILE: /run/secrets/authelia_oidc_hmac
+{% if identite_smtp is defined %}
+      AUTHELIA_NOTIFIER_SMTP_PASSWORD_FILE: /run/secrets/authelia_smtp
+{% endif %}
     ports:
       # Portail, joignable uniquement depuis le WAF (filtré par OPNsense).
       - "9091:9091"
     volumes:
       - ./authelia/configuration.yml:/config/configuration.yml:ro
       - authelia:/config/data
-    secrets: [authelia_reset_jwt, authelia_session, authelia_storage, authelia_ldap, authelia_oidc_hmac, authelia_oidc_jwks]
+    secrets: [authelia_reset_jwt, authelia_session, authelia_storage, authelia_ldap, authelia_oidc_hmac, authelia_oidc_jwks{% if identite_smtp is defined %}, authelia_smtp{% endif %}]
     security_opt: ["no-new-privileges:true"]
 
   valkey:
@@ -62,7 +65,7 @@ services:
     security_opt: ["no-new-privileges:true"]
 
 secrets:
-{% for s in ['lldap_jwt_secret', 'lldap_admin_password', 'ldaps.crt', 'ldaps.key', 'authelia_reset_jwt', 'authelia_session', 'authelia_storage', 'authelia_ldap', 'authelia_oidc_hmac', 'authelia_oidc_jwks'] %}
+{% for s in ['lldap_jwt_secret', 'lldap_admin_password', 'ldaps.crt', 'ldaps.key', 'authelia_reset_jwt', 'authelia_session', 'authelia_storage', 'authelia_ldap', 'authelia_oidc_hmac', 'authelia_oidc_jwks'] + (['authelia_smtp'] if identite_smtp is defined else []) %}
   {{ s }}:
     file: ./secrets/{{ s }}
 {% endfor %}

@@ -51,6 +51,15 @@
   delay: 10
   changed_when: false
 
+# Vu de l'intérieur, auth.<domaine> pointe vers le WAF (adresse privée) : Nextcloud refuse par défaut toute
+# connexion vers une adresse privée (protection contre les requêtes forgées, SSRF). Le pare-feu limite déjà ce que
+# apps01 peut joindre en interne (WAF et LDAPS uniquement).
+- name: Autoriser Nextcloud à joindre le portail d'authentification interne
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u www-data app php occ config:system:set allow_local_remote_servers --value=true --type=boolean
+    chdir: "{{ nextcloud_dossier }}"
+  changed_when: false
+
 - name: Désactiver les applications inutiles
   ansible.builtin.command:
     cmd: "docker compose exec -T -u www-data app php occ app:disable {{ item }}"

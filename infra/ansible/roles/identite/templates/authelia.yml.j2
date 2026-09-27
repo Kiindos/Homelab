@@ -66,6 +66,7 @@ notifier:
     address: "submission://{{ identite_smtp.serveur }}:587"
     username: "{{ identite_smtp.utilisateur }}"
     sender: "Homelab <{{ identite_smtp.expediteur }}>"
+    # Mot de passe (jeton SMTP) : fichier secret, variable AUTHELIA_NOTIFIER_SMTP_PASSWORD_FILE du Compose.
 {% else %}
   # En attendant la configuration SMTP (Proton Mail) : messages écrits dans un fichier.
   filesystem:

@@ -127,3 +127,21 @@
     label: "VM {{ item.item.key }} : {{ item.item.value }}"
   when: "('startup: ' ~ item.item.value) not in item.stdout"
   changed_when: true
+
+# iDRAC : l'IPMI sur le réseau (UDP 623) permet à tout appareil du réseau de la maison de récupérer l'empreinte
+# du mot de passe d'un compte (faiblesse du protocole RAKP). L'interface web et la console virtuelle suffisent.
+- name: Installer ipmitool (administration de l'iDRAC par l'interface interne du serveur)
+  ansible.builtin.apt:
+    name: ipmitool
+    state: present
+
+- name: Lire l'état de l'IPMI sur le réseau
+  ansible.builtin.command: ipmitool channel info 1
+  register: hyperviseur_ipmi
+  changed_when: false
+  check_mode: false
+
+- name: Désactiver l'IPMI sur le réseau
+  ansible.builtin.command: ipmitool lan set 1 access off
+  when: "'Access Mode         : disabled' not in hyperviseur_ipmi.stdout"
+  changed_when: true

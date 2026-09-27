@@ -38,6 +38,9 @@ services:
       USE_MODSECURITY: "yes"
       USE_MODSECURITY_CRS: "yes"
       USE_BAD_BEHAVIOR: "yes"
+      # 401 (session expirée, visiteur non connecté) et 404 (image absente…) sont normaux pour les applications :
+      # seuls les refus du WAF (403) et les requêtes invalides comptent pour le bannissement.
+      BAD_BEHAVIOR_STATUS_CODES: "{{ waf_codes_suspects }}"
       USE_LIMIT_REQ: "yes"
       USE_DNSBL: "no"
       # Les applications gèrent leurs propres sessions et API : pas de défi anti-robot.
@@ -62,6 +65,13 @@ services:
 {% endif %}
 {% if site.limite_debit | default('') %}
       {{ fqdn }}_LIMIT_REQ_RATE: "{{ site.limite_debit }}"
+{% endif %}
+{% if site.methodes | default('') %}
+      {{ fqdn }}_ALLOWED_METHODS: "{{ site.methodes }}"
+{% endif %}
+{% if site.exclusions_modsec | default([]) %}
+      # Exclusions ciblées de règles OWASP (faux positifs constatés), appliquées avant le chargement du CRS.
+      {{ fqdn }}_CUSTOM_CONF_MODSEC_CRS_exclusions: {{ site.exclusions_modsec | join('\n') | to_json }}
 {% endif %}
 {% for cle, valeur in (site.autres | default({})).items() %}
       {{ fqdn }}_{{ cle }}: "{{ valeur }}"
