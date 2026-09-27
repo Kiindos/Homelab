@@ -74,6 +74,20 @@
     mode: "0644"
   notify: Redémarrer la supervision
 
+- name: Lire les autorités de certification du système
+  ansible.builtin.slurp:
+    src: /etc/ssl/certs/ca-certificates.crt
+  register: supervision_autorites_systeme
+
+- name: Déposer les autorités des sondes (système + autorité interne)
+  ansible.builtin.copy:
+    content: "{{ supervision_autorites_systeme.content | b64decode }}{{ supervision_ca_interne }}"
+    dest: "{{ supervision_dossier }}/autorites.pem"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Redémarrer la supervision
+
 - name: Déposer les configurations
   ansible.builtin.template:
     src: "{{ item.src }}"

@@ -23,14 +23,14 @@ tags: [architecture]
 | Identité | LLDAP (annuaire), Authelia (SSO et double authentification) |
 | Provisionnement | OpenTofu (bpg/proxmox, opnsense, cloudflare), Ansible, lancé aussi depuis Semaphore UI |
 | Applications | Docker Compose dans des VM dédiées par zone ; Kubernetes (k3s, Argo CD) pour l'environnement de test |
-| Secrets | SOPS + age |
+| Secrets | Coffre OpenBao (SSO, AppRole, audit ; en test), SOPS + age pour le démarrage |
 | Observabilité | Prometheus, Alertmanager, NOC sur mesure, Grafana (interne), ntfy (alertes sur téléphone) ; Loki plus tard |
 | Services d'infra | NetBox (source de vérité), Semaphore UI (lancement des playbooks) |
 
 Les choix structurants sont expliqués dans les ADR, en particulier l'[ADR 0010](../adr/0010-serveur-unique.md)
 (un seul serveur), l'[ADR 0008](../adr/0008-exposition-directe-waf.md) (publication des services),
-l'[ADR 0014](../adr/0014-supervision-noc.md) (supervision) et l'[ADR 0015](../adr/0015-semaphore-ansible.md)
-(Semaphore).
+l'[ADR 0014](../adr/0014-supervision-noc.md) (supervision), l'[ADR 0015](../adr/0015-semaphore-ansible.md)
+(Semaphore) et l'[ADR 0016](../adr/0016-coffre-openbao.md) (coffre à secrets).
 
 ## Ce qui est exposé
 

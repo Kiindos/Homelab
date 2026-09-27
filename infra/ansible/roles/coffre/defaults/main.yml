@@ -1,0 +1,21 @@
+# Coffre à secrets OpenBao (fork libre de HashiCorp Vault), installé depuis le paquet officiel.
+coffre_version: "2.6.3"
+coffre_sha256: 5fc11b4aa2bd51eccfda8a694131d88410d3f3d60420aadb2d8c31558db03acd
+coffre_nom: "vault.{{ domaine_interne }}"
+coffre_port: 8200
+
+# Descellement automatique par clé statique : la clé reste sur l'hyperviseur, partagée en lecture seule (virtiofs)
+# et remise par systemd au seul service, en mémoire. Une sauvegarde du disque de la VM ne suffit pas à l'ouvrir.
+coffre_cle_montage: /mnt/coffre-cle
+coffre_cle_id: descellement-1
+coffre_hyperviseur: "{{ groups['hyperviseurs'][0] }}"
+coffre_cle_hyperviseur: /rpool/coffre/descellement-1.key
+
+# Certificat signé par l'autorité interne du homelab (clé privée générée sur la VM, jamais copiée).
+coffre_ca_certificat: "{{ ca_interne.certificat }}"
+coffre_ca_cle: "{{ ca_interne.cle }}"
+coffre_certificat_jours: 825
+
+# Résultat de l'initialisation (clés de récupération, jeton racine, copie de la clé de descellement) : écrit une
+# seule fois sur la machine qui lance Ansible, droits 600, à ranger hors ligne puis à supprimer.
+coffre_fichier_initialisation: "{{ lookup('env', 'HOME') }}/coffre-initialisation.json"

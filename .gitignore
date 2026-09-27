@@ -29,9 +29,8 @@ secrets/*
 *.swp
 infra/ansible/inventory/hosts.yml
 
-# Contexte Claude Code (détails internes, jamais versionnés dans ce dépôt public)
-CLAUDE.md
-CLAUDE.local.md
+# Contexte local Claude Code (détails internes, jamais versionné)
+CLAUDE .md
 # Permissions Claude Code propres au poste (jamais versionnées)
 .claude/settings.local.json
 

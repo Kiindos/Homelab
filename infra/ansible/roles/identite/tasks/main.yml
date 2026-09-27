@@ -49,10 +49,39 @@
   no_log: true
   notify: Redémarrer la pile identité
 
-- name: Déposer la configuration d'Authelia
+# Une configuration refusée empêcherait Authelia de redémarrer (plus aucun SSO) : elle est d'abord validée par
+# Authelia lui-même, dans le conteneur en service, avant de remplacer celle en production.
+- name: Préparer la configuration d'Authelia
   ansible.builtin.template:
     src: authelia.yml.j2
+    dest: "{{ identite_dossier }}/authelia/configuration.candidate.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Vérifier si Authelia est en service
+  ansible.builtin.command: docker ps --quiet --filter name=identite-authelia-1 --filter status=running
+  register: identite_authelia_actif
+  changed_when: false
+  check_mode: false
+
+- name: Valider la configuration candidate avec Authelia
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail;
+      docker exec -i identite-authelia-1 sh -c
+      'cat > /tmp/candidate.yml && authelia validate-config --config /tmp/candidate.yml; code=$?; rm -f /tmp/candidate.yml; exit $code'
+      < {{ identite_dossier }}/authelia/configuration.candidate.yml
+    executable: /bin/bash
+  changed_when: false
+  check_mode: false
+  when: identite_authelia_actif.stdout | length > 0
+
+- name: Appliquer la configuration d'Authelia
+  ansible.builtin.copy:
+    src: "{{ identite_dossier }}/authelia/configuration.candidate.yml"
     dest: "{{ identite_dossier }}/authelia/configuration.yml"
+    remote_src: true
     owner: root
     group: root
     mode: "0644"

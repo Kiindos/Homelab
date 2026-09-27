@@ -95,5 +95,7 @@
 - name: Appliquer les changements de configuration avant le provisionnement
   ansible.builtin.meta: flush_handlers
 
+# Le provisionnement passe par la CLI et l'API de Semaphore : pas de mode test possible (--check).
 - name: Provisionner le projet (utilisateur, dépôts, inventaire, modèles)
   ansible.builtin.include_tasks: projet.yml
+  when: not ansible_check_mode

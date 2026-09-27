@@ -123,7 +123,14 @@
 
 - name: Déclarer la correspondance virtiofs de la clé du coffre
   ansible.builtin.command:
-    argv: [pvesh, create, /cluster/mapping/dir, --id, "{{ hyperviseur_coffre.correspondance }}", --map, "node={{ inventory_hostname }},path=/{{ hyperviseur_coffre.dataset }}"]
+    argv:
+      - pvesh
+      - create
+      - /cluster/mapping/dir
+      - --id
+      - "{{ hyperviseur_coffre.correspondance }}"
+      - --map
+      - "node={{ inventory_hostname }},path=/{{ hyperviseur_coffre.dataset }}"
   when:
     - hyperviseur_coffre.dataset is defined
     - hyperviseur_coffre.correspondance not in (hyperviseur_correspondances.stdout | from_json | map(attribute='id') | list)

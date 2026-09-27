@@ -1,0 +1,8 @@
+# {{ ansible_managed }}
+[Unit]
+# La clé de descellement vient du partage de l'hyperviseur : attendre qu'il soit monté.
+RequiresMountsFor={{ coffre_cle_montage }}
+
+[Service]
+# systemd lit la clé (root) et la remet au seul service, en mémoire (/run/credentials/openbao.service).
+LoadCredential=descellement:{{ coffre_cle_montage }}/{{ coffre_cle_id }}.key

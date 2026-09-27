@@ -8,6 +8,9 @@ modules:
       follow_redirects: true
       fail_if_not_ssl: true
       valid_status_codes: []   # 2xx
+      tls_config:
+        # Autorités du système + autorité interne du homelab (coffre OpenBao).
+        ca_file: /etc/blackbox/autorites.pem
   icmp:
     prober: icmp
     timeout: 5s

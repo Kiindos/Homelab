@@ -1,0 +1,216 @@
+- name: Installer les dépendances (génération de clé et de demande de certificat)
+  ansible.builtin.apt:
+    name: [python3-cryptography]
+    state: present
+
+# --- Paquet officiel -----------------------------------------------------------------------------
+
+- name: Télécharger OpenBao (empreinte vérifiée)
+  ansible.builtin.get_url:
+    url: "https://github.com/openbao/openbao/releases/download/v{{ coffre_version }}/openbao_{{ coffre_version }}_linux_amd64.deb"
+    dest: "/var/cache/openbao_{{ coffre_version }}_linux_amd64.deb"
+    checksum: "sha256:{{ coffre_sha256 }}"
+    mode: "0644"
+
+- name: Installer OpenBao
+  ansible.builtin.apt:
+    deb: "/var/cache/openbao_{{ coffre_version }}_linux_amd64.deb"
+  notify: Redémarrer le coffre
+
+# --- Certificat (autorité interne) -----------------------------------------------------------------
+
+- name: Créer le dossier des certificats du coffre
+  ansible.builtin.file:
+    path: /etc/openbao/tls
+    state: directory
+    owner: root
+    group: openbao
+    mode: "0750"
+
+- name: Générer la clé privée TLS du coffre (sur la VM, jamais copiée)
+  community.crypto.openssl_privatekey:
+    path: /etc/openbao/tls/coffre.key
+    type: ECC
+    curve: secp384r1
+    owner: root
+    group: openbao
+    mode: "0640"
+
+- name: Déposer l'autorité interne (vérification locale par la CLI)
+  ansible.builtin.copy:
+    content: "{{ coffre_ca_certificat }}"
+    dest: /etc/openbao/tls/ca.crt
+    owner: root
+    group: openbao
+    mode: "0644"
+
+- name: Définir les noms du certificat
+  ansible.builtin.set_fact:
+    coffre_noms_certificat: >-
+      {{ ['DNS:' ~ coffre_nom, 'DNS:' ~ inventory_hostname ~ '.' ~ domaine_interne, 'DNS:localhost', 'IP:127.0.0.1']
+         + (['IP:' ~ adresse_ipv4] if adresse_ipv4 is defined else []) }}
+
+- name: Lire le certificat actuel
+  community.crypto.x509_certificate_info:
+    path: /etc/openbao/tls/coffre.crt
+    valid_at:
+      dans_30_jours: "+30d"
+  register: coffre_certificat
+  failed_when: false
+
+- name: Préparer la demande de certificat
+  community.crypto.openssl_csr_pipe:
+    privatekey_path: /etc/openbao/tls/coffre.key
+    common_name: "{{ coffre_nom }}"
+    subject_alt_name: "{{ coffre_noms_certificat }}"
+    key_usage: [digitalSignature, keyEncipherment]
+    extended_key_usage: [serverAuth]
+  register: coffre_demande
+  # Nouveau certificat : absent, expirant dans moins de 30 jours, ou noms modifiés.
+  when: >-
+    coffre_certificat.valid_at is not defined or not coffre_certificat.valid_at.dans_30_jours
+    or (coffre_certificat.subject_alt_name | default([]) | sort) != (coffre_noms_certificat | sort)
+
+- name: Signer le certificat avec l'autorité interne (sur la machine qui lance Ansible)
+  community.crypto.x509_certificate_pipe:
+    csr_content: "{{ coffre_demande.csr }}"
+    provider: ownca
+    ownca_content: "{{ coffre_ca_certificat }}"
+    ownca_privatekey_content: "{{ coffre_ca_cle }}"
+    ownca_not_after: "+{{ coffre_certificat_jours }}d"
+  delegate_to: localhost
+  become: false
+  register: coffre_signature
+  when: coffre_demande is not skipped
+  no_log: true
+
+- name: Déposer le certificat (suivi de l'autorité interne)
+  ansible.builtin.copy:
+    content: "{{ coffre_signature.certificate }}{{ coffre_ca_certificat }}"
+    dest: /etc/openbao/tls/coffre.crt
+    owner: root
+    group: openbao
+    mode: "0644"
+  when: coffre_signature is not skipped
+  notify: Redémarrer le coffre
+
+# --- Configuration et service ----------------------------------------------------------------------
+
+- name: Déposer la configuration du coffre
+  ansible.builtin.template:
+    src: openbao.hcl.j2
+    dest: /etc/openbao/openbao.hcl
+    owner: root
+    group: openbao
+    mode: "0640"
+  notify: Redémarrer le coffre
+
+- name: Créer le dossier des réglages systemd du coffre
+  ansible.builtin.file:
+    path: /etc/systemd/system/openbao.service.d
+    state: directory
+    mode: "0755"
+
+- name: Remettre la clé de descellement au service (systemd, en mémoire)
+  ansible.builtin.template:
+    src: openbao-homelab.conf.j2
+    dest: /etc/systemd/system/openbao.service.d/homelab.conf
+    mode: "0644"
+  notify: Redémarrer le coffre
+
+- name: Créer le dossier du journal d'audit
+  ansible.builtin.file:
+    path: /var/log/openbao
+    state: directory
+    owner: openbao
+    group: openbao
+    mode: "0750"
+
+- name: Faire tourner le journal d'audit (OpenBao rouvre le fichier sur SIGHUP)
+  ansible.builtin.copy:
+    dest: /etc/logrotate.d/openbao
+    content: |
+      # Géré par Ansible (rôle coffre)
+      /var/log/openbao/*.log {
+          daily
+          rotate 30
+          compress
+          delaycompress
+          missingok
+          notifempty
+          postrotate
+              systemctl reload openbao >/dev/null 2>&1 || true
+          endscript
+      }
+    mode: "0644"
+
+- name: Démarrer le coffre
+  ansible.builtin.systemd_service:
+    name: openbao
+    state: started
+    enabled: true
+    daemon_reload: true
+
+- name: Appliquer les changements avant l'initialisation
+  ansible.builtin.meta: flush_handlers
+
+- name: Attendre que le coffre réponde
+  ansible.builtin.uri:
+    url: "https://{{ coffre_nom }}:{{ coffre_port }}/v1/sys/init"
+    ca_path: /etc/openbao/tls/ca.crt
+  register: coffre_etat
+  until: coffre_etat.status == 200
+  retries: 20
+  delay: 3
+  check_mode: false   # lecture seule
+
+# --- Initialisation (une seule fois) ---------------------------------------------------------------
+
+- name: Initialiser le coffre (clés de récupération 3 sur 5)
+  ansible.builtin.uri:
+    url: "https://{{ coffre_nom }}:{{ coffre_port }}/v1/sys/init"
+    method: PUT
+    ca_path: /etc/openbao/tls/ca.crt
+    body_format: json
+    body: { recovery_shares: 5, recovery_threshold: 3 }
+  register: coffre_initialisation
+  when: not coffre_etat.json.initialized
+  no_log: true
+
+- name: Lire la clé de descellement sur l'hyperviseur (copie hors ligne)
+  ansible.builtin.slurp:
+    src: "{{ coffre_cle_hyperviseur }}"
+  delegate_to: "{{ coffre_hyperviseur }}"
+  become: false
+  register: coffre_cle_descellement
+  when: coffre_initialisation is not skipped
+  no_log: true
+
+- name: Écrire le résultat de l'initialisation sur la machine qui lance Ansible (600, à ranger hors ligne)
+  ansible.builtin.copy:
+    dest: "{{ coffre_fichier_initialisation }}"
+    content: "{{ {
+      'date': now(utc=true).isoformat(),
+      'consignes': 'À ranger hors ligne (gestionnaire de mots de passe + enveloppe scellée), puis supprimer ce fichier. '
+                   ~ 'Sans la clé de descellement, les données du coffre sont irrécupérables.',
+      'cle_descellement_base64': coffre_cle_descellement.content,
+      'cles_recuperation_base64': coffre_initialisation.json.recovery_keys_base64,
+      'seuil_recuperation': 3,
+      'jeton_racine': coffre_initialisation.json.root_token,
+    } | to_nice_json }}"
+    mode: "0600"
+    force: false
+  delegate_to: localhost
+  become: false
+  when: coffre_initialisation is not skipped
+  no_log: true
+
+- name: Vérifier que le coffre est descellé
+  ansible.builtin.uri:
+    url: "https://{{ coffre_nom }}:{{ coffre_port }}/v1/sys/seal-status"
+    ca_path: /etc/openbao/tls/ca.crt
+  register: coffre_scellement
+  until: not coffre_scellement.json.sealed
+  retries: 10
+  delay: 3
+  check_mode: false   # lecture seule

@@ -222,6 +222,46 @@
     headers: "{{ semaphore_entetes }}"
   register: semaphore_environnements
 
+- name: Lire l'environnement (variables et noms des secrets ; les valeurs ne sont jamais renvoyées)
+  ansible.builtin.uri:
+    url: >-
+      {{ semaphore_api }}/project/{{ semaphore_pid }}/environment/{{
+      (semaphore_environnements.json | selectattr('name', 'equalto', semaphore_projet.environnement.nom) | first).id }}
+    headers: "{{ semaphore_entetes }}"
+  register: semaphore_environnement
+
+# Ajoute les secrets manquants, retire ceux qui ne sont plus déclarés, corrige les variables. Un secret existant
+# n'est pas réécrit (rotation : le retirer de l'inventaire, relancer, puis le remettre).
+- name: Mettre l'environnement en conformité
+  vars:
+    actuel: "{{ semaphore_environnement.json }}"
+    voulus: "{{ semaphore_projet.environnement.secrets_env | default({}) }}"
+    noms_actuels: "{{ actuel.secrets | default([]) | map(attribute='name') | list }}"
+    a_creer: >-
+      {{ voulus | dict2items(key_name='name', value_name='secret')
+         | rejectattr('name', 'in', noms_actuels)
+         | map('combine', {'type': 'env', 'operation': 'create'}) | list }}
+    a_retirer: >-
+      {{ actuel.secrets | default([]) | rejectattr('name', 'in', voulus.keys() | list)
+         | map('combine', {'operation': 'delete'}) | list }}
+    variables: "{{ semaphore_projet.environnement.variables | default({}) }}"
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/environment/{{ actuel.id }}"
+    method: PUT
+    headers: "{{ semaphore_entetes }}"
+    body_format: json
+    body:
+      id: "{{ actuel.id }}"
+      name: "{{ actuel.name }}"
+      project_id: "{{ semaphore_pid | int }}"
+      json: "{{ variables | to_json }}"
+      env: "{{ actuel.env | default('{}', true) }}"
+      secrets: "{{ a_creer + a_retirer }}"
+    status_code: [200, 204]
+  when: (a_creer + a_retirer) | length > 0 or (actuel.json | from_json) != variables
+  changed_when: true
+  no_log: true
+
 # --- Modèles de tâches ------------------------------------------------------------------------------
 
 - name: Lister les modèles de tâches

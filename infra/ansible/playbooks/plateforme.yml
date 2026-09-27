@@ -1,22 +1,20 @@
 # Plateforme applicative : une VM par zone (voir docs/adr/0010 et 0011).
 # L'inventaire et les secrets (chiffrés par SOPS) sont tenus dans le dépôt privé :
-#   ansible-playbook -i <inventaire> playbooks/plateforme.yml -e fichier_secrets=<secrets.enc.yaml>
+#   ansible-playbook -i <inventaire> playbooks/plateforme.yml [-e secrets_source=coffre]
 
-- name: Charger les secrets chiffrés
+- name: Charger les secrets (SOPS ou coffre OpenBao, selon secrets_source)
   hosts: plateforme
   gather_facts: false
-  tasks:
-    - name: Déchiffrer les secrets de la plateforme (SOPS + age, sur le poste d'admin)
-      community.sops.load_vars:
-        file: "{{ fichier_secrets }}"
-      no_log: true
+  roles:
+    - secrets
 
 - name: Socle commun (durcissement, mises à jour, Docker, agent de supervision)
   hosts: plateforme
   become: true
   roles:
     - common
-    - docker
+    - role: docker
+      when: docker_active | default(true)
     - agent_supervision
 
 - name: Identité (LLDAP, Authelia)
@@ -24,6 +22,13 @@
   become: true
   roles:
     - identite
+
+- name: Coffre à secrets (OpenBao)
+  hosts: vault01
+  become: true
+  roles:
+    - montages
+    - coffre
 
 - name: WAF (BunkerWeb)
   hosts: waf01

@@ -37,6 +37,7 @@ services:
     command: ["--config.file=/etc/blackbox/blackbox.yml"]
     volumes:
       - ./blackbox.yml:/etc/blackbox/blackbox.yml:ro
+      - ./autorites.pem:/etc/blackbox/autorites.pem:ro
     cap_add: [NET_RAW]   # sondes ping (ICMP)
     security_opt: ["no-new-privileges:true"]
 

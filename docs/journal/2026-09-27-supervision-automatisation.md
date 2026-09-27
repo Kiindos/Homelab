@@ -32,11 +32,21 @@ Semaphore UI lance désormais les playbooks Ansible depuis le navigateur, avec h
 ([ADR 0015](../adr/0015-semaphore-ansible.md)). Un détail a demandé de l'attention : l'image officielle désactive la
 vérification de l'identité des serveurs SSH. Elle est rétablie, et testée : un serveur inconnu est refusé.
 
+## Un coffre pour les secrets
+
+Dernier chantier de la journée : un coffre **OpenBao** ([ADR 0016](../adr/0016-coffre-openbao.md)), en test. On s'y
+connecte par le SSO, Semaphore n'y lit que ce dont il a besoin et depuis sa seule adresse, chaque accès est tracé.
+Il se descelle seul au démarrage grâce à une clé qui ne quitte pas l'hyperviseur. Avant de s'y fier, un déploiement
+complet « à blanc » a été rejoué en lisant les secrets dans le coffre plutôt que dans le fichier chiffré : aucune
+configuration n'aurait changé.
+
 ## Ce que la journée a appris
 
 - **Tester l'échec, pas seulement le succès.** La vérification des clés SSH a été validée en présentant
   volontairement une identité inconnue.
 - **Une coupure réseau ne doit pas figer un déploiement.** Une reconnexion du VPN a laissé Ansible bloqué ;
   les connexions vérifient maintenant qu'elles sont vivantes.
+- **Une valeur par défaut peut trahir.** Une règle OWASP a pris l'adresse de retour de la connexion en ligne de
+  commande (`http://localhost`) pour une attaque SSRF : exclusion ciblée sur ce seul paramètre.
 - **Un nom mal résolu se cache bien.** La supervision ne se voyait pas elle-même : le nom de la machine pointait
   vers l'adresse de boucle locale. Corrigé à la source, pour toutes les machines.

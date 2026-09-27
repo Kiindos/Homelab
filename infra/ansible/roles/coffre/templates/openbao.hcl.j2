@@ -1,0 +1,35 @@
+# {{ ansible_managed }}
+ui            = true
+# Stockage intégré (raft) : verrouillage mémoire déconseillé ; le service interdit déjà l'échange (MemorySwapMax=0).
+disable_mlock = true
+api_addr      = "https://{{ coffre_nom }}:{{ coffre_port }}"
+cluster_addr  = "https://127.0.0.1:8201"
+
+storage "raft" {
+  path    = "/opt/openbao/data"
+  node_id = "{{ inventory_hostname }}"
+}
+
+listener "tcp" {
+  address         = "0.0.0.0:{{ coffre_port }}"
+  cluster_address = "127.0.0.1:8201"   # nœud unique
+  tls_cert_file   = "/etc/openbao/tls/coffre.crt"
+  tls_key_file    = "/etc/openbao/tls/coffre.key"
+  tls_min_version = "tls13"
+}
+
+# Descellement automatique : clé fournie par systemd (LoadCredential), lue sur l'hyperviseur.
+seal "static" {
+  current_key_id = "{{ coffre_cle_id }}"
+  current_key    = "file:///run/credentials/openbao.service/descellement"
+}
+
+# Journal d'audit déclaré ici plutôt que par l'API : personne ne peut le désactiver sans accès à la VM.
+# Chaque requête est tracée ; les valeurs des secrets y sont remplacées par une empreinte (HMAC).
+audit "file" "fichier" {
+  description = "Journal d'audit du coffre"
+  options {
+    file_path = "/var/log/openbao/audit.log"
+    mode      = "0600"
+  }
+}
