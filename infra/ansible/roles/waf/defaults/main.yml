@@ -13,6 +13,10 @@ waf_sites: {}
 #    greffons_crs: ""
 #    methodes: "GET|POST|HEAD"            # méthodes HTTP autorisées (BunkerWeb : GET|POST|HEAD par défaut)
 #    exclusions_modsec: []                # règles SecRule ajoutées avant le CRS (faux positifs)
+#    charte: portail.css                  # feuille de style de files/charte/ injectée dans les pages (habillage)
+#    sso:                                 # connexion obligatoire par Authelia (auth_request)
+#      portail: https://auth.example
+#      verification: http://auth01.example:9091/api/authz/auth-request
 
 # Pages d'erreur personnalisées (générées depuis templates/erreur.html.j2) : code => textes.
 waf_erreurs:

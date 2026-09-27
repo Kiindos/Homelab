@@ -25,6 +25,14 @@
   loop_control:
     loop_var: code
 
+- name: Déposer les fichiers de la charte (habillage du portail d'authentification)
+  ansible.builtin.copy:
+    src: charte/
+    dest: "{{ waf_dossier }}/charte/"
+    owner: root
+    group: root
+    mode: "u=rwX,go=rX"
+
 - name: Déposer le fichier Compose de BunkerWeb
   ansible.builtin.template:
     src: compose.yaml.j2

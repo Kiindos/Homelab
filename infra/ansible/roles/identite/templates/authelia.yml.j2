@@ -38,6 +38,16 @@ access_control:
   rules:
     - domain: "auth.{{ domaine_public }}"
       policy: bypass
+{% for regle in identite_regles_acces %}
+    - domain: {{ regle.domaine | to_json }}
+{% if regle.ressources is defined %}
+      resources: {{ regle.ressources | to_json }}
+{% endif %}
+      policy: {{ regle.politique }}
+{% if regle.sujets is defined %}
+      subject: {{ regle.sujets | to_json }}
+{% endif %}
+{% endfor %}
 
 session:
   cookies:
@@ -91,6 +101,10 @@ identity_providers:
         rules:
           - policy: two_factor
             subject: "group:admins"
+    claims_policies:
+      # Pour les clients qui lisent l'identité dans le jeton d'identité plutôt qu'auprès de /userinfo (Semaphore).
+      jeton_id_complet:
+        id_token: [email, email_verified, preferred_username, name, groups]
     clients:
 {% for c in identite_clients_oidc %}
       - client_id: "{{ c.id }}"
@@ -110,4 +124,7 @@ identity_providers:
         scopes: {{ c.scopes | default(['openid', 'profile', 'email', 'groups']) | to_json }}
         token_endpoint_auth_method: "{{ c.auth_jeton | default('client_secret_post') }}"
         userinfo_signed_response_alg: none
+{% if c.jeton_id_complet | default(false) %}
+        claims_policy: jeton_id_complet
+{% endif %}
 {% endfor %}

@@ -1,0 +1,181 @@
+/*
+ * Charte du homelab appliquée au portail Authelia (auth.maximebertrand.net).
+ * Feuille injectée par le WAF (BunkerWeb, INJECT_HEAD) et servie par lui sous /charte/ : Authelia n'est pas modifié.
+ * Authelia 4.39 construit son interface avec Tailwind et des variables CSS (--primary, --background…) :
+ * il suffit de les redéfinir. Les sélecteurs « html[data-theme=…] » l'emportent sur ceux d'Authelia.
+ */
+
+/* --- Palette sombre (défaut, et thèmes « dark », « grey », « oled ») --------------------------------- */
+html[data-theme="dark"], html[data-theme="grey"], html[data-theme="oled"] {
+  --background: #070b14;
+  --foreground: #e6edf7;
+  --card: #111a2c;
+  --card-foreground: #e6edf7;
+  --popover: #111a2c;
+  --popover-foreground: #e6edf7;
+  --primary: #2dd4bf;
+  --primary-foreground: #041014;
+  --secondary: #818cf8;
+  --secondary-foreground: #041014;
+  --muted: #0b1220;
+  --muted-foreground: #9aa9bf;
+  --accent: rgba(45, 212, 191, 0.12);
+  --accent-foreground: #e6edf7;
+  --destructive: #f87171;
+  --destructive-foreground: #1b0707;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --info: #818cf8;
+  --border: rgba(148, 163, 184, 0.18);
+  --input: rgba(148, 163, 184, 0.28);
+  --ring: #2dd4bf;
+  --divider: rgba(148, 163, 184, 0.14);
+  --custom-icon: #2dd4bf;
+  --custom-loading-bar: #2dd4bf;
+  --radius: 12px;
+  --hl-surface: rgba(17, 26, 44, 0.66);
+  --hl-champ: rgba(7, 11, 20, 0.55);
+  --hl-halo-1: rgba(15, 118, 110, 0.42);
+  --hl-halo-2: rgba(67, 56, 202, 0.34);
+  --hl-ombre: 0 30px 70px -30px rgba(0, 0, 0, 0.75);
+  --hl-marque: url("/charte/marque-sombre.svg");
+  color-scheme: dark;
+}
+
+/* --- Palette claire ----------------------------------------------------------------------------------- */
+html[data-theme="light"] {
+  --background: #f6f8fc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #0d9488;
+  --primary-foreground: #ffffff;
+  --secondary: #4f46e5;
+  --secondary-foreground: #ffffff;
+  --muted: #eef2f7;
+  --muted-foreground: #475569;
+  --accent: rgba(13, 148, 136, 0.1);
+  --accent-foreground: #0f172a;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --success: #059669;
+  --warning: #b45309;
+  --info: #4f46e5;
+  --border: rgba(15, 23, 42, 0.1);
+  --input: rgba(15, 23, 42, 0.18);
+  --ring: #0d9488;
+  --divider: rgba(15, 23, 42, 0.09);
+  --custom-icon: #0d9488;
+  --custom-loading-bar: #0d9488;
+  --radius: 12px;
+  --hl-surface: rgba(255, 255, 255, 0.8);
+  --hl-champ: rgba(248, 250, 252, 0.9);
+  --hl-halo-1: rgba(94, 234, 212, 0.45);
+  --hl-halo-2: rgba(165, 180, 252, 0.45);
+  --hl-ombre: 0 30px 60px -32px rgba(15, 23, 42, 0.35);
+  --hl-marque: url("/charte/marque-clair.svg");
+  color-scheme: light;
+}
+
+/* --- Fond : halos lumineux, comme l'accroche du site ------------------------------------------------ */
+html[data-theme] body {
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background:
+    radial-gradient(640px circle at -4% -8%, var(--hl-halo-1), transparent 62%),
+    radial-gradient(600px circle at 104% 38%, var(--hl-halo-2), transparent 62%),
+    var(--background);
+  background-attachment: fixed;
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- En-tête : la marque du homelab à gauche du sélecteur de langue -------------------------------- */
+html[data-theme] header .grow {
+  min-height: 40px;
+  margin-left: .5rem;
+  background: var(--hl-marque) left center / auto 36px no-repeat;
+}
+
+/* --- Carte centrale (connexion, double authentification, réinitialisation, confirmation) --------- */
+html[data-theme] [id$="-stage"] > div.mx-auto {
+  max-width: 460px;
+  padding: 2.4rem 2.2rem 1.6rem;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--hl-surface);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: var(--hl-ombre);
+}
+@media (max-width: 520px) {
+  html[data-theme] [id$="-stage"] > div.mx-auto { padding: 1.8rem 1.2rem 1.2rem; border-radius: 18px; margin-inline: .75rem; width: auto; }
+}
+
+/* Logo : le « M » du homelab remplace la silhouette générique */
+html[data-theme] #UserSvg {
+  width: 56px;
+  height: 56px;
+  background: url("/charte/logo.svg") center / contain no-repeat;
+  filter: drop-shadow(0 12px 22px rgba(45, 212, 191, 0.35));
+}
+html[data-theme] #UserSvg > * { display: none; }
+
+/* Titre et sous-titre */
+html[data-theme] [id$="-stage"] h5 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  margin-top: .4rem;
+}
+html[data-theme] #first-factor-stage h5::after {
+  content: "Espace sécurisé du homelab";
+  display: block;
+  margin-top: .35rem;
+  font-size: .95rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+}
+
+/* Champs */
+html[data-theme] input[data-slot="floating-input"] {
+  border-radius: 12px;
+  border-color: var(--input);
+  background: var(--hl-champ);
+  transition: border-color .2s, box-shadow .2s;
+}
+html[data-theme] input[data-slot="floating-input"]:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+/* Bouton principal : dégradé de la charte */
+html[data-theme] button[data-slot="button"][data-variant="default"] {
+  height: 46px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2dd4bf 0%, #818cf8 55%, #c084fc 100%);
+  color: #041014;
+  font-size: .98rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: 0 14px 30px -14px rgba(45, 212, 191, 0.7);
+  transition: transform .15s, box-shadow .15s, filter .15s;
+}
+html[data-theme] button[data-slot="button"][data-variant="default"]:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 18px 34px -14px rgba(129, 140, 248, 0.75);
+}
+html[data-theme] button[data-slot="button"][data-variant="default"]:disabled { filter: grayscale(.4); transform: none; }
+
+/* Liens et mentions */
+html[data-theme] #reset-password-button { font-size: .92rem; }
+html[data-theme] a[href="https://www.authelia.com"] { color: var(--muted-foreground); opacity: .7; }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme] * { transition: none !important; }
+}

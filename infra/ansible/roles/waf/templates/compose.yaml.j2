@@ -14,6 +14,7 @@ services:
     volumes:
       - bw-donnees:/data
       - ./erreurs:/var/www/html/homelab/erreurs:ro
+      - ./charte:/var/www/html/homelab/charte:ro
     environment:
       TZ: Europe/Paris
       # Pas d'interface d'administration exposée : la configuration vient uniquement d'Ansible.
@@ -78,6 +79,45 @@ services:
 {% if site.exclusions_modsec | default([]) %}
       # Exclusions ciblées de règles OWASP (faux positifs constatés), appliquées avant le chargement du CRS.
       {{ fqdn }}_CUSTOM_CONF_MODSEC_CRS_exclusions: {{ site.exclusions_modsec | join('\n') | to_json }}
+{% endif %}
+{% set conf_charte %}
+# Fichiers de la charte du homelab (feuille de style, logos), servis par le WAF lui-même.
+location ^~ /charte/ {
+    alias /var/www/html/homelab/charte/;
+    expires 1d;
+}
+location = /favicon.ico {
+    alias /var/www/html/homelab/charte/favicon.ico;
+    expires 7d;
+}
+{% endset %}
+{% set conf_sso %}
+# Vérification de la session SSO auprès d'Authelia (auth_request) : 200 = accès, 401 = renvoi vers le portail.
+location = /.homelab-sso {
+    internal;
+    proxy_pass {{ site.sso.verification | default('') }};
+    proxy_pass_request_body off;
+    proxy_set_header Content-Length "";
+    proxy_set_header X-Original-Method $request_method;
+    proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
+    proxy_set_header X-Forwarded-For $remote_addr;
+}
+{% endset %}
+{% if site.charte | default(false) %}
+      # Charte du homelab : feuille de style injectée dans les pages HTML, fichiers servis par le WAF sous /charte/.
+      {{ fqdn }}_INJECT_HEAD: '<link rel="stylesheet" href="/charte/{{ site.charte }}">'
+{% endif %}
+{% if site.sso is defined %}
+      # Connexion obligatoire par le SSO : chaque requête est vérifiée auprès d'Authelia avant d'atteindre la cible,
+      # qui reçoit l'identité dans Remote-User / Remote-Groups (valeurs envoyées par le client écrasées).
+      {{ fqdn }}_REVERSE_PROXY_AUTH_REQUEST: /.homelab-sso
+      {{ fqdn }}_REVERSE_PROXY_AUTH_REQUEST_SIGNIN_URL: "{{ site.sso.portail }}/?rd=$$scheme://$$http_host$$request_uri"
+      {{ fqdn }}_REVERSE_PROXY_AUTH_REQUEST_SET: "$$sso_utilisateur $$upstream_http_remote_user;$$sso_groupes $$upstream_http_remote_groups"
+      {{ fqdn }}_REVERSE_PROXY_HEADERS: "Remote-User $$sso_utilisateur;Remote-Groups $$sso_groupes"
+{% endif %}
+{% set conf = (conf_charte if site.charte | default(false) else '') ~ (conf_sso if site.sso is defined else '') %}
+{% if conf %}
+      {{ fqdn }}_CUSTOM_CONF_SERVER_HTTP_homelab: {{ conf | trim | to_json(ensure_ascii=False) | replace('$', '$$') }}
 {% endif %}
 {% for cle, valeur in (site.autres | default({})).items() %}
       {{ fqdn }}_{{ cle }}: "{{ valeur }}"
