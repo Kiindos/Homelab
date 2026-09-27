@@ -10,7 +10,6 @@ tags: [dns, cloudflare]
 
 > **Décision remplacée.** Cette décision a été remplacée par l'[ADR 0009](0009-domaine-unique.md) le 26/09/2026. Elle est conservée pour l'historique.
 
-
 ## Contexte
 
 Un domaine à mon pseudo en `.fr` existe déjà. La vitrine doit être trouvable en cherchant mon nom.

@@ -2,3 +2,5 @@ default: true
 MD013: false   # longueur de ligne
 MD033: false   # HTML inline (badges)
 MD041: false   # le frontmatter précède le titre
+MD025:           # un seul titre de niveau 1 : celui de la page (le « title » de l'en-tête sert au site)
+  front_matter_title: ""

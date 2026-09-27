@@ -10,7 +10,6 @@ tags: [réseau, opnsense, freebox]
 
 > **Décision remplacée.** Cette décision a été remplacée par l'[ADR 0010](0010-serveur-unique.md) le 26/09/2026. Elle est conservée pour l'historique.
 
-
 ## Contexte
 
 Le homelab doit avoir son propre pare-feu et ses VLAN, sans casser le réseau de la maison ni le Player TV. Avec trois environnements (PROD, stockage, LAB), le pare-feu devient le cœur du réseau.

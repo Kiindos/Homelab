@@ -2,7 +2,7 @@
 
 Manifests suivis par Argo CD selon le modèle *app of apps* :
 
-```
+```text
 kubernetes/
   bootstrap/   Application racine Argo CD
   apps/        Une Application par service (Traefik, cert-manager, site vitrine…)

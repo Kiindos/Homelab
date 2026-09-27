@@ -14,7 +14,7 @@
     </div>
   </header>
   <div class="enveloppe article__grille">
-    <div class="prose">{{ .Content }}</div>
+    <div class="prose">{{/* Le titre est déjà affiché dans l'en-tête : on retire le « # Titre » du contenu. */}}{{ .Content | replaceRE `(?s)^\s*<h1[^>]*>.*?</h1>` "" | safeHTML }}</div>
     {{ with .TableOfContents }}{{ if gt (len (findRE "<li>" .)) 1 }}
     <aside class="sommaire" aria-label="Sommaire"><p>Sur cette page</p>{{ . }}</aside>
     {{ end }}{{ end }}

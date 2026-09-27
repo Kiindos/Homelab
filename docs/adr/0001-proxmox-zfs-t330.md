@@ -10,7 +10,6 @@ tags: [proxmox, zfs, stockage]
 
 > **Décision remplacée.** Cette décision a été remplacée par l'[ADR 0010](0010-serveur-unique.md) le 26/09/2026. Elle est conservée pour l'historique.
 
-
 ## Contexte
 
 Le T330 (8 baies hot-plug, 32 Go DDR4 ECC, PERC H330) devait d'abord tout héberger : pare-feu, stockage et services. Une seule machine pour tout, c'est un point unique de défaillance, et chaque maintenance coupe l'ensemble.

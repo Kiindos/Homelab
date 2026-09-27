@@ -10,7 +10,6 @@ tags: [proxmox, cluster, énergie]
 
 > **Décision remplacée.** Cette décision a été remplacée par l'[ADR 0010](0010-serveur-unique.md) le 26/09/2026. Elle est conservée pour l'historique.
 
-
 ## Contexte
 
 Les services 24/24 ont besoin de haute disponibilité, avec une contrainte forte : **40 € d'électricité par mois au maximum** pour toute l'infra, soit environ 280 W en moyenne continue.
