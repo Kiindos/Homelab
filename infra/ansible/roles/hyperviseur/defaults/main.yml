@@ -6,3 +6,8 @@ hyperviseur_datasets:
 hyperviseur_racine_donnees: rpool/donnees
 # Ordre de démarrage : VMID => réglage Proxmox (order, up = secondes d'attente avant la suivante).
 hyperviseur_demarrage: {}
+# Clé de descellement automatique du coffre (OpenBao, « static seal ») : générée ici, jamais copiée sur une VM.
+# Dataset à part (hors instantanés des données), partagé en lecture seule avec la VM du coffre par virtiofs :
+# une sauvegarde du disque de la VM ne suffit donc pas à ouvrir le coffre.
+#   hyperviseur_coffre: { dataset: rpool/coffre, correspondance: coffre-cle, cle: descellement-1 }
+hyperviseur_coffre: {}
