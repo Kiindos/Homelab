@@ -23,3 +23,11 @@
     services: [authelia]
     state: restarted
   listen: Redémarrer la pile identité
+
+- name: Redémarrer la page des comptes
+  community.docker.docker_compose_v2:
+    project_src: "{{ identite_dossier }}"
+    services: [comptes]
+    state: restarted
+  # À blanc, le service peut ne pas encore exister (Compose non écrit).
+  when: identite_page_comptes | bool and not ansible_check_mode

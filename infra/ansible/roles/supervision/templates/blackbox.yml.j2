@@ -1,0 +1,33 @@
+# {{ ansible_managed }}
+# Sondes : HTTPS (certificat valide, redirections suivies), barrière SSO et ping.
+modules:
+  https:
+    prober: http
+    timeout: 10s
+    http:
+      preferred_ip_protocol: ip4
+      follow_redirects: true
+      fail_if_not_ssl: true
+      valid_status_codes: []   # 2xx
+      tls_config:
+        # Autorités du système + autorité interne du homelab (coffre OpenBao).
+        ca_file: /etc/blackbox/autorites.pem
+  # Site protégé par le SSO du WAF, sans session : il doit renvoyer vers le portail (jamais servir la page).
+  sso:
+    prober: http
+    timeout: 10s
+    http:
+      preferred_ip_protocol: ip4
+      follow_redirects: false
+      fail_if_not_ssl: true
+      valid_status_codes: [302]
+      fail_if_header_not_matches:
+        - header: Location
+          regexp: {{ ('^' ~ (supervision_portail_sso | regex_escape)) | to_json }}
+      tls_config:
+        ca_file: /etc/blackbox/autorites.pem
+  icmp:
+    prober: icmp
+    timeout: 5s
+    icmp:
+      preferred_ip_protocol: ip4

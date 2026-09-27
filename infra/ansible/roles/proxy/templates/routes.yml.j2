@@ -1,4 +1,8 @@
 # {{ ansible_managed }}
+{% set services = {} %}
+{% for nom, cible in proxy_services.items() %}
+{%   set _ = services.update({nom: (cible if cible is mapping else {'url': cible})}) %}
+{% endfor %}
 http:
   middlewares:
     vpn-uniquement:
@@ -10,20 +14,37 @@ http:
         contentTypeNosniff: true
         frameDeny: true
         referrerPolicy: same-origin
+{% if proxy_sso_verification %}
+    # L'identité ne peut venir que d'Authelia : en-têtes envoyés par le client supprimés avant la vérification.
+    sans-identite:
+      headers:
+        customRequestHeaders:
+          Remote-User: ""
+          Remote-Groups: ""
+          Remote-Email: ""
+          Remote-Name: ""
+    sso:
+      forwardAuth:
+        address: "{{ proxy_sso_verification }}"
+        trustForwardHeader: true
+        authResponseHeaders: [Remote-User, Remote-Groups, Remote-Email, Remote-Name]
+        # Réponse d'Authelia : quelques octets (ou une courte page de redirection).
+        maxResponseBodySize: 65536
+{% endif %}
 
   routers:
-{% for nom, cible in proxy_services.items() %}
+{% for nom, service in services.items() %}
     {{ nom }}:
       rule: "Host(`{{ nom }}.{{ domaine_interne }}`)"
       entryPoints: [websecure]
-      middlewares: [vpn-uniquement, securite]
+      middlewares: {{ (['vpn-uniquement', 'securite'] + (['sans-identite', 'sso'] if service.sso | default(false) else [])) | to_json }}
       service: {{ nom }}
 {% endfor %}
 
   services:
-{% for nom, cible in proxy_services.items() %}
+{% for nom, service in services.items() %}
     {{ nom }}:
       loadBalancer:
         servers:
-          - url: "{{ cible }}"
+          - url: "{{ service.url }}"
 {% endfor %}

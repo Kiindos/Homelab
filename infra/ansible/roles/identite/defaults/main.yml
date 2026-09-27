@@ -2,6 +2,7 @@ identite_dossier: /opt/piles/identite
 identite_image_lldap: lldap/lldap:v0.6.3-debian
 identite_image_authelia: authelia/authelia:4.39.28
 identite_image_valkey: valkey/valkey:9.1.2-alpine
+identite_image_comptes: python:3.14.7-alpine3.24
 identite_base_dn: "dc={{ domaine_public | split('.') | join(',dc=') }}"
 identite_url_portail: "https://auth.{{ domaine_public }}"
 
@@ -26,3 +27,14 @@ identite_clients_oidc: []
 # Sites protégés par le WAF en « auth_request » (sans OpenID Connect) : règles d'accès d'Authelia, dans l'ordre.
 # [{ domaine, politique: bypass|one_factor|two_factor, ressources: [regex], sujets: ["group:…"] }]
 identite_regles_acces: []
+
+# Page des comptes (inviter un proche, renvoyer un lien) : servie par le proxy interne, qui impose le SSO et transmet
+# l'identité (Remote-User, Remote-Groups). Seules les adresses du proxy sont acceptées ; réservée au groupe admins.
+identite_page_comptes: false
+identite_comptes_port: 8095
+identite_comptes_sources: []
+identite_comptes_groupe_admin: admins
+# Groupes proposés à l'invitation (nom => description) ; les autres se gèrent dans l'interface de LLDAP.
+identite_comptes_groupes:
+  famille: "Photos, drive, médias"
+identite_comptes_lien_annuaire: ""

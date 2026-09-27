@@ -41,13 +41,19 @@ scrape_configs:
       - { source_labels: [__param_target], regex: '([^.]+).*', target_label: instance, replacement: '$1' }
       - { target_label: __address__, replacement: "pve:9221" }
 
-  # Services publiés : sondés via le WAF (résolution interne), avec contrôle du certificat.
+  # Services publiés : sondés via le WAF (résolution interne), avec contrôle du certificat. Les sites protégés par
+  # le SSO du WAF sont sondés sans suivre la redirection : la sonde vérifie que la barrière est bien en place.
   - job_name: services
     metrics_path: /probe
-    params: { module: [https] }
     static_configs:
       - targets: {{ supervision_services_publics | to_json }}
+        labels: { module: https }
+{% if supervision_services_sso | length > 0 %}
+      - targets: {{ supervision_services_sso | to_json }}
+        labels: { module: sso }
+{% endif %}
     relabel_configs:
+      - { source_labels: [module], target_label: __param_module }
       - { source_labels: [__address__], target_label: __param_target }
       - { source_labels: [__param_target], regex: 'https://([^/]+).*', target_label: instance, replacement: '$1' }
       - { target_label: __address__, replacement: "blackbox:9115" }

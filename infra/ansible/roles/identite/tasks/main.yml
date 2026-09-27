@@ -1,3 +1,10 @@
+- name: Vérifier les réglages de la page des comptes
+  ansible.builtin.assert:
+    that: identite_comptes_sources | length > 0
+    fail_msg: "identite_comptes_sources (adresses du proxy interne) est obligatoire avec identite_page_comptes."
+    quiet: true
+  when: identite_page_comptes | bool
+
 - name: Créer les dossiers de la pile identité
   ansible.builtin.file:
     path: "{{ item.chemin }}"
@@ -64,6 +71,16 @@
     {{ ['IdentityVerificationJWT', 'IdentityVerificationOTC', 'Event'] | product(['.html', '.txt'])
        | map('join') | list }}
   notify: Redémarrer Authelia
+
+- name: Déposer la page des comptes
+  ansible.builtin.copy:
+    src: comptes/
+    dest: "{{ identite_dossier }}/comptes/"
+    owner: root
+    group: root
+    mode: "u=rwX,go=rX"
+  when: identite_page_comptes | bool
+  notify: Redémarrer la page des comptes
 
 # Une configuration refusée empêcherait Authelia de redémarrer (plus aucun SSO) : elle est d'abord validée par
 # Authelia lui-même, dans le conteneur en service, avant de remplacer celle en production.

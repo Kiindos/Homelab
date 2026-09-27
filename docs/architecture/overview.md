@@ -20,7 +20,7 @@ tags: [architecture]
 | Matériel | Dell PowerEdge T330 (serveur unique), Dell 1U (LAB, à venir) |
 | Hyperviseur & stockage | Proxmox VE, ZFS RAIDZ2 |
 | Réseau & sécurité | OPNsense (virtualisé), VLAN, WireGuard, BunkerWeb (WAF), CrowdSec, Cloudflare (DNS, tunnel de la vitrine) |
-| Identité | LLDAP (annuaire), Authelia (SSO et double authentification) |
+| Identité | LLDAP (annuaire), Authelia (SSO et double authentification), page des comptes (invitations sans mot de passe transmis) |
 | Provisionnement | OpenTofu (bpg/proxmox, opnsense, cloudflare), Ansible, lancé aussi depuis Semaphore UI |
 | Applications | Docker Compose dans des VM dédiées par zone ; Kubernetes (k3s, Argo CD) pour l'environnement de test |
 | Secrets | Coffre OpenBao (SSO, AppRole, audit ; en test), SOPS + age pour le démarrage |
@@ -30,7 +30,8 @@ tags: [architecture]
 Les choix structurants sont expliqués dans les ADR, en particulier l'[ADR 0010](../adr/0010-serveur-unique.md)
 (un seul serveur), l'[ADR 0008](../adr/0008-exposition-directe-waf.md) (publication des services),
 l'[ADR 0014](../adr/0014-supervision-noc.md) (supervision), l'[ADR 0015](../adr/0015-semaphore-ansible.md)
-(Semaphore) et l'[ADR 0016](../adr/0016-coffre-openbao.md) (coffre à secrets).
+(Semaphore), l'[ADR 0016](../adr/0016-coffre-openbao.md) (coffre à secrets) et l'[ADR 0017](../adr/0017-invitations-page-comptes.md)
+(invitations et page des comptes).
 
 ## Ce qui est exposé
 
@@ -40,4 +41,4 @@ l'[ADR 0014](../adr/0014-supervision-noc.md) (supervision), l'[ADR 0015](../adr/
 | NOC (page de supervision sur mesure) | `noc.maximebertrand.net` | Public, derrière OPNsense, WAF et SSO ; lecture seule |
 | Notifications d'alerte (ntfy) | `ntfy.maximebertrand.net` | Public, derrière OPNsense et WAF ; comptes dédiés, tout refusé par défaut |
 | Services personnels (photos, fichiers) | sous-domaines de `maximebertrand.net` | Public, derrière OPNsense, WAF et SSO avec double authentification |
-| Administration, annuaire, outils internes | `*.home.maximebertrand.net` (DNS interne uniquement) | VPN uniquement |
+| Administration, annuaire, outils internes | `*.home.maximebertrand.net` (DNS interne uniquement) | VPN uniquement ; SSO en plus pour la page des comptes |

@@ -48,6 +48,17 @@ son mot de passe. Le même lien sert au « mot de passe oublié », qui ne fonct
 portail n'avait que la lecture sur l'annuaire. Les e-mails sont traduits et aux couleurs du homelab ; ils ont été
 éprouvés sur une instance jetable (faux serveur SMTP) avant la mise en production.
 
+## Une page pour inviter
+
+La ligne de commande a laissé place à une **page des comptes** ([ADR 0017](../adr/0017-invitations-page-comptes.md)) :
+prénom, nom, e-mail, accès, et l'invitation part. Elle n'est joignable que par le VPN, derrière le proxy interne,
+qui sait maintenant imposer lui aussi la connexion SSO (double authentification, administrateurs seulement). La page
+n'accepte l'identité transmise que depuis le proxy et refuse les formulaires envoyés depuis un autre site ; elle a été
+éprouvée contre un faux annuaire avant d'approcher le vrai.
+
+Côté supervision, un service publié derrière la barrière SSO du WAF est désormais sondé **sans session** : la sonde
+exige une redirection vers le portail. Si la barrière disparaissait, l'alerte partirait.
+
 ## Ce que la journée a appris
 
 - **Tester l'échec, pas seulement le succès.** La vérification des clés SSH a été validée en présentant

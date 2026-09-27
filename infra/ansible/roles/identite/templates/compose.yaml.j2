@@ -57,6 +57,41 @@ services:
     secrets: [authelia_reset_jwt, authelia_session, authelia_storage, authelia_ldap, authelia_oidc_hmac, authelia_oidc_jwks{% if identite_smtp is defined %}, authelia_smtp{% endif %}]
     security_opt: ["no-new-privileges:true"]
 
+{% if identite_page_comptes | bool %}
+  # Page des comptes : jointe par le proxy interne seulement (SSO imposé par lui, adresses vérifiées par la page).
+  comptes:
+    image: {{ identite_image_comptes }}
+    restart: unless-stopped
+    command: ["python3", "-u", "/app/app.py"]
+    user: "65534:65534"
+    depends_on: [lldap, authelia]
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      LLDAP_URL: http://lldap:17170
+      LLDAP_MOT_DE_PASSE_FICHIER: /run/secrets/lldap_admin_password
+      AUTHELIA_URL: http://authelia:9091
+      PORTAIL: "{{ identite_url_portail }}"
+      SOURCES_AUTORISEES: "{{ identite_comptes_sources | join(' ') }}"
+      GROUPE_ADMIN: "{{ identite_comptes_groupe_admin }}"
+      GROUPES_PROPOSES: {{ identite_comptes_groupes | to_json | to_json }}
+      DUREE_LIEN_HEURES: "{{ identite_duree_lien_heures }}"
+      LIEN_ANNUAIRE: "{{ identite_comptes_lien_annuaire }}"
+      TZ: Europe/Paris
+    ports:
+      - "{{ identite_comptes_port }}:8080"
+    volumes:
+      - ./comptes:/app:ro
+    secrets: [lldap_admin_password]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/sante', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+{% endif %}
   valkey:
     image: {{ identite_image_valkey }}
     restart: unless-stopped

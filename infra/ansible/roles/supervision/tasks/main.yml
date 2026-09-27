@@ -102,11 +102,12 @@
     - { src: grafana/sources.yml.j2, dest: grafana/provisioning/datasources/sources.yml }
     - { src: grafana/tableaux.yml.j2, dest: grafana/provisioning/dashboards/tableaux.yml }
     - { src: compose.yaml.j2, dest: compose.yaml }
+    - { src: blackbox.yml.j2, dest: blackbox.yml }
   loop_control:
     label: "{{ item.dest }}"
   notify: Redémarrer la supervision
 
-- name: Déposer les règles d'alerte, les sondes et le tableau de bord du NOC
+- name: Déposer les règles d'alerte et le tableau de bord du NOC
   ansible.builtin.copy:
     src: "{{ item.src }}"
     dest: "{{ supervision_dossier }}/{{ item.dest }}"
@@ -115,7 +116,6 @@
     mode: "0644"
   loop:
     - { src: alertes.yml, dest: prometheus/alertes.yml }
-    - { src: blackbox.yml, dest: blackbox.yml }
     - { src: noc.json, dest: grafana/tableaux/noc.json }
   loop_control:
     label: "{{ item.dest }}"

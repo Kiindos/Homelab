@@ -13,6 +13,10 @@ supervision_retention: 30d
 supervision_machines_supplementaires: [fw01]
 # Services publiés sondés depuis l'intérieur (via le WAF) et outils internes (via le proxy de svc01).
 supervision_services_publics: []
+# Services publiés derrière le SSO du WAF : réponse attendue = redirection vers le portail (module « sso »).
+supervision_services_sso: []
+# Adresse du portail SSO attendue dans la redirection (module « sso »).
+supervision_portail_sso: "https://auth.{{ domaine_public }}/"
 supervision_outils_internes: []
 # Destinataire des alertes critiques (e-mail) et sujet ntfy (notifications sur téléphone).
 supervision_email_alertes: ""

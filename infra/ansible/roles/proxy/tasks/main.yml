@@ -1,3 +1,13 @@
+- name: Vérifier que les services « sso » ont un point de vérification
+  vars:
+    services_sso: >-
+      {{ proxy_services | dict2items | selectattr('value', 'mapping') | map(attribute='value')
+         | selectattr('sso', 'defined') | selectattr('sso') | list }}
+  ansible.builtin.assert:
+    that: services_sso | length == 0 or proxy_sso_verification | length > 0
+    fail_msg: "proxy_sso_verification est vide alors qu'un service exige le SSO."
+    quiet: true
+
 - name: Créer les dossiers du proxy interne
   ansible.builtin.file:
     path: "{{ item.chemin }}"
