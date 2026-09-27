@@ -63,6 +63,8 @@
   loop: "{{ web_sites | dict2items | selectattr('value.depot', 'defined') | list | product(['service', 'timer']) | list }}"
   loop_control:
     label: "synchro-site-{{ item.0.key }}.{{ item.1 }}"
+  vars:
+    site: "{{ item.0 }}"
   register: web_unites
 
 - name: Activer la minuterie de publication

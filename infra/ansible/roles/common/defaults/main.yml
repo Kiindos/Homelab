@@ -12,3 +12,6 @@ common_paquets:
   - unattended-upgrades
   - apt-listchanges
   - needrestart
+# Clés SSH supplémentaires autorisées pour le compte de connexion d'Ansible, limitées à une adresse source
+# (ex. l'orchestrateur Semaphore) : [{ cle: "ssh-ed25519 AAAA… commentaire", depuis: "adresse" }].
+common_cles_autorisees: []

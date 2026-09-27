@@ -1,0 +1,15 @@
+## template:jinja
+{#
+{{ ansible_managed }} (rôle common)
+Modèle de /etc/hosts utilisé par cloud-init à chaque démarrage (manage_etc_hosts, imposé par Proxmox).
+Le nom de la machine pointe sur son adresse réelle, et non sur 127.0.1.1 : les conteneurs (DNS de Docker
+relayé par systemd-resolved) joindraient sinon leur propre boucle locale en visant la machine par son nom.
+-#}
+# Fichier généré par cloud-init depuis /etc/cloud/templates/hosts.debian.tmpl (géré par Ansible).
+{{ adresse_ipv4 }} {% raw %}{{fqdn}} {{hostname}}{% endraw %}
+
+127.0.0.1 localhost
+
+::1 localhost ip6-localhost ip6-loopback
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters

@@ -73,6 +73,32 @@
     validate: "sshd -t -f %s"
   notify: Recharger SSH
 
+- name: Associer le nom de la machine à son adresse réelle (modèle de /etc/hosts de cloud-init)
+  ansible.builtin.template:
+    src: hosts.debian.tmpl.j2
+    dest: /etc/cloud/templates/hosts.debian.tmpl
+    owner: root
+    group: root
+    mode: "0644"
+  when: adresse_ipv4 is defined
+
+- name: Corriger /etc/hosts sans attendre le prochain démarrage
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^(127\.0\.1\.1|{{ adresse_ipv4 | default("") | regex_escape }})\s'
+    line: "{{ adresse_ipv4 }} {{ inventory_hostname }}.{{ domaine_interne }} {{ inventory_hostname }}"
+  when: adresse_ipv4 is defined
+
+- name: Autoriser les clés SSH supplémentaires (limitées à leur adresse source, sans redirection)
+  ansible.posix.authorized_key:
+    user: "{{ ansible_user }}"
+    key: "{{ item.cle }}"
+    key_options: 'from="{{ item.depuis }}",restrict,pty'
+    state: present
+  loop: "{{ common_cles_autorisees }}"
+  loop_control:
+    label: "{{ item.cle.split()[-1] }} depuis {{ item.depuis }}"
+
 - name: Limiter la taille des journaux système
   ansible.builtin.copy:
     dest: /etc/systemd/journald.conf.d/homelab.conf

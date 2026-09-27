@@ -6,11 +6,18 @@ nom="$1"; depot="$2"; branche="$3"
 clone="{{ web_dossier }}/.git-$nom"
 cible="{{ web_dossier }}/$nom"
 changement=0
+# GitHub injoignable ou branche absente : la version en ligne reste servie (échec seulement s'il n'y en a aucune).
+echec() {
+  logger -t synchro-site -p user.warning "$nom : récupération impossible ($1), version en ligne conservée"
+  [ -f "$cible/index.html" ] && exit 0
+  exit 1
+}
 if [ ! -d "$clone/.git" ]; then
-  git clone -q --depth 1 --branch "$branche" "$depot" "$clone"
+  rm -rf "${clone:?}"
+  git clone -q --depth 1 --branch "$branche" "$depot" "$clone" || echec "clonage de $branche"
   changement=1
 else
-  git -C "$clone" fetch -q --depth 1 origin "$branche"
+  git -C "$clone" fetch -q --depth 1 origin "$branche" || echec "mise à jour de $branche"
   if [ "$(git -C "$clone" rev-parse HEAD)" != "$(git -C "$clone" rev-parse FETCH_HEAD)" ]; then
     git -C "$clone" reset -q --hard FETCH_HEAD
     changement=1
