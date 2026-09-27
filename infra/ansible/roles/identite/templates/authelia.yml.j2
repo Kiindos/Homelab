@@ -32,6 +32,11 @@ password_policy:
     enabled: true
     min_score: 3
 
+identity_validation:
+  reset_password:
+    # Lien reçu par e-mail pour choisir son mot de passe (oubli, invitation d'un nouveau compte) : usage unique.
+    jwt_lifespan: "{{ identite_duree_lien_heures }}h"
+
 access_control:
   # Tout ce qui n'est pas explicitement autorisé est refusé.
   default_policy: deny
@@ -71,11 +76,14 @@ storage:
     path: /config/data/db.sqlite3
 
 notifier:
+  # Modèles d'e-mails en français, aux couleurs du homelab (templates/modeles du rôle).
+  template_path: /config/modeles
 {% if identite_smtp is defined %}
   smtp:
     address: "submission://{{ identite_smtp.serveur }}:587"
     username: "{{ identite_smtp.utilisateur }}"
     sender: "Homelab <{{ identite_smtp.expediteur }}>"
+    subject: "{{ identite_sujet_emails }}"
     # Mot de passe (jeton SMTP) : fichier secret, variable AUTHELIA_NOTIFIER_SMTP_PASSWORD_FILE du Compose.
 {% else %}
   # En attendant la configuration SMTP (Proton Mail) : messages écrits dans un fichier.

@@ -1,0 +1,18 @@
+{{- $fr := dict "Password changed successfully" "mot de passe modifié" "Second Factor Method Added" "double authentification ajoutée" "Second Factor Method Removed" "double authentification supprimée" "Password Reset" "réinitialisation du mot de passe" "Password Change" "changement du mot de passe" "One-Time Password" "application d'authentification" "WebAuthn Credential" "clé de sécurité ou clé d'accès" "WebAuthn Credential Passively Upgraded to a Passkey" "clé de sécurité convertie en clé d'accès" "Action" "Action" "Category" "Type" "Description" "Nom" -}}
+MODIFICATION DE VOTRE COMPTE
+
+Bonjour {{ .DisplayName }},
+
+Une modification vient d'être apportée à votre compte Homelab : {{ get $fr .Title | default .Title }}.
+
+Détails :
+{{- $keys := sortAlpha (keys .Details) }}{{- range $key := $keys }}
+- {{ get $fr $key | default $key }} : {{ $v := printf "%v" (index $.Details $key) }}{{ get $fr $v | default $v }}
+{{- end }}
+
+----------------------------------------
+
+Si vous n'êtes pas à l'origine de cette modification, changez votre mot de passe et prévenez l'administrateur du
+homelab.
+
+Message destiné à {{ .DisplayName }}, envoyé à la suite d'une action faite depuis l'adresse {{ .RemoteIP }}.

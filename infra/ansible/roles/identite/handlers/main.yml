@@ -1,4 +1,25 @@
-- name: Redémarrer la pile identité
+# Redémarrage complet (secrets) : l'annuaire d'abord, Authelia ensuite. Authelia vérifie LLDAP à son démarrage et
+# s'arrête s'il ne répond pas encore : les redémarrer ensemble provoquait un échec puis une relance.
+- name: Redémarrer l'annuaire
   community.docker.docker_compose_v2:
     project_src: "{{ identite_dossier }}"
+    services: [lldap, valkey]
     state: restarted
+  listen: Redémarrer la pile identité
+
+- name: Attendre que l'annuaire réponde
+  ansible.builtin.command: docker exec identite-lldap-1 /app/lldap healthcheck --config-file /data/lldap_config.toml
+  register: identite_sante_lldap
+  until: identite_sante_lldap.rc == 0
+  retries: 30
+  delay: 2
+  changed_when: false
+  listen: Redémarrer la pile identité
+
+# Configuration ou modèles d'e-mails modifiés : Authelia seul (l'annuaire reste en service).
+- name: Redémarrer Authelia
+  community.docker.docker_compose_v2:
+    project_src: "{{ identite_dossier }}"
+    services: [authelia]
+    state: restarted
+  listen: Redémarrer la pile identité

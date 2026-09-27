@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<title>Choisir votre mot de passe</title>
+</head>
+<body style="margin:0;padding:0;background-color:#eef2f7;">
+<div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0;">Lien personnel pour choisir le mot de passe de votre compte Homelab.</div>
+<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#eef2f7;">
+<tr><td align="center" style="padding:32px 12px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+  <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:12px;overflow:hidden;">
+    <tr><td style="background-color:#070b14;padding:20px 28px;">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:#2dd4bf;margin-right:10px;"></span><span style="color:#e6edf7;font-size:16px;font-weight:600;letter-spacing:0.02em;">Homelab</span>
+    </td></tr>
+    <tr><td style="padding:28px;color:#0f172a;font-size:15px;line-height:1.6;">
+      <h1 style="margin:0 0 20px;font-size:22px;font-weight:600;color:#0f172a;">Choisir votre mot de passe</h1>
+      <p style="margin:0 0 14px;">Bonjour {{ .DisplayName }},</p>
+      <p style="margin:0 0 14px;">Une demande a été faite pour choisir (ou réinitialiser) le mot de passe de votre compte Homelab (<i>{{ .Domain }}</i>). Si vous venez d'être invité, c'est ainsi que vous créez votre premier mot de passe.</p>
+      <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:14px 0 18px;">
+        <a id="link" href="{{ .LinkURL }}" target="_blank" style="display:inline-block;background-color:#2dd4bf;color:#041014;font-size:15px;font-weight:600;text-decoration:none;padding:13px 26px;border-radius:10px;">Choisir mon mot de passe</a>
+      </td></tr></table>
+      <p style="margin:0 0 6px;font-size:13px;color:#475569;text-align:center;">Lien personnel, à usage unique, valable [[ identite_duree_lien_heures ]] heures. S'il ne s'ouvre pas, copiez cette adresse dans votre navigateur :</p>
+      <p style="margin:0 0 20px;font-size:12px;text-align:center;word-break:break-all;"><a href="{{ .LinkURL }}" target="_blank" style="color:#0f766e;text-decoration:none;">{{ .LinkURL }}</a></p>
+      <p style="margin:0 0 20px;padding:10px 14px;background-color:#fef3c7;border-radius:8px;font-size:13px;color:#78350f;"><strong>Ne transférez ce message à personne</strong> : ce lien donne accès à votre compte.</p>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 18px;">
+      <p style="margin:0 0 10px;font-size:14px;"><strong>Vous n'êtes pas à l'origine de cette demande ?</strong> Ignorez ce message : votre mot de passe actuel reste valable. Par précaution, annulez le lien et prévenez l'administrateur du homelab.</p>
+      <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:6px 0 4px;">
+        <a id="link-revoke" href="{{ .RevocationLinkURL }}" target="_blank" style="display:inline-block;background-color:#ffffff;color:#b91c1c;border:1px solid #fca5a5;font-size:13px;font-weight:600;text-decoration:none;padding:9px 18px;border-radius:8px;">Annuler ce lien</a>
+      </td></tr></table>
+    </td></tr>
+    <tr><td style="padding:16px 28px;background-color:#f8fafc;color:#64748b;font-size:12px;line-height:1.5;text-align:center;">
+      Message destiné à <span style="color:#0f172a;">{{ .DisplayName }}</span>, envoyé à la suite d'une demande faite depuis l'adresse <span style="color:#0f172a;">{{ .RemoteIP }}</span>.
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>

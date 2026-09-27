@@ -40,6 +40,14 @@ Il se descelle seul au démarrage grâce à une clé qui ne quitte pas l'hypervi
 complet « à blanc » a été rejoué en lisant les secrets dans le coffre plutôt que dans le fichier chiffré : aucune
 configuration n'aurait changé.
 
+## Des comptes sans mot de passe temporaire
+
+Inviter un proche ne passe plus par un mot de passe transmis à la main : le compte est créé vide dans l'annuaire,
+puis le portail d'authentification envoie un lien personnel, à usage unique et limité dans le temps, pour choisir
+son mot de passe. Le même lien sert au « mot de passe oublié », qui ne fonctionnait pas : le compte de service du
+portail n'avait que la lecture sur l'annuaire. Les e-mails sont traduits et aux couleurs du homelab ; ils ont été
+éprouvés sur une instance jetable (faux serveur SMTP) avant la mise en production.
+
 ## Ce que la journée a appris
 
 - **Tester l'échec, pas seulement le succès.** La vérification des clés SSH a été validée en présentant
@@ -55,3 +63,8 @@ configuration n'aurait changé.
   une application qui en envoie des dizaines au démarrage.
 - **Un nom mal résolu se cache bien.** La supervision ne se voyait pas elle-même : le nom de la machine pointait
   vers l'adresse de boucle locale. Corrigé à la source, pour toutes les machines.
+- **Deux serveurs DNS qui répondent, c'est une course.** Sans domaine de routage, le poste interrogeait à la fois
+  la box et le serveur du homelab et gardait la première réponse : les noms internes marchaient une fois sur deux.
+- **Redémarrer une pile d'un bloc ignore ses dépendances.** Le portail vérifie l'annuaire au démarrage ; relancés
+  ensemble, il échouait avant de se relancer. L'annuaire redémarre maintenant d'abord, et une simple modification
+  de configuration ne relance plus que le portail.

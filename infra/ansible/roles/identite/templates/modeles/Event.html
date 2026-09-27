@@ -1,0 +1,35 @@
+{{- $fr := dict "Password changed successfully" "mot de passe modifié" "Second Factor Method Added" "double authentification ajoutée" "Second Factor Method Removed" "double authentification supprimée" "Password Reset" "réinitialisation du mot de passe" "Password Change" "changement du mot de passe" "One-Time Password" "application d'authentification" "WebAuthn Credential" "clé de sécurité ou clé d'accès" "WebAuthn Credential Passively Upgraded to a Passkey" "clé de sécurité convertie en clé d'accès" "Action" "Action" "Category" "Type" "Description" "Nom" }}<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<title>Modification de votre compte</title>
+</head>
+<body style="margin:0;padding:0;background-color:#eef2f7;">
+<div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0;">Une modification vient d’être apportée à votre compte Homelab.</div>
+<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#eef2f7;">
+<tr><td align="center" style="padding:32px 12px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+  <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:12px;overflow:hidden;">
+    <tr><td style="background-color:#070b14;padding:20px 28px;">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:#2dd4bf;margin-right:10px;"></span><span style="color:#e6edf7;font-size:16px;font-weight:600;letter-spacing:0.02em;">Homelab</span>
+    </td></tr>
+    <tr><td style="padding:28px;color:#0f172a;font-size:15px;line-height:1.6;">
+      <h1 style="margin:0 0 20px;font-size:22px;font-weight:600;color:#0f172a;">Modification de votre compte</h1>
+      <p style="margin:0 0 14px;">Bonjour {{ .DisplayName }},</p>
+      <p style="margin:0 0 14px;">Une modification vient d'être apportée à votre compte Homelab : <strong>{{ get $fr .Title | default .Title }}</strong>.</p>
+      <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin:0 0 20px;font-size:13px;background-color:#f8fafc;border-radius:8px;">
+      {{- $keys := sortAlpha (keys .Details) }}{{- range $key := $keys }}
+        <tr><td style="padding:6px 14px;color:#64748b;white-space:nowrap;">{{ get $fr $key | default $key }}</td><td style="padding:6px 14px;color:#0f172a;">{{ $v := printf "%v" (index $.Details $key) }}{{ get $fr $v | default $v }}</td></tr>
+      {{- end }}
+      </table>
+      <p style="margin:0;font-size:14px;"><strong>Vous n'êtes pas à l'origine de cette modification ?</strong> Changez votre mot de passe et prévenez l'administrateur du homelab.</p>
+    </td></tr>
+    <tr><td style="padding:16px 28px;background-color:#f8fafc;color:#64748b;font-size:12px;line-height:1.5;text-align:center;">
+      Message destiné à <span style="color:#0f172a;">{{ .DisplayName }}</span>, envoyé à la suite d'une action faite depuis l'adresse <span style="color:#0f172a;">{{ .RemoteIP }}</span>.
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>

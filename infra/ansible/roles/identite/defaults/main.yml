@@ -10,6 +10,15 @@ identite_url_portail: "https://auth.{{ domaine_public }}"
 identite_comptes_service:
   authelia: "{{ authelia.ldap_bind_password }}"
 
+# Comptes de service autorisés à changer les mots de passe des utilisateurs (sauf administrateurs de l'annuaire) :
+# Authelia, pour « mot de passe oublié » et les invitations. Les autres restent en lecture seule.
+identite_comptes_gestion_mdp: [authelia]
+# Validité (en heures) du lien reçu par e-mail pour choisir son mot de passe (oubli ou invitation) ; lien à usage
+# unique. Reprise dans le texte des e-mails.
+identite_duree_lien_heures: 12
+# Sujet de tous les e-mails d'Authelia (les titres fournis par Authelia sont en anglais ; le corps est traduit).
+identite_sujet_emails: "[Homelab] Sécurité de votre compte"
+
 identite_groupes: [famille, admins]
 
 # Clients OpenID Connect (le condensat du secret vient des secrets chiffrés).

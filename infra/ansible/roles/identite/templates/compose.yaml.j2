@@ -52,6 +52,7 @@ services:
       - "9091:9091"
     volumes:
       - ./authelia/configuration.yml:/config/configuration.yml:ro
+      - ./authelia/modeles:/config/modeles:ro
       - authelia:/config/data
     secrets: [authelia_reset_jwt, authelia_session, authelia_storage, authelia_ldap, authelia_oidc_hmac, authelia_oidc_jwks{% if identite_smtp is defined %}, authelia_smtp{% endif %}]
     security_opt: ["no-new-privileges:true"]

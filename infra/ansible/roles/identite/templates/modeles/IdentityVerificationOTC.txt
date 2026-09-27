@@ -1,0 +1,23 @@
+CONFIRMER VOTRE IDENTITÉ
+
+Bonjour {{ .DisplayName }},
+
+Pour modifier la sécurité de votre compte Homelab ({{ .Domain }}), par exemple ajouter une application
+d'authentification ou une clé de sécurité, saisissez ce code dans la fenêtre ouverte dans votre navigateur :
+
+----------------------------------------
+
+{{ .OneTimeCode }}
+
+----------------------------------------
+
+Ne communiquez ce code à personne : l'administrateur ne vous le demandera jamais.
+
+Vous n'êtes pas à l'origine de cette demande ? Votre mot de passe est peut-être connu de quelqu'un d'autre :
+annulez le code, changez votre mot de passe et prévenez l'administrateur du homelab.
+
+{{ .RevocationLinkURL }}
+
+----------------------------------------
+
+Message destiné à {{ .DisplayName }}, envoyé à la suite d'une demande faite depuis l'adresse {{ .RemoteIP }}.

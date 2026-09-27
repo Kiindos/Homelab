@@ -8,6 +8,7 @@
   loop:
     - { chemin: "{{ identite_dossier }}", mode: "0750" }
     - { chemin: "{{ identite_dossier }}/authelia", mode: "0750" }
+    - { chemin: "{{ identite_dossier }}/authelia/modeles", mode: "0755" }
     - { chemin: "{{ identite_dossier }}/secrets", mode: "0700" }
     - { chemin: "{{ identite_dossier }}/amorcage/utilisateurs", mode: "0700" }
     - { chemin: "{{ identite_dossier }}/amorcage/groupes", mode: "0700" }
@@ -49,6 +50,21 @@
   no_log: true
   notify: Redémarrer la pile identité
 
+# Les modèles contiennent la syntaxe de Go ({{ .Variable }}) : Ansible n'y remplace que les [[ variables ]].
+- name: Déposer les modèles d'e-mails d'Authelia (français)
+  ansible.builtin.template:
+    src: "modeles/{{ item }}"
+    dest: "{{ identite_dossier }}/authelia/modeles/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+    variable_start_string: "[["
+    variable_end_string: "]]"
+  loop: >-
+    {{ ['IdentityVerificationJWT', 'IdentityVerificationOTC', 'Event'] | product(['.html', '.txt'])
+       | map('join') | list }}
+  notify: Redémarrer Authelia
+
 # Une configuration refusée empêcherait Authelia de redémarrer (plus aucun SSO) : elle est d'abord validée par
 # Authelia lui-même, dans le conteneur en service, avant de remplacer celle en production.
 - name: Préparer la configuration d'Authelia
@@ -65,12 +81,15 @@
   changed_when: false
   check_mode: false
 
+# « mkdir » : au premier déploiement des modèles, le conteneur en service n'a pas encore leur dossier, dont la
+# validation exige l'existence (il est monté à la recréation du conteneur).
 - name: Valider la configuration candidate avec Authelia
   ansible.builtin.shell:
     cmd: >-
       set -o pipefail;
       docker exec -i identite-authelia-1 sh -c
-      'cat > /tmp/candidate.yml && authelia validate-config --config /tmp/candidate.yml; code=$?; rm -f /tmp/candidate.yml; exit $code'
+      'mkdir -p /config/modeles && cat > /tmp/candidate.yml && authelia validate-config --config /tmp/candidate.yml;
+      code=$?; rm -f /tmp/candidate.yml; exit $code'
       < {{ identite_dossier }}/authelia/configuration.candidate.yml
     executable: /bin/bash
   changed_when: false
@@ -85,7 +104,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify: Redémarrer la pile identité
+  notify: Redémarrer Authelia
 
 - name: Déposer le fichier Compose
   ansible.builtin.template:
@@ -113,11 +132,13 @@
     mode: "0600"
   loop: "{{ identite_groupes }}"
 
-- name: Décrire les comptes de service (lecture seule sur l'annuaire)
+- name: Décrire les comptes de service (lecture seule, ou gestion des mots de passe pour Authelia)
   ansible.builtin.copy:
     dest: "{{ identite_dossier }}/amorcage/utilisateurs/{{ item.key }}.json"
     content: "{{ {'id': item.key, 'email': item.key ~ '@' ~ domaine_public, 'displayName': 'Service ' ~ item.key,
-      'password': item.value, 'groups': ['lldap_strict_readonly']} | to_json }}\n"
+      'password': item.value,
+      'groups': ['lldap_password_manager'] if item.key in identite_comptes_gestion_mdp else ['lldap_strict_readonly']}
+      | to_json }}\n"
     mode: "0600"
   loop: "{{ identite_comptes_service | dict2items }}"
   loop_control:
