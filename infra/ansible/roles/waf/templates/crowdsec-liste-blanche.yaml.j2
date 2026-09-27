@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+# Liste blanche CrowdSec : trafic légitime des applications qui ressemble à un robot (nombreuses URL distinctes).
+# Ces requêtes restent filtrées par ModSecurity, la limite de débit et l'authentification des applications.
+name: homelab/liste-blanche-applications
+description: "Trafic normal des applications du homelab (vignettes, synchronisation, fichiers de langue)"
+whitelist:
+  reason: "trafic applicatif légitime"
+  expression:
+{% for regle in waf_crowdsec_liste_blanche %}
+{% for chemin in regle.chemins %}
+    - "evt.Meta.target_fqdn == '{{ regle.site }}.{{ domaine_public }}' && evt.Meta.http_path startsWith '{{ chemin }}'"
+{% endfor %}
+{% endfor %}
+{% if not waf_crowdsec_liste_blanche %}
+    - "false"
+{% endif %}

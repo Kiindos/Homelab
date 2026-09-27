@@ -2,8 +2,16 @@ waf_dossier: /opt/piles/waf
 waf_image: bunkerity/bunkerweb-all-in-one:1.6.15
 # Pays autorisés (codes ISO ou groupes BunkerWeb comme @EU) : tout le reste est refusé.
 waf_pays_autorises: "FR"
-# Codes HTTP comptés comme « comportement suspect » (10 en 60 s = bannissement de 24 h).
-waf_codes_suspects: "400 403 405 429 444"
+# Codes HTTP comptés comme « comportement suspect » (10 en 60 s = bannissement). 429 (limite de débit) n'en fait
+# pas partie : la limite freine déjà, et une rafale légitime d'application ne doit pas valoir un bannissement.
+waf_codes_suspects: "400 403 405 444"
+# Durée du bannissement (secondes) : un faux positif se résorbe seul, les scanners étrangers restent bloqués par pays.
+waf_duree_bannissement: 3600
+# Liste blanche CrowdSec : chemins où le trafic normal d'une application ressemble à un robot (nombreuses URL
+# distinctes : vignettes, synchronisation, fichiers de langue). Ces requêtes passent toujours par ModSecurity,
+# la limite de débit et l'authentification ; seule l'analyse comportementale de CrowdSec les ignore.
+#   - { site: photos, chemins: ["/api/assets/"] }
+waf_crowdsec_liste_blanche: []
 # Sites publiés : nom (sous-domaine public) => cible et réglages propres.
 waf_sites: {}
 #  photos:

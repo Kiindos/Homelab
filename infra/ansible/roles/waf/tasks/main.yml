@@ -33,6 +33,15 @@
     group: root
     mode: "u=rwX,go=rX"
 
+- name: Déposer la liste blanche CrowdSec (faux positifs des applications)
+  ansible.builtin.template:
+    src: crowdsec-liste-blanche.yaml.j2
+    dest: "{{ waf_dossier }}/crowdsec-liste-blanche.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+  register: waf_liste_blanche
+
 - name: Déposer le fichier Compose de BunkerWeb
   ansible.builtin.template:
     src: compose.yaml.j2
@@ -47,4 +56,4 @@
     project_src: "{{ waf_dossier }}"
     state: present
     pull: missing
-    recreate: "{{ 'always' if waf_compose.changed else 'auto' }}"
+    recreate: "{{ 'always' if (waf_compose.changed or waf_liste_blanche.changed) else 'auto' }}"
