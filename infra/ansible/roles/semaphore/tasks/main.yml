@@ -1,0 +1,99 @@
+- name: Créer les dossiers de Semaphore
+  ansible.builtin.file:
+    path: "{{ semaphore_dossier }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    # Le conteneur tourne en 1001:0 : le groupe root lui donne la lecture de sa configuration, rien de plus.
+    mode: "0750"
+  loop: ["", image, config]
+  loop_control:
+    label: "{{ item or semaphore_dossier }}"
+
+# --- Image ------------------------------------------------------------------------------------------
+
+- name: Déposer les sources de l'image
+  ansible.builtin.template:
+    src: Dockerfile.j2
+    dest: "{{ semaphore_dossier }}/image/Dockerfile"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Déposer le relais SSH de l'image
+  ansible.builtin.copy:
+    src: ssh-verifie
+    dest: "{{ semaphore_dossier }}/image/ssh-verifie"
+    owner: root
+    group: root
+    mode: "0755"
+
+# L'étiquette contient l'empreinte des sources : toute modification produit une nouvelle image.
+- name: Nommer l'image d'après ses sources
+  ansible.builtin.set_fact:
+    semaphore_image: >-
+      homelab/semaphore:{{ semaphore_version }}-{{
+      (lookup('ansible.builtin.template', 'Dockerfile.j2') ~ lookup('ansible.builtin.file', 'ssh-verifie'))
+      | hash('sha256') | truncate(12, true, '') }}
+
+- name: Construire l'image
+  community.docker.docker_image_build:
+    name: "{{ semaphore_image.split(':')[0] }}"
+    tag: "{{ semaphore_image.split(':')[1] }}"
+    path: "{{ semaphore_dossier }}/image"
+    rebuild: never
+  notify: Redémarrer Semaphore
+
+# --- Configuration ----------------------------------------------------------------------------------
+
+- name: Relever les clés d'hôtes SSH des machines administrées (sur les machines elles-mêmes)
+  ansible.builtin.slurp:
+    src: /etc/ssh/ssh_host_ed25519_key.pub
+  delegate_to: "{{ item }}"
+  become: false
+  loop: "{{ semaphore_machines }}"
+  register: semaphore_cles_hotes
+
+- name: Déposer la configuration (secrets compris)
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: "{{ semaphore_dossier }}/config/config.json"
+    owner: root
+    group: root
+    mode: "0440"
+  no_log: true
+  notify: Redémarrer Semaphore
+
+- name: Déposer les clés d'hôtes connues et la configuration SSH
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ semaphore_dossier }}/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0444"
+  loop:
+    - { src: known_hosts.j2, dest: config/known_hosts }
+    - { src: ssh_config.j2, dest: ssh_config }
+  loop_control:
+    label: "{{ item.dest }}"
+
+- name: Déposer le fichier Compose
+  ansible.builtin.template:
+    src: compose.yaml.j2
+    dest: "{{ semaphore_dossier }}/compose.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Démarrer Semaphore
+  community.docker.docker_compose_v2:
+    project_src: "{{ semaphore_dossier }}"
+    state: present
+    pull: never
+    remove_orphans: true
+
+- name: Appliquer les changements de configuration avant le provisionnement
+  ansible.builtin.meta: flush_handlers
+
+- name: Provisionner le projet (utilisateur, dépôts, inventaire, modèles)
+  ansible.builtin.include_tasks: projet.yml

@@ -11,12 +11,13 @@
         file: "{{ fichier_secrets }}"
       no_log: true
 
-- name: Socle commun (durcissement, mises à jour, Docker)
+- name: Socle commun (durcissement, mises à jour, Docker, agent de supervision)
   hosts: plateforme
   become: true
   roles:
     - common
     - docker
+    - agent_supervision
 
 - name: Identité (LLDAP, Authelia)
   hosts: auth01
@@ -38,12 +39,19 @@
     - immich
     - nextcloud
 
-- name: Outils internes (proxy, NetBox)
+- name: Outils internes (proxy, NetBox, Semaphore)
   hosts: svc01
   become: true
   roles:
     - proxy
     - netbox
+    - semaphore
+
+- name: Supervision (Prometheus, Alertmanager, Grafana, ntfy)
+  hosts: mon01
+  become: true
+  roles:
+    - supervision
 
 - name: Documentation
   hosts: web01

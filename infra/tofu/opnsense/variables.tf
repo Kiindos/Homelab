@@ -86,6 +86,15 @@ variable "alias_hotes_externes" {
   default = {}
 }
 
+variable "alias_groupes" {
+  description = "Groupes d'hôtes internes (alias g_<nom>), composés des alias h_<hôte> de var.hotes."
+  type = map(object({
+    membres     = list(string)
+    description = string
+  }))
+  default = {}
+}
+
 variable "regles" {
   description = <<-EOT
     Règles de filtrage, indexées par un identifiant stable. Les champs interface, source et destination

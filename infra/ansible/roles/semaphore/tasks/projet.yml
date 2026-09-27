@@ -1,0 +1,278 @@
+# Provisionnement par l'API : crée ce qui manque et corrige ce qui diffère (repéré par le nom).
+# Les clés et secrets déjà présents ne sont jamais réécrits (rotation : voir la documentation).
+
+- name: Attendre que Semaphore réponde
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ semaphore_port_local }}/api/ping"
+    return_content: true
+  register: semaphore_ping
+  until: semaphore_ping.status == 200
+  retries: 30
+  delay: 2
+
+- name: Lister les comptes
+  community.docker.docker_container_exec:
+    container: semaphore
+    argv: [semaphore, users, list, --config, /etc/semaphore/config.json]
+  register: semaphore_comptes
+  changed_when: false
+
+- name: Créer le compte administrateur (SSO, sans mot de passe local)
+  community.docker.docker_container_exec:
+    container: semaphore
+    argv:
+      - semaphore
+      - users
+      - add
+      - --config=/etc/semaphore/config.json
+      - --external
+      - --admin
+      - --login={{ semaphore_admin.login }}
+      - --name={{ semaphore_admin.nom }}
+      - --email={{ semaphore_admin.email }}
+  when: semaphore_admin.login not in semaphore_comptes.stdout_lines
+
+- name: Obtenir un jeton d'API temporaire (15 minutes)
+  community.docker.docker_container_exec:
+    container: semaphore
+    argv:
+      - semaphore
+      - users
+      - token
+      - create
+      - --config=/etc/semaphore/config.json
+      - --login={{ semaphore_admin.login }}
+      - --ttl=15m
+      - --name=provisionnement-ansible
+  register: semaphore_jeton
+  changed_when: false
+  no_log: true
+
+- name: Préparer les appels à l'API
+  ansible.builtin.set_fact:
+    semaphore_api: "http://127.0.0.1:{{ semaphore_port_local }}/api"
+    semaphore_entetes:
+      Authorization: "Bearer {{ semaphore_jeton.stdout_lines[-1] }}"
+  no_log: true
+
+# --- Projet -----------------------------------------------------------------------------------------
+
+- name: Lister les projets
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/projects"
+    headers: "{{ semaphore_entetes }}"
+  register: semaphore_projets
+
+- name: Créer le projet
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/projects"
+    method: POST
+    headers: "{{ semaphore_entetes }}"
+    body_format: json
+    body: { name: "{{ semaphore_projet.nom }}", max_parallel_tasks: 1 }
+    status_code: [200, 201]
+  register: semaphore_projet_cree
+  when: semaphore_projet.nom not in (semaphore_projets.json | map(attribute='name'))
+  changed_when: true
+
+- name: Retenir l'identifiant du projet
+  ansible.builtin.set_fact:
+    semaphore_pid: >-
+      {{ semaphore_projet_cree.json.id if semaphore_projet_cree is not skipped else
+         (semaphore_projets.json | selectattr('name', 'equalto', semaphore_projet.nom) | first).id }}
+
+# --- Clés -------------------------------------------------------------------------------------------
+
+- name: Lister les clés du projet
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/keys"
+    headers: "{{ semaphore_entetes }}"
+  register: semaphore_cles
+
+- name: Créer les clés manquantes (chiffrées dans la base de Semaphore)
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/keys"
+    method: POST
+    headers: "{{ semaphore_entetes }}"
+    body_format: json
+    body: >-
+      {{ {'name': item.nom, 'type': item.type, 'project_id': semaphore_pid | int}
+         | combine({'ssh': {'login': '', 'passphrase': '', 'private_key': item.cle}} if item.type == 'ssh' else {}) }}
+    status_code: [200, 201, 204]
+  loop: >-
+    {{ [{'nom': 'aucune', 'type': 'none', 'cle': ''}]
+       + (semaphore_projet.cles_ssh | dict2items(key_name='nom', value_name='cle')
+          | map('combine', {'type': 'ssh'}) | list) }}
+  loop_control:
+    label: "{{ item.nom }}"
+  when: item.nom not in (semaphore_cles.json | map(attribute='name'))
+  changed_when: true
+  no_log: true
+
+- name: Relister les clés du projet
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/keys"
+    headers: "{{ semaphore_entetes }}"
+  register: semaphore_cles
+
+# --- Dépôts -----------------------------------------------------------------------------------------
+
+- name: Lister les dépôts
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/repositories"
+    headers: "{{ semaphore_entetes }}"
+  register: semaphore_depots
+
+- name: Créer ou corriger les dépôts
+  vars:
+    semaphore_id_cles: "{{ semaphore_cles.json | items2dict(key_name='name', value_name='id') }}"
+    existant: "{{ semaphore_depots.json | selectattr('name', 'equalto', item.key) | first | default({}) }}"
+    voulu:
+      name: "{{ item.key }}"
+      project_id: "{{ semaphore_pid | int }}"
+      git_url: "{{ item.value.url }}"
+      git_branch: "{{ item.value.branche }}"
+      ssh_key_id: "{{ semaphore_id_cles[item.value.cle] }}"
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/repositories{{ ('/' ~ existant.id) if existant else '' }}"
+    method: "{{ 'PUT' if existant else 'POST' }}"
+    headers: "{{ semaphore_entetes }}"
+    body_format: json
+    body: "{{ voulu | combine({'id': existant.id} if existant else {}) }}"
+    status_code: [200, 201, 204]
+  loop: "{{ semaphore_projet.depots | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: >-
+    not existant or existant.git_url != voulu.git_url or existant.git_branch != voulu.git_branch
+    or existant.ssh_key_id | int != voulu.ssh_key_id | int
+  changed_when: true
+
+- name: Relister les dépôts
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/repositories"
+    headers: "{{ semaphore_entetes }}"
+  register: semaphore_depots
+
+# --- Inventaire -------------------------------------------------------------------------------------
+
+- name: Lister les inventaires
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/inventory"
+    headers: "{{ semaphore_entetes }}"
+  register: semaphore_inventaires
+
+- name: Créer ou corriger l'inventaire (fichier du dépôt privé)
+  vars:
+    semaphore_id_cles: "{{ semaphore_cles.json | items2dict(key_name='name', value_name='id') }}"
+    semaphore_id_depots: "{{ semaphore_depots.json | items2dict(key_name='name', value_name='id') }}"
+    existant: >-
+      {{ semaphore_inventaires.json | selectattr('name', 'equalto', semaphore_projet.inventaire.nom) | first | default({}) }}
+    voulu:
+      name: "{{ semaphore_projet.inventaire.nom }}"
+      project_id: "{{ semaphore_pid | int }}"
+      type: file
+      inventory: "{{ semaphore_projet.inventaire.chemin }}"
+      repository_id: "{{ semaphore_id_depots[semaphore_projet.inventaire.depot] }}"
+      ssh_key_id: "{{ semaphore_id_cles[semaphore_projet.inventaire.cle] }}"
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/inventory{{ ('/' ~ existant.id) if existant else '' }}"
+    method: "{{ 'PUT' if existant else 'POST' }}"
+    headers: "{{ semaphore_entetes }}"
+    body_format: json
+    body: "{{ voulu | combine({'id': existant.id} if existant else {}) }}"
+    status_code: [200, 201, 204]
+  when: >-
+    not existant or existant.inventory != voulu.inventory
+    or existant.repository_id | int != voulu.repository_id | int
+    or existant.ssh_key_id | int != voulu.ssh_key_id | int
+  changed_when: true
+
+# --- Environnement ----------------------------------------------------------------------------------
+
+- name: Lister les environnements
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/environment"
+    headers: "{{ semaphore_entetes }}"
+  register: semaphore_environnements
+
+- name: Créer l'environnement (variables et secrets, chiffrés dans la base de Semaphore)
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/environment"
+    method: POST
+    headers: "{{ semaphore_entetes }}"
+    body_format: json
+    body:
+      name: "{{ semaphore_projet.environnement.nom }}"
+      project_id: "{{ semaphore_pid | int }}"
+      json: "{{ semaphore_projet.environnement.variables | default({}) | to_json }}"
+      env: "{}"
+      secrets: >-
+        {{ semaphore_projet.environnement.secrets_env | default({})
+           | dict2items(key_name='name', value_name='secret')
+           | map('combine', {'type': 'env', 'operation': 'create'}) | list }}
+    status_code: [200, 201, 204]
+  when: semaphore_projet.environnement.nom not in (semaphore_environnements.json | map(attribute='name'))
+  changed_when: true
+  no_log: true
+
+- name: Relister les environnements
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/environment"
+    headers: "{{ semaphore_entetes }}"
+  register: semaphore_environnements
+
+# --- Modèles de tâches ------------------------------------------------------------------------------
+
+- name: Lister les modèles de tâches
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/templates"
+    headers: "{{ semaphore_entetes }}"
+  register: semaphore_modeles
+
+- name: Relister les inventaires
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/inventory"
+    headers: "{{ semaphore_entetes }}"
+  register: semaphore_inventaires
+
+- name: Créer ou corriger les modèles de tâches
+  vars:
+    semaphore_id_depots: "{{ semaphore_depots.json | items2dict(key_name='name', value_name='id') }}"
+    existant: "{{ semaphore_modeles.json | selectattr('name', 'equalto', item.nom) | first | default({}) }}"
+    voulu:
+      name: "{{ item.nom }}"
+      project_id: "{{ semaphore_pid | int }}"
+      app: ansible
+      playbook: "{{ item.playbook }}"
+      description: "{{ item.description | default('') }}"
+      repository_id: "{{ semaphore_id_depots[item.depot] }}"
+      inventory_id: >-
+        {{ (semaphore_inventaires.json | selectattr('name', 'equalto', semaphore_projet.inventaire.nom) | first).id }}
+      environment_id: >-
+        {{ (semaphore_environnements.json | selectattr('name', 'equalto', semaphore_projet.environnement.nom) | first).id }}
+      arguments: "[]"
+      task_params:
+        allow_debug: true
+        allow_override_limit: true
+        allow_override_tags: true
+        allow_override_skip_tags: true
+        limit: "{{ item.limite | default([]) }}"
+        tags: []
+        skip_tags: []
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/templates{{ ('/' ~ existant.id) if existant else '' }}"
+    method: "{{ 'PUT' if existant else 'POST' }}"
+    headers: "{{ semaphore_entetes }}"
+    body_format: json
+    body: "{{ voulu | combine({'id': existant.id} if existant else {}) }}"
+    status_code: [200, 201, 204]
+  loop: "{{ semaphore_projet.modeles }}"
+  loop_control:
+    label: "{{ item.nom }}"
+  when: >-
+    not existant or existant.playbook != voulu.playbook
+    or existant.repository_id | int != voulu.repository_id | int
+    or existant.description | default('', true) != voulu.description
+    or existant.task_params.limit | default([], true) != voulu.task_params.limit
+  changed_when: true

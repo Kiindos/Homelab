@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+# Remplace la configuration de l'image officielle, qui désactive la vérification des clés d'hôtes.
+Host *
+  StrictHostKeyChecking yes
+  UserKnownHostsFile /etc/semaphore/known_hosts
+  GlobalKnownHostsFile /dev/null
+  HashKnownHosts no

@@ -24,6 +24,7 @@
       - docker-ce-cli
       - containerd.io
       - docker-compose-plugin
+      - docker-buildx-plugin   # construction d'images locales (Semaphore)
     state: present
     update_cache: "{{ docker_sources.changed }}"
 

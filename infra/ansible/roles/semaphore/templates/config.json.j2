@@ -1,0 +1,34 @@
+{{ {
+  "dialect": "sqlite",
+  "sqlite": {"host": "/var/lib/semaphore/database.sqlite"},
+  "port": ":3000",
+  "tmp_path": "/tmp/semaphore",
+  "web_host": semaphore_url,
+  "git_client": "cmd_git",
+  "cookie_hash": semaphore_secrets.cookie_hash,
+  "cookie_encryption": semaphore_secrets.cookie_encryption,
+  "access_key_encryption": semaphore_secrets.access_key_encryption,
+  "password_login_disable": true,
+  "non_admin_can_create_project": false,
+  "max_parallel_tasks": 1,
+  "max_tasks_per_template": 200,
+  "schedule": {"timezone": semaphore_fuseau},
+  "env_vars": {
+    "ANSIBLE_HOST_KEY_CHECKING": "True",
+    "ANSIBLE_CONFIG": "infra/ansible/ansible.cfg"
+  },
+  "oidc_providers": {
+    "authelia": {
+      "display_name": "Authelia (SSO)",
+      "provider_url": semaphore_issuer,
+      "client_id": "semaphore",
+      "client_secret": semaphore_secrets.oidc_secret,
+      "redirect_url": semaphore_url ~ "/api/auth/oidc/authelia/redirect",
+      "return_via_state": true,
+      "scopes": ["openid", "profile", "email", "groups"],
+      "username_claim": "preferred_username",
+      "name_claim": "name",
+      "email_claim": "email"
+    }
+  }
+} | to_nice_json }}

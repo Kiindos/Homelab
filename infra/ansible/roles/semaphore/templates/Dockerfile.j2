@@ -1,0 +1,20 @@
+# {{ ansible_managed }}
+# Image Semaphore du homelab : l'image officielle, plus les outils qu'appellent les playbooks.
+FROM {{ semaphore_image_base }}
+
+USER root
+
+# sops (déchiffrement des secrets) : binaire officiel, empreinte vérifiée.
+RUN wget -q -O /usr/local/bin/sops \
+      "https://github.com/getsops/sops/releases/download/v{{ semaphore_sops_version }}/sops-v{{ semaphore_sops_version }}.linux.amd64" \
+ && echo "{{ semaphore_sops_sha256 }}  /usr/local/bin/sops" | sha256sum -c - \
+ && chmod 0755 /usr/local/bin/sops
+
+# Ansible et MkDocs aux versions du poste d'admin (la documentation interne est construite ici).
+RUN pip3 install --no-cache-dir --upgrade {{ semaphore_paquets_python | join(' ') }}
+
+# Vérification des clés d'hôtes SSH rétablie (voir le script) : il passe devant /usr/bin/ssh dans le PATH.
+COPY ssh-verifie /usr/local/bin/ssh
+RUN chmod 0755 /usr/local/bin/ssh
+
+USER 1001

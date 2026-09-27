@@ -79,6 +79,17 @@ resource "opnsense_firewall_alias" "externe" {
   description = each.value.description
 }
 
+resource "opnsense_firewall_alias" "groupe" {
+  for_each = var.alias_groupes
+
+  name        = "g_${each.key}"
+  type        = "host"
+  content     = [for m in each.value.membres : "h_${replace(m, "-", "_")}"]
+  description = each.value.description
+
+  depends_on = [opnsense_firewall_alias.hote]
+}
+
 resource "opnsense_firewall_alias" "prives" {
   name        = "n_prives"
   type        = "network"
@@ -121,6 +132,7 @@ resource "opnsense_firewall_filter" "regle" {
     opnsense_firewall_alias.hote,
     opnsense_firewall_alias.ports,
     opnsense_firewall_alias.externe,
+    opnsense_firewall_alias.groupe,
     opnsense_firewall_alias.prives,
   ]
 }

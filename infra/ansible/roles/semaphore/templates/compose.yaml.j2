@@ -1,0 +1,27 @@
+# {{ ansible_managed }}
+# Semaphore UI : interface de lancement des playbooks Ansible du homelab (VPN + SSO uniquement).
+name: semaphore
+
+services:
+  semaphore:
+    image: {{ semaphore_image }}
+    container_name: semaphore
+    restart: unless-stopped
+    user: "1001:0"
+    ports:
+      - "127.0.0.1:{{ semaphore_port_local }}:3000"   # API locale, pour le provisionnement par Ansible
+    volumes:
+      - ./config:/etc/semaphore:ro
+      - ./ssh_config:/etc/ssh/ssh_config.d/semaphore.conf:ro
+      - donnees:/var/lib/semaphore
+      - taches:/tmp/semaphore
+    networks: [proxy]
+    security_opt: ["no-new-privileges:true"]
+
+networks:
+  proxy:
+    external: true
+
+volumes:
+  donnees:
+  taches:

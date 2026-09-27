@@ -1,0 +1,26 @@
+#!/bin/sh
+# Relais installé devant /usr/bin/ssh dans l'image Semaphore du homelab.
+# Semaphore lance git avec « -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null » (non configurable),
+# ce qui laisserait n'importe qui se faire passer pour GitHub ou pour un serveur. Ces deux options sont retirées :
+# la configuration SSH de l'image impose alors les clés d'hôtes connues (/etc/semaphore/known_hosts).
+n=$#
+i=0
+while [ "$i" -lt "$n" ]; do
+  a=$1
+  shift
+  i=$((i + 1))
+  case "$a" in
+    -oStrictHostKeyChecking=no | -oUserKnownHostsFile=/dev/null) continue ;;
+  esac
+  if [ "$a" = "-o" ] && [ "$i" -lt "$n" ]; then
+    case "$1" in
+      StrictHostKeyChecking=no | UserKnownHostsFile=/dev/null)
+        shift
+        i=$((i + 1))
+        continue
+        ;;
+    esac
+  fi
+  set -- "$@" "$a"
+done
+exec /usr/bin/ssh "$@"

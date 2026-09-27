@@ -1,0 +1,43 @@
+semaphore_dossier: /opt/piles/semaphore
+# Image officielle (empreinte figée), complétée localement par les outils des playbooks (voir templates/Dockerfile.j2).
+semaphore_image_base: semaphoreui/semaphore:v2.19.12@sha256:3996804607ebb63690528185bb9adc3507ee896851098e4453975f2ce7f8b435
+semaphore_version: "2.19.12"
+# Mêmes versions que sur le poste d'admin : un playbook se comporte pareil qu'il soit lancé d'ici ou de là.
+semaphore_paquets_python:
+  - ansible==14.4.0
+  - mkdocs==1.6.1
+  - mkdocs-material==9.7.7
+semaphore_sops_version: "3.13.3"
+semaphore_sops_sha256: e5bec3346a873ae91d871550f3e698c1aad962aff462a080e40f25fde17fef6b
+# Port local de l'API (provisionnement par Ansible) ; l'interface web passe par le proxy interne.
+semaphore_port_local: 3010
+semaphore_url: "https://semaphore.{{ domaine_interne }}"
+semaphore_issuer: "https://auth.{{ domaine_public }}"
+semaphore_fuseau: Europe/Paris
+
+# Administrateur : compte SSO créé d'avance comme « externe » (aucun mot de passe local n'existe).
+semaphore_admin:
+  login: ""
+  nom: ""
+  email: ""
+
+# Secrets (fichier SOPS) : cookie_hash, cookie_encryption, access_key_encryption (32 octets en base64), oidc_secret.
+semaphore_secrets: {}
+
+# Clés d'hôtes SSH de GitHub (https://api.github.com/meta), pour le clone en SSH sur le port 443.
+semaphore_github_cles:
+  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+  - >-
+    ecdsa-sha2-nistp256
+    AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+# Machines administrées : leurs clés d'hôtes sont relevées sur place et seules acceptées.
+semaphore_machines: "{{ groups['all'] | difference([inventory_hostname]) | sort }}"
+
+# Projet créé dans Semaphore (dépôts, inventaire, environnement, modèles de tâches).
+semaphore_projet:
+  nom: Homelab
+  depots: {}          # nom => { url, branche, cle (nom d'une clé ci-dessous ou « aucune ») }
+  cles_ssh: {}        # nom => clé privée
+  inventaire: {}      # { nom, depot, chemin, cle }
+  environnement: {}   # { nom, variables (dict), secrets_env (dict nom => valeur) }
+  modeles: []         # [{ nom, depot, playbook, description }]

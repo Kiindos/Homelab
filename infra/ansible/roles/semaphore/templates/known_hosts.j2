@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+# Seules ces clés sont acceptées : relevées sur les machines elles-mêmes, et publiées par GitHub.
+# Les machines sont désignées par leur nom complet, celui qu'utilise l'inventaire (ansible_host).
+{% for r in semaphore_cles_hotes.results %}
+{{ r.item }}.{{ domaine_interne }} {{ (r.content | b64decode).split()[:2] | join(' ') }}
+{% endfor %}
+{% for cle in semaphore_github_cles %}
+[ssh.github.com]:443 {{ cle }}
+{% endfor %}
