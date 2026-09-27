@@ -8,3 +8,6 @@
         # needrestart pourrait redémarrer des services Proxmox en pleine journée : exclu ici.
         common_paquets: [curl, vim, htop, jq, ca-certificates, unattended-upgrades, apt-listchanges, smartmontools]
     - hyperviseur
+    - role: agent_supervision
+      vars:
+        agent_supervision_smart: true

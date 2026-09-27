@@ -1,0 +1,173 @@
+- name: Créer les dossiers de la supervision
+  ansible.builtin.file:
+    path: "{{ supervision_dossier }}/{{ item.chemin }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { chemin: "", mode: "0750" }
+    - { chemin: secrets, mode: "0700" }
+    - { chemin: prometheus, mode: "0755" }
+    - { chemin: alertmanager, mode: "0755" }
+    - { chemin: alertmanager/secrets, mode: "0755" }
+    - { chemin: grafana/provisioning/datasources, mode: "0755" }
+    - { chemin: grafana/provisioning/dashboards, mode: "0755" }
+    - { chemin: grafana/tableaux, mode: "0755" }
+    - { chemin: noc, mode: "0755" }
+    - { chemin: noc/site, mode: "0755" }
+  loop_control:
+    label: "{{ item.chemin or supervision_dossier }}"
+
+# Seul dossier accessible en écriture au collecteur (utilisateur « nobody »), en lecture à la page.
+- name: Créer le dossier de l'instantané du NOC
+  ansible.builtin.file:
+    path: "{{ supervision_dossier }}/noc/etat"
+    state: directory
+    owner: "65534"
+    group: "65534"
+    mode: "0755"
+
+# Secrets lisibles dans leur conteneur (0444), mais inaccessibles sur l'hôte : dossier parent réservé à root.
+- name: Écrire les secrets
+  ansible.builtin.copy:
+    dest: "{{ supervision_dossier }}/{{ item.chemin }}"
+    content: "{{ item.valeur }}"
+    owner: root
+    group: root
+    mode: "0444"
+  loop:
+    - { chemin: secrets/grafana_admin, valeur: "{{ supervision.grafana_admin_password }}" }
+    - { chemin: secrets/grafana_oidc, valeur: "{{ oidc_clients.grafana.secret }}" }
+    - { chemin: alertmanager/secrets/smtp, valeur: "{{ authelia.smtp_password }}" }
+    - { chemin: alertmanager/secrets/ntfy, valeur: "{{ supervision.ntfy_alertmanager_password }}" }
+  loop_control:
+    label: "{{ item.chemin }}"
+  no_log: true
+  notify: Redémarrer la supervision
+
+- name: Écrire la configuration de l'exporteur Proxmox (jeton en lecture seule)
+  ansible.builtin.template:
+    src: pve.yml.j2
+    dest: "{{ supervision_dossier }}/secrets/pve.yml"
+    owner: root
+    group: root
+    mode: "0444"
+  no_log: true
+  notify: Redémarrer la supervision
+
+# Lue sur l'hyperviseur lui-même : le rôle ne dépend d'aucun fichier du poste qui lance Ansible.
+- name: Lire l'autorité de certification de Proxmox
+  ansible.builtin.slurp:
+    src: /etc/pve/pve-root-ca.pem
+  delegate_to: "{{ item }}"
+  become: false
+  loop: "{{ groups['hyperviseurs'] }}"
+  register: supervision_ca_pve
+
+- name: Déposer l'autorité de certification de Proxmox (vérification TLS de l'API)
+  ansible.builtin.copy:
+    content: "{{ supervision_ca_pve.results | map(attribute='content') | map('b64decode') | join('') }}"
+    dest: "{{ supervision_dossier }}/ca-bundle.pem"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Redémarrer la supervision
+
+- name: Déposer les configurations
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ supervision_dossier }}/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - { src: prometheus.yml.j2, dest: prometheus/prometheus.yml }
+    - { src: alertmanager.yml.j2, dest: alertmanager/alertmanager.yml }
+    - { src: ntfy.yml.j2, dest: ntfy.yml }
+    - { src: grafana/sources.yml.j2, dest: grafana/provisioning/datasources/sources.yml }
+    - { src: grafana/tableaux.yml.j2, dest: grafana/provisioning/dashboards/tableaux.yml }
+    - { src: compose.yaml.j2, dest: compose.yaml }
+  loop_control:
+    label: "{{ item.dest }}"
+  notify: Redémarrer la supervision
+
+- name: Déposer les règles d'alerte, les sondes et le tableau de bord du NOC
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ supervision_dossier }}/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - { src: alertes.yml, dest: prometheus/alertes.yml }
+    - { src: blackbox.yml, dest: blackbox.yml }
+    - { src: noc.json, dest: grafana/tableaux/noc.json }
+  loop_control:
+    label: "{{ item.dest }}"
+  notify: Redémarrer la supervision
+
+- name: Déposer la page du NOC (fichiers statiques, sans redémarrage)
+  ansible.builtin.copy:
+    src: noc/site/
+    dest: "{{ supervision_dossier }}/noc/site/"
+    owner: root
+    group: root
+    mode: "u=rwX,go=rX"
+
+- name: Déposer le collecteur, ses libellés et la configuration de la page du NOC
+  ansible.builtin.copy:
+    dest: "{{ supervision_dossier }}/noc/{{ item.dest }}"
+    src: "{{ item.src | default(omit) }}"
+    content: "{{ item.contenu | default(omit) }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - { src: noc/collecte.py, dest: collecte.py }
+    - { contenu: "{{ supervision_noc_libelles | to_nice_json }}\n", dest: noc.json }
+    - { contenu: "{{ lookup('ansible.builtin.template', 'noc-nginx.conf.j2') }}", dest: nginx.conf }
+  loop_control:
+    label: "noc/{{ item.dest }}"
+  notify: Redémarrer la supervision
+
+- name: Démarrer la supervision
+  community.docker.docker_compose_v2:
+    project_src: "{{ supervision_dossier }}"
+    state: present
+    pull: missing
+    remove_orphans: true
+
+# --- ntfy : comptes et droits (tout est refusé par défaut) -----------------------------------------
+
+- name: Lister les comptes ntfy
+  ansible.builtin.command:
+    cmd: docker compose exec -T ntfy ntfy user list
+    chdir: "{{ supervision_dossier }}"
+  register: supervision_ntfy_comptes
+  changed_when: false
+
+- name: Créer les comptes ntfy (Alertmanager en écriture, téléphone de Maxime en lecture)
+  ansible.builtin.command:
+    argv: [docker, compose, exec, -T, -e, "NTFY_PASSWORD={{ item.mdp }}", ntfy, ntfy, user, add, --role=user, "{{ item.nom }}"]
+    chdir: "{{ supervision_dossier }}"
+  loop:
+    - { nom: alertmanager, mdp: "{{ supervision.ntfy_alertmanager_password }}" }
+    - { nom: maxime, mdp: "{{ supervision.ntfy_maxime_password }}" }
+  loop_control:
+    label: "{{ item.nom }}"
+  when: ("user " ~ item.nom ~ " ") not in supervision_ntfy_comptes.stdout
+  changed_when: true
+  no_log: true
+
+- name: Donner les droits sur le sujet des alertes
+  ansible.builtin.command:
+    cmd: "docker compose exec -T ntfy ntfy access {{ item.nom }} {{ supervision_ntfy_sujet }} {{ item.droit }}"
+    chdir: "{{ supervision_dossier }}"
+  loop:
+    - { nom: alertmanager, droit: write-only }
+    - { nom: maxime, droit: read-only }
+  loop_control:
+    label: "{{ item.nom }} : {{ item.droit }}"
+  when: (item.droit ~ " access to topic " ~ supervision_ntfy_sujet) not in supervision_ntfy_comptes.stdout
+  changed_when: true

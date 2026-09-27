@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+base-url: "{{ supervision_ntfy_url }}"
+listen-http: ":80"
+behind-proxy: true
+cache-file: /var/cache/ntfy/cache.db
+auth-file: /var/lib/ntfy/auth.db
+# Tout est refusé par défaut : seuls les comptes déclarés peuvent publier ou lire.
+auth-default-access: deny-all
+enable-signup: false
+enable-login: true
+# Notifications instantanées sur iOS : ntfy.sh ne reçoit qu'un identifiant de message, jamais son contenu.
+upstream-base-url: "https://ntfy.sh"

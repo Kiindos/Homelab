@@ -1,0 +1,4 @@
+- name: Redémarrer la supervision
+  community.docker.docker_compose_v2:
+    project_src: "{{ supervision_dossier }}"
+    state: restarted

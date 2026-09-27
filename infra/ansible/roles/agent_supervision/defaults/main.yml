@@ -1,0 +1,5 @@
+# Exporteur SMART (disques physiques) : uniquement sur l'hyperviseur.
+agent_supervision_smart: false
+agent_supervision_smart_version: "0.14.0"
+agent_supervision_smart_base: "https://github.com/prometheus-community/smartctl_exporter/releases/download"
+agent_supervision_smart_url: "{{ agent_supervision_smart_base }}/v{{ agent_supervision_smart_version }}"

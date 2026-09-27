@@ -1,0 +1,80 @@
+# {{ ansible_managed }}
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+rule_files: [/etc/prometheus/alertes.yml]
+
+alerting:
+  alertmanagers:
+    - static_configs: [{ targets: ["alertmanager:9093"] }]
+
+# Libellé « instance » = nom court de la machine (hv01, waf01…) plutôt que nom:port.
+{% set nom_court = [{'source_labels': ['__address__'], 'regex': '([^.:]+).*', 'target_label': 'instance', 'replacement': '$1'}] %}
+scrape_configs:
+  - job_name: machines
+    static_configs:
+      - targets:
+{% for h in (groups['hyperviseurs'] + groups['plateforme'] + supervision_machines_supplementaires) | unique | sort %}
+          - "{{ h }}.{{ domaine_interne }}:9100"
+{% endfor %}
+    relabel_configs: {{ nom_court | to_json }}
+
+  - job_name: disques
+    static_configs:
+      - targets:
+{% for h in groups['hyperviseurs'] %}
+          - "{{ h }}.{{ domaine_interne }}:9633"
+{% endfor %}
+    relabel_configs: {{ nom_court | to_json }}
+
+  - job_name: proxmox
+    metrics_path: /pve
+    params: { module: [default], cluster: ["1"], node: ["1"] }
+    static_configs:
+      - targets:
+{% for h in groups['hyperviseurs'] %}
+          - "{{ h }}.{{ domaine_interne }}"
+{% endfor %}
+    relabel_configs:
+      - { source_labels: [__address__], target_label: __param_target }
+      - { source_labels: [__param_target], regex: '([^.]+).*', target_label: instance, replacement: '$1' }
+      - { target_label: __address__, replacement: "pve:9221" }
+
+  # Services publiés : sondés via le WAF (résolution interne), avec contrôle du certificat.
+  - job_name: services
+    metrics_path: /probe
+    params: { module: [https] }
+    static_configs:
+      - targets: {{ supervision_services_publics | to_json }}
+    relabel_configs:
+      - { source_labels: [__address__], target_label: __param_target }
+      - { source_labels: [__param_target], regex: 'https://([^/]+).*', target_label: instance, replacement: '$1' }
+      - { target_label: __address__, replacement: "blackbox:9115" }
+
+  - job_name: outils-internes
+    metrics_path: /probe
+    params: { module: [https] }
+    static_configs:
+      - targets: {{ supervision_outils_internes | to_json }}
+    relabel_configs:
+      - { source_labels: [__address__], target_label: __param_target }
+      - { source_labels: [__param_target], regex: 'https://([^/]+).*', target_label: instance, replacement: '$1' }
+      - { target_label: __address__, replacement: "blackbox:9115" }
+
+  - job_name: ping
+    metrics_path: /probe
+    params: { module: [icmp] }
+    static_configs:
+      - targets:
+{% for h in (groups['hyperviseurs'] + groups['plateforme'] + supervision_machines_supplementaires) | unique | sort %}
+          - "{{ h }}.{{ domaine_interne }}"
+{% endfor %}
+    relabel_configs:
+      - { source_labels: [__address__], target_label: __param_target }
+      - { source_labels: [__param_target], regex: '([^.]+).*', target_label: instance, replacement: '$1' }
+      - { target_label: __address__, replacement: "blackbox:9115" }
+
+  - job_name: supervision
+    static_configs:
+      - targets: ["localhost:9090", "alertmanager:9093"]

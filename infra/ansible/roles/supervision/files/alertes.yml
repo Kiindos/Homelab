@@ -1,0 +1,111 @@
+# Règles d'alerte. Niveau « critique » : e-mail + notification sur téléphone ; « avertissement » : NOC uniquement.
+groups:
+  - name: disponibilite
+    rules:
+      - alert: MachineInjoignable
+        expr: up{job="machines"} == 0
+        for: 3m
+        labels: { severite: critique }
+        annotations:
+          resume: "{{ $labels.instance }} ne répond plus"
+          description: "La supervision n'arrive plus à joindre {{ $labels.instance }} depuis 3 minutes (machine arrêtée, réseau ou agent en panne)."
+      - alert: VMArretee
+        expr: pve_up{id=~"qemu/.*"} == 0 and on (id) pve_onboot_status == 1
+        for: 5m
+        labels: { severite: critique }
+        annotations:
+          resume: "La VM {{ $labels.id }} est arrêtée"
+          description: "Une VM censée démarrer avec l'hyperviseur est arrêtée depuis 5 minutes."
+      - alert: ServicePublicIndisponible
+        expr: probe_success{job="services"} == 0
+        for: 3m
+        labels: { severite: critique }
+        annotations:
+          resume: "{{ $labels.instance }} est indisponible"
+          description: "La sonde HTTPS de {{ $labels.instance }} échoue depuis 3 minutes (application, WAF ou certificat)."
+      - alert: OutilInterneIndisponible
+        expr: probe_success{job="outils-internes"} == 0
+        for: 10m
+        labels: { severite: avertissement }
+        annotations:
+          resume: "{{ $labels.instance }} est indisponible"
+          description: "Un outil interne ne répond plus depuis 10 minutes."
+
+  - name: stockage
+    rules:
+      - alert: PoolZFSDegrade
+        expr: node_zfs_zpool_state{state!="online"} > 0
+        for: 1m
+        labels: { severite: critique }
+        annotations:
+          resume: "Pool ZFS {{ $labels.zpool }} : {{ $labels.state }}"
+          description: "Le pool {{ $labels.zpool }} n'est plus en état ONLINE : un disque est probablement en panne. Vérifier avec « zpool status »."
+      - alert: DisqueEnEchecSMART
+        expr: smartctl_device_smart_status == 0
+        for: 5m
+        labels: { severite: critique }
+        annotations:
+          resume: "Disque {{ $labels.device }} en échec SMART"
+          description: "Le disque {{ $labels.device }} signale une défaillance : préparer son remplacement."
+      - alert: DefautsDisqueEnHausse
+        expr: increase(smartctl_scsi_grown_defect_list[24h]) > 0
+        labels: { severite: avertissement }
+        annotations:
+          resume: "Nouveaux secteurs défectueux sur {{ $labels.device }}"
+          description: "La liste des défauts du disque {{ $labels.device }} a augmenté sur 24 h : surveiller son évolution."
+      - alert: EspaceDisqueFaible
+        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|virtiofs"} / node_filesystem_size_bytes) > 0.85
+        for: 15m
+        labels: { severite: avertissement }
+        annotations:
+          resume: "{{ $labels.instance }} : {{ $labels.mountpoint }} rempli à plus de 85 %"
+          description: "Espace disque bientôt épuisé sur {{ $labels.instance }} ({{ $labels.mountpoint }})."
+      - alert: EspaceDisqueCritique
+        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|virtiofs"} / node_filesystem_size_bytes) > 0.95
+        for: 5m
+        labels: { severite: critique }
+        annotations:
+          resume: "{{ $labels.instance }} : {{ $labels.mountpoint }} presque plein"
+          description: "Moins de 5 % d'espace libre : les services vont bientôt échouer."
+
+  - name: ressources
+    rules:
+      - alert: MemoireSaturee
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.92
+        for: 10m
+        labels: { severite: avertissement }
+        annotations:
+          resume: "{{ $labels.instance }} : mémoire saturée"
+          description: "Plus de 92 % de la mémoire utilisée depuis 10 minutes."
+      - alert: ProcesseurSature
+        expr: 1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) > 0.9
+        for: 15m
+        labels: { severite: avertissement }
+        annotations:
+          resume: "{{ $labels.instance }} : processeur saturé"
+          description: "Processeur occupé à plus de 90 % depuis 15 minutes."
+
+  - name: certificats
+    rules:
+      - alert: CertificatBientotExpire
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 14
+        labels: { severite: avertissement }
+        annotations:
+          resume: "Certificat de {{ $labels.instance }} : expiration dans moins de 14 jours"
+          description: "Le renouvellement automatique n'a pas eu lieu : vérifier Let's Encrypt."
+      - alert: CertificatExpireImminent
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 5
+        labels: { severite: critique }
+        annotations:
+          resume: "Certificat de {{ $labels.instance }} : expiration dans moins de 5 jours"
+          description: "Les visiteurs verront bientôt une erreur de sécurité."
+
+  - name: supervision
+    rules:
+      - alert: CibleDeCollecteInjoignable
+        expr: up{job=~"disques|proxmox|supervision"} == 0
+        for: 10m
+        labels: { severite: avertissement }
+        annotations:
+          resume: "Collecte {{ $labels.job }} en échec"
+          description: "La supervision n'obtient plus les métriques de {{ $labels.job }} ({{ $labels.instance }})."

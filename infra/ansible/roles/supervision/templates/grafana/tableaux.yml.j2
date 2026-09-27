@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+apiVersion: 1
+providers:
+  - name: NOC
+    folder: NOC
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/tableaux

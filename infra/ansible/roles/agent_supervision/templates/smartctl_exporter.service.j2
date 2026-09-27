@@ -1,0 +1,17 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Exporteur Prometheus de l'état SMART des disques
+After=network-online.target
+
+[Service]
+# smartctl doit lire les disques : root, mais sans rien pouvoir écrire sur le système.
+# Le contrôleur PERC expose chaque disque deux fois (sdX et bus_0_megaraid_X) : on ne garde que sdX.
+ExecStart=/usr/local/bin/smartctl_exporter --web.listen-address=:9633 --smartctl.interval=5m --smartctl.device-exclude=^bus_
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

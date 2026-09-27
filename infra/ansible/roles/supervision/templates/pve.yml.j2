@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+# Compte de supervision Proxmox en lecture seule (rôle PVEAuditor).
+default:
+  user: "{{ supervision.pve_jeton.utilisateur }}"
+  token_name: "{{ supervision.pve_jeton.nom_jeton }}"
+  token_value: "{{ supervision.pve_jeton.valeur }}"
+  verify_ssl: true

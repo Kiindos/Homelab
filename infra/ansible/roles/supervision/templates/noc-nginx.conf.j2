@@ -1,0 +1,52 @@
+# {{ ansible_managed }}
+# NOC public : fichiers statiques et instantané JSON. La connexion SSO est imposée par le WAF, seul autorisé ici.
+
+# Identifiant transmis par le WAF après vérification par Authelia ; seuls des caractères sûrs sont repris.
+map $http_remote_user $noc_utilisateur {
+    "~^(?<u>[A-Za-z0-9._-]{1,64})$" $u;
+    default "";
+}
+
+server {
+    listen 8080;
+    server_name _;
+    server_tokens off;
+    root /usr/share/nginx/html;
+    index index.html;
+    charset utf-8;
+    charset_types application/json;
+
+    add_header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy same-origin always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+
+    # Sonde de disponibilité : seule adresse ouverte sans SSO (règle « bypass » dans Authelia).
+    location = /sante {
+        allow all;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Tout le reste : uniquement depuis le WAF (et la machine elle-même, pour les tests).
+{% for source in supervision_noc_sources %}
+    allow {{ source }};
+{% endfor %}
+    allow 127.0.0.1;
+    deny all;
+
+    location = /etat.json {
+        alias /donnees/etat.json;
+        expires -1;
+    }
+
+    location = /moi.json {
+        default_type application/json;
+        expires -1;
+        return 200 '{"utilisateur":"$noc_utilisateur"}';
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}

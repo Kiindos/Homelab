@@ -1,0 +1,29 @@
+supervision_dossier: /opt/piles/supervision
+supervision_images:
+  prometheus: prom/prometheus:v3.15.0
+  alertmanager: prom/alertmanager:v0.34.1
+  blackbox: prom/blackbox-exporter:v0.28.0
+  pve: prompve/prometheus-pve-exporter:3.10.0
+  grafana: grafana/grafana:13.2.2
+  ntfy: binwiederhier/ntfy:v2.28.0
+  noc_web: nginxinc/nginx-unprivileged:1.30.5-alpine-slim
+  noc_collecte: python:3.14.7-alpine3.24
+supervision_retention: 30d
+# Machines sans inventaire Ansible mais supervisées (pare-feu : plugin node_exporter d'OPNsense).
+supervision_machines_supplementaires: [fw01]
+# Services publiés sondés depuis l'intérieur (via le WAF) et outils internes (via le proxy de svc01).
+supervision_services_publics: []
+supervision_outils_internes: []
+# Destinataire des alertes critiques (e-mail) et sujet ntfy (notifications sur téléphone).
+supervision_email_alertes: ""
+supervision_ntfy_sujet: homelab-alertes
+supervision_noc_url: "https://noc.{{ domaine_public }}"
+# Grafana : exploration détaillée des métriques, outil interne (VPN) derrière le proxy de svc01.
+supervision_grafana_url: "https://grafana.{{ domaine_interne }}"
+# NOC public (page sur mesure) : seule l'adresse du WAF peut le joindre, le WAF imposant la connexion SSO.
+supervision_noc_sources: []
+# Libellés affichés par le NOC : { services: { <nom d'hôte>: { nom, description, ordre } },
+#   machines: { <machine>: { role, ordre } }, outils: { <nom d'hôte>: { nom } } }
+supervision_noc_libelles: {}
+supervision_ntfy_url: "https://ntfy.{{ domaine_public }}"
+supervision_issuer: "https://auth.{{ domaine_public }}"
