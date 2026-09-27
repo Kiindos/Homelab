@@ -6,6 +6,25 @@
     group: root
     mode: "0750"
 
+- name: Créer le dossier des pages d'erreur
+  ansible.builtin.file:
+    path: "{{ waf_dossier }}/erreurs"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Générer les pages d'erreur personnalisées
+  ansible.builtin.template:
+    src: erreur.html.j2
+    dest: "{{ waf_dossier }}/erreurs/{{ code }}.html"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ waf_erreurs.keys() | list }}"
+  loop_control:
+    loop_var: code
+
 - name: Déposer le fichier Compose de BunkerWeb
   ansible.builtin.template:
     src: compose.yaml.j2

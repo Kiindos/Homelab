@@ -4,7 +4,7 @@ web_image_cloudflared: cloudflare/cloudflared:2026.9.3
 # Sites statiques construits sur le poste d'admin : nom => source, générateur (mkdocs ou hugo), port,
 # et éventuellement une politique de sécurité du contenu (en-tête Content-Security-Policy).
 web_sites: {}
-#  public:  { source: /chemin/vers/Homelab/site, generateur: hugo, port: 8080, csp: "default-src 'self'" }
+#  public:  { depot: https://github.com/…/Homelab.git, branche: site-publie, port: 8080, csp: "…" }  # publié par la CI
 #  interne: { source: /chemin/vers/Homelab-interne, generateur: mkdocs, port: 8081 }
 web_mkdocs: "{{ lookup('env', 'HOME') }}/.local/share/homelab/venv/bin/mkdocs"
 web_hugo: "{{ lookup('env', 'HOME') }}/.local/bin/hugo"

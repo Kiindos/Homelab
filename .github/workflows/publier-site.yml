@@ -1,0 +1,55 @@
+# Publication du site public (maximebertrand.net) — déploiement « tiré » :
+# la CI construit le site et le pousse dans la branche « site-publie » ; la VM web du homelab récupère cette
+# branche toutes les 5 minutes. GitHub n'a ainsi aucun accès entrant au homelab (ni clé, ni runner, ni port).
+name: Publier le site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "site/**"
+      - ".github/workflows/publier-site.yml"
+  workflow_dispatch:
+
+# Une seule publication à la fois ; la plus récente l'emporte.
+concurrency:
+  group: publier-site
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  publier:
+    name: Construire et publier
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # uniquement pour pousser la branche site-publie
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "0.166.0"
+
+      - name: Construire en mode strict (un avertissement arrête la publication)
+        run: hugo --source site --destination "$RUNNER_TEMP/site" --gc --minify --panicOnWarning
+
+      - name: Vérifier l'absence de détails internes
+        run: |
+          if grep -rEl '\b(10|192\.168)\.[0-9]+\.[0-9]+\.[0-9]+' "$RUNNER_TEMP/site"; then
+            echo "::error::Adresse IP interne trouvée dans le site construit"; exit 1
+          fi
+
+      - name: Pousser le site construit dans la branche site-publie
+        env:
+          JETON: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd "$RUNNER_TEMP/site"
+          echo "Construit depuis ${GITHUB_SHA} le $(date -u +%FT%TZ)" > VERSION.txt
+          git init -q -b site-publie
+          git add -A
+          git -c user.name="github-actions" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Site construit depuis ${GITHUB_SHA::7}"
+          git push -q --force "https://x-access-token:${JETON}@github.com/${GITHUB_REPOSITORY}.git" site-publie

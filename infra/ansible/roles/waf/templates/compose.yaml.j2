@@ -13,6 +13,7 @@ services:
       - "443:8443/udp"  # HTTP/3
     volumes:
       - bw-donnees:/data
+      - ./erreurs:/var/www/html/homelab/erreurs:ro
     environment:
       TZ: Europe/Paris
       # Pas d'interface d'administration exposée : la configuration vient uniquement d'Ansible.
@@ -32,6 +33,11 @@ services:
       AUTO_LETS_ENCRYPT: "yes"
       AUTO_REDIRECT_HTTP_TO_HTTPS: "yes"
       HTTP3: "yes"
+
+      # Pages d'erreur personnalisées, communes à tous les sites.
+      ROOT_FOLDER: /var/www/html/homelab
+      ERRORS: "{% for c in waf_erreurs %}{{ c }}=/erreurs/{{ c }}.html{{ ' ' if not loop.last }}{% endfor %}"
+      INTERCEPTED_ERROR_CODES: "{{ waf_erreurs.keys() | join(' ') }}"
 
       # Réglages communs à tous les sites
       WHITELIST_COUNTRY: "{{ waf_pays_autorises }}"

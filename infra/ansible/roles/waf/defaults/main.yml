@@ -13,3 +13,59 @@ waf_sites: {}
 #    greffons_crs: ""
 #    methodes: "GET|POST|HEAD"            # méthodes HTTP autorisées (BunkerWeb : GET|POST|HEAD par défaut)
 #    exclusions_modsec: []                # règles SecRule ajoutées avant le CRS (faux positifs)
+
+# Pages d'erreur personnalisées (générées depuis templates/erreur.html.j2) : code => textes.
+waf_erreurs:
+  400:
+    titre: "Requête invalide"
+    texte: "Le serveur n'a pas compris la requête envoyée par votre navigateur ou votre application."
+    conseil: "Rechargez la page ; si le problème persiste, videz le cache du navigateur."
+  401:
+    titre: "Authentification requise"
+    texte: "Cette ressource demande d'être connecté."
+    conseil: "Connectez-vous depuis l'accueil du service, puis réessayez."
+  403:
+    titre: "Accès refusé"
+    texte: >-
+      Le pare-feu applicatif a bloqué cette requête : elle ressemble à une attaque, vient d'un pays non autorisé, ou
+      votre adresse a été temporairement bannie après trop d'erreurs.
+    conseil: "Si vous êtes un utilisateur légitime, attendez quelques minutes puis réessayez, et prévenez l'administrateur si le blocage continue."
+    couleur: "#f87171"
+  404:
+    titre: "Page introuvable"
+    texte: "Cette adresse n'existe pas, ou plus."
+    conseil: "Vérifiez l'adresse, ou revenez à l'accueil du service."
+  405:
+    titre: "Méthode non autorisée"
+    texte: "Ce type de requête n'est pas accepté par ce service."
+    conseil: "Utilisez l'application ou le site officiel du service."
+  413:
+    titre: "Fichier trop volumineux"
+    texte: "L'envoi dépasse la taille maximale autorisée pour ce service."
+    conseil: "Réduisez la taille du fichier, ou utilisez l'application de synchronisation, qui découpe les gros envois."
+    couleur: "#f59e0b"
+  429:
+    titre: "Trop de requêtes"
+    texte: "Vous avez envoyé beaucoup de requêtes en peu de temps : le pare-feu ralentit le rythme pour protéger le service."
+    conseil: "Patientez une minute avant de réessayer."
+    couleur: "#f59e0b"
+  500:
+    titre: "Erreur interne"
+    texte: "Le service a rencontré un problème en traitant votre demande."
+    conseil: "Réessayez dans quelques instants ; l'incident est enregistré dans la supervision."
+    couleur: "#f87171"
+  502:
+    titre: "Service injoignable"
+    texte: "Le pare-feu applicatif n'a pas pu joindre le service : il redémarre ou est en panne."
+    conseil: "Réessayez dans quelques minutes ; la supervision a prévenu l'administrateur."
+    couleur: "#f87171"
+  503:
+    titre: "Service indisponible"
+    texte: "Le service est momentanément indisponible, probablement pour une maintenance."
+    conseil: "Réessayez un peu plus tard."
+    couleur: "#f59e0b"
+  504:
+    titre: "Délai dépassé"
+    texte: "Le service a mis trop de temps à répondre."
+    conseil: "Réessayez ; si l'opération était longue (gros envoi), elle a peut-être abouti malgré tout."
+    couleur: "#f59e0b"

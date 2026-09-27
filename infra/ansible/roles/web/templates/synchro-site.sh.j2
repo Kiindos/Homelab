@@ -1,0 +1,22 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# Récupère le site construit par la CI (branche Git) et le publie s'il a changé. Usage : synchro-site <nom> <dépôt> <branche>
+set -euo pipefail
+nom="$1"; depot="$2"; branche="$3"
+clone="{{ web_dossier }}/.git-$nom"
+cible="{{ web_dossier }}/$nom"
+changement=0
+if [ ! -d "$clone/.git" ]; then
+  git clone -q --depth 1 --branch "$branche" "$depot" "$clone"
+  changement=1
+else
+  git -C "$clone" fetch -q --depth 1 origin "$branche"
+  if [ "$(git -C "$clone" rev-parse HEAD)" != "$(git -C "$clone" rev-parse FETCH_HEAD)" ]; then
+    git -C "$clone" reset -q --hard FETCH_HEAD
+    changement=1
+  fi
+fi
+if [ "$changement" = 1 ] || [ ! -f "$cible/index.html" ]; then
+  rsync -a --delete --exclude .git "$clone/" "$cible/"
+  logger -t synchro-site "$nom publié : $(head -1 "$cible/VERSION.txt" 2>/dev/null || echo 'version inconnue')"
+fi

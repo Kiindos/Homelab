@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Publication du site {{ item.key }} depuis la branche {{ item.value.branche }}
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/synchro-site {{ item.key }} {{ item.value.depot }} {{ item.value.branche }}
+# Isolement : lecture seule partout, sauf le dossier des sites.
+ProtectSystem=strict
+ReadWritePaths={{ web_dossier }}
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true

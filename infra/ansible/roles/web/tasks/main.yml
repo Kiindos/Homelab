@@ -10,7 +10,7 @@
   delegate_to: localhost
   become: false
   run_once: true
-  loop: "{{ web_sites | dict2items }}"
+  loop: "{{ web_sites | dict2items | rejectattr('value.depot', 'defined') | list }}"
   loop_control:
     label: "{{ item.key }}"
   changed_when: true
@@ -26,14 +26,63 @@
     mode: "0755"
   loop: "{{ ['', 'secrets'] + (web_sites.keys() | list) }}"
 
-- name: Publier les fichiers statiques
+- name: Publier les fichiers statiques construits sur le poste d'admin
   ansible.builtin.copy:
-    src: "{{ lookup('env', 'HOME') }}/.cache/homelab/sites/{{ item }}/"
-    dest: "{{ web_dossier }}/{{ item }}/"
+    src: "{{ lookup('env', 'HOME') }}/.cache/homelab/sites/{{ item.key }}/"
+    dest: "{{ web_dossier }}/{{ item.key }}/"
     owner: root
     group: root
     mode: "u=rwX,go=rX"
-  loop: "{{ web_sites.keys() | list }}"
+  loop: "{{ web_sites | dict2items | rejectattr('value.depot', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+# --- Sites publiés par la CI (déploiement « tiré ») --------------------------------------------------
+
+- name: Installer git et rsync
+  ansible.builtin.apt:
+    name: [git, rsync]
+    state: present
+  when: web_sites | dict2items | selectattr('value.depot', 'defined') | list | length > 0
+
+- name: Déposer le script de publication
+  ansible.builtin.template:
+    src: synchro-site.sh.j2
+    dest: /usr/local/sbin/synchro-site
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Déclarer le service et la minuterie de publication
+  ansible.builtin.template:
+    src: "synchro-site.{{ item.1 }}.j2"
+    dest: "/etc/systemd/system/synchro-site-{{ item.0.key }}.{{ item.1 }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ web_sites | dict2items | selectattr('value.depot', 'defined') | list | product(['service', 'timer']) | list }}"
+  loop_control:
+    label: "synchro-site-{{ item.0.key }}.{{ item.1 }}"
+  register: web_unites
+
+- name: Activer la minuterie de publication
+  ansible.builtin.systemd_service:
+    name: "synchro-site-{{ item.key }}.timer"
+    state: started
+    enabled: true
+    daemon_reload: "{{ web_unites is changed }}"
+  loop: "{{ web_sites | dict2items | selectattr('value.depot', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Publier immédiatement la dernière version
+  ansible.builtin.systemd_service:
+    name: "synchro-site-{{ item.key }}.service"
+    state: started
+  loop: "{{ web_sites | dict2items | selectattr('value.depot', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.key }}"
+  changed_when: false
 
 - name: Configurer nginx
   ansible.builtin.template:
