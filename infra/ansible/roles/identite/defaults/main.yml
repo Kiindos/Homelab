@@ -34,7 +34,9 @@ identite_page_comptes: false
 identite_comptes_port: 8095
 identite_comptes_sources: []
 identite_comptes_groupe_admin: admins
-# Groupes proposés à l'invitation (nom => description) ; les autres se gèrent dans l'interface de LLDAP.
-identite_comptes_groupes:
+# Groupes proposés à l'invitation : tous ceux de l'annuaire sauf les groupes techniques et ceux-ci (gérés dans
+# l'interface de LLDAP) ; descriptions affichées sur la page.
+identite_comptes_groupes_exclus: ["{{ identite_comptes_groupe_admin }}"]
+identite_comptes_descriptions:
   famille: "Photos, drive, médias"
 identite_comptes_lien_annuaire: ""

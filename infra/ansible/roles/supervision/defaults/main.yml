@@ -8,7 +8,11 @@ supervision_images:
   ntfy: binwiederhier/ntfy:v2.28.0
   noc_web: nginxinc/nginx-unprivileged:1.30.5-alpine-slim
   noc_collecte: python:3.14.7-alpine3.24
+  sms: python:3.14.7-alpine3.24
 supervision_retention: 30d
+# SMS des alertes critiques par l'option gratuite « Notifications par SMS » de Free Mobile (au titulaire de la ligne
+# seulement) : { utilisateur: identifiant Free Mobile, cle: clé de l'option }. Vide = pas de SMS.
+supervision_sms_free: {}
 # Machines sans inventaire Ansible mais supervisées (pare-feu : plugin node_exporter d'OPNsense).
 supervision_machines_supplementaires: [fw01]
 # Services publiés sondés depuis l'intérieur (via le WAF) et outils internes (via le proxy de svc01).

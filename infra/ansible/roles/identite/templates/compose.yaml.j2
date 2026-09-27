@@ -73,7 +73,8 @@ services:
       PORTAIL: "{{ identite_url_portail }}"
       SOURCES_AUTORISEES: "{{ identite_comptes_sources | join(' ') }}"
       GROUPE_ADMIN: "{{ identite_comptes_groupe_admin }}"
-      GROUPES_PROPOSES: {{ identite_comptes_groupes | to_json | to_json }}
+      GROUPES_EXCLUS: "{{ identite_comptes_groupes_exclus | join(' ') }}"
+      GROUPES_DESCRIPTIONS: {{ identite_comptes_descriptions | to_json | to_json }}
       DUREE_LIEN_HEURES: "{{ identite_duree_lien_heures }}"
       LIEN_ANNUAIRE: "{{ identite_comptes_lien_annuaire }}"
       TZ: Europe/Paris

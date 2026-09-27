@@ -16,6 +16,7 @@
     - { chemin: grafana/tableaux, mode: "0755" }
     - { chemin: noc, mode: "0755" }
     - { chemin: noc/site, mode: "0755" }
+    - { chemin: sms, mode: "0755" }
   loop_control:
     label: "{{ item.chemin or supervision_dossier }}"
 
@@ -41,6 +42,9 @@
     - { chemin: secrets/grafana_oidc, valeur: "{{ oidc_clients.grafana.secret }}" }
     - { chemin: alertmanager/secrets/smtp, valeur: "{{ authelia.smtp_password }}" }
     - { chemin: alertmanager/secrets/ntfy, valeur: "{{ supervision.ntfy_alertmanager_password }}" }
+    - { chemin: secrets/sms_utilisateur, valeur: "{{ supervision_sms_free.utilisateur | default('') }}", si: "{{ supervision_sms_free.cle is defined }}" }
+    - { chemin: secrets/sms_cle, valeur: "{{ supervision_sms_free.cle | default('') }}", si: "{{ supervision_sms_free.cle is defined }}" }
+  when: item.si | default(true) | bool
   loop_control:
     label: "{{ item.chemin }}"
   no_log: true
@@ -119,6 +123,16 @@
     - { src: noc.json, dest: grafana/tableaux/noc.json }
   loop_control:
     label: "{{ item.dest }}"
+  notify: Redémarrer la supervision
+
+- name: Déposer le relais SMS des alertes critiques (Free Mobile)
+  ansible.builtin.copy:
+    src: sms/relais.py
+    dest: "{{ supervision_dossier }}/sms/relais.py"
+    owner: root
+    group: root
+    mode: "0644"
+  when: supervision_sms_free.cle is defined
   notify: Redémarrer la supervision
 
 - name: Déposer la page du NOC (fichiers statiques, sans redémarrage)

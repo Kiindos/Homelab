@@ -59,6 +59,18 @@ n'accepte l'identité transmise que depuis le proxy et refuse les formulaires en
 Côté supervision, un service publié derrière la barrière SSO du WAF est désormais sondé **sans session** : la sonde
 exige une redirection vers le portail. Si la barrière disparaissait, l'alerte partirait.
 
+## Voir le homelab depuis l'extérieur
+
+La supervision vit dans le homelab : si le courant, la box ou l'hyperviseur tombent, elle se tait avec lui. Une
+**sonde externe** (UptimeRobot, offre gratuite) vérifie désormais toutes les 5 minutes la vitrine (via Cloudflare)
+et l'accès direct au pare-feu applicatif. Le WAF n'acceptant que la France, la seconde sonde reste au niveau TCP
+plutôt que d'assouplir le filtrage. Les moniteurs sont décrits dans un fichier et appliqués par un script
+idempotent, comme le reste. Les alertes critiques internes peuvent aussi partir par **SMS**, via l'option gratuite
+de l'opérateur mobile qui n'écrit qu'au titulaire de la ligne : aucun numéro à stocker.
+
+Le site a enfin ses pages **mentions légales** et **confidentialité**, écrites à partir de ce que les services
+journalisent réellement (durées de rotation, partage communautaire des adresses d'attaquants, sous-traitants).
+
 ## Ce que la journée a appris
 
 - **Tester l'échec, pas seulement le succès.** La vérification des clés SSH a été validée en présentant
@@ -79,3 +91,6 @@ exige une redirection vers le portail. Si la barrière disparaissait, l'alerte p
 - **Redémarrer une pile d'un bloc ignore ses dépendances.** Le portail vérifie l'annuaire au démarrage ; relancés
   ensemble, il échouait avant de se relancer. L'annuaire redémarre maintenant d'abord, et une simple modification
   de configuration ne relance plus que le portail.
+- **Un en-tête de sécurité peut casser une application.** Le WAF ajoutait `HttpOnly` à tous les cookies ; or
+  l'interface de la galerie photo lit un de ses cookies en JavaScript pour savoir si l'on est connecté. Résultat :
+  une boucle de connexion. Les drapeaux sont maintenant imposés aux seuls cookies de session.

@@ -54,6 +54,8 @@ scrape_configs:
 {% endif %}
     relabel_configs:
       - { source_labels: [module], target_label: __param_module }
+      # Libellé retiré ensuite : mêmes séries qu'avant (historique de disponibilité du NOC conservé).
+      - { regex: module, action: labeldrop }
       - { source_labels: [__address__], target_label: __param_target }
       - { source_labels: [__param_target], regex: 'https://([^/]+).*', target_label: instance, replacement: '$1' }
       - { target_label: __address__, replacement: "blackbox:9115" }

@@ -127,6 +127,26 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
 
+{% if supervision_sms_free.cle is defined %}
+  # Relais SMS des alertes critiques (Free Mobile) : joint par Alertmanager seulement, port non publié.
+  sms:
+    image: {{ supervision_images.sms }}
+    restart: unless-stopped
+    command: ["python3", "-u", "/app/relais.py"]
+    user: "65534:65534"
+    environment:
+      FICHIER_UTILISATEUR: /run/secrets/sms_utilisateur
+      FICHIER_CLE: /run/secrets/sms_cle
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ./sms/relais.py:/app/relais.py:ro
+      - ./secrets/sms_utilisateur:/run/secrets/sms_utilisateur:ro
+      - ./secrets/sms_cle:/run/secrets/sms_cle:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+{% endif %}
   ntfy:
     image: {{ supervision_images.ntfy }}
     restart: unless-stopped

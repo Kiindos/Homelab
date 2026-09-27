@@ -12,6 +12,8 @@ disableKinds = ["rss"]
   auteur = "Maxime Bertrand"
   metier = "Administrateur systèmes et réseaux, orienté DevOps"
   depot = "https://github.com/maximebertrand-dev/Homelab"
+  # Adresse de contact publiée dans les pages légales (alias de la messagerie du domaine).
+  contact = "contact@maximebertrand.net"
   mermaid_version = "12.0.0"
   mermaid_sri = "sha384-xzghz1GQ5u9HCpVskeDPqMsdogD1yvuMQbEK53+wi+G70+6J1AG0L2cfi9PHjDWI"
 

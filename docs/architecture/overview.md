@@ -24,7 +24,7 @@ tags: [architecture]
 | Provisionnement | OpenTofu (bpg/proxmox, opnsense, cloudflare), Ansible, lancé aussi depuis Semaphore UI |
 | Applications | Docker Compose dans des VM dédiées par zone ; Kubernetes (k3s, Argo CD) pour l'environnement de test |
 | Secrets | Coffre OpenBao (SSO, AppRole, audit ; en test), SOPS + age pour le démarrage |
-| Observabilité | Prometheus, Alertmanager, NOC sur mesure, Grafana (interne), ntfy (alertes sur téléphone) ; Loki plus tard |
+| Observabilité | Prometheus, Alertmanager, NOC sur mesure, Grafana (interne), ntfy et SMS (alertes sur téléphone), sonde externe UptimeRobot ; Loki plus tard |
 | Services d'infra | NetBox (source de vérité), Semaphore UI (lancement des playbooks) |
 
 Les choix structurants sont expliqués dans les ADR, en particulier l'[ADR 0010](../adr/0010-serveur-unique.md)

@@ -26,8 +26,10 @@ AUTHELIA = os.environ.get("AUTHELIA_URL", "http://authelia:9091")
 PORTAIL = os.environ.get("PORTAIL", "https://auth.example.com").rstrip("/")
 SOURCES = [ipaddress.ip_network(s) for s in os.environ.get("SOURCES_AUTORISEES", "127.0.0.1/32").split()]
 GROUPE_ADMIN = os.environ.get("GROUPE_ADMIN", "admins")
-# Groupes proposés à l'invitation : nom => description (les autres se gèrent dans l'interface de LLDAP).
-GROUPES = json.loads(os.environ.get("GROUPES_PROPOSES", '{"famille": "Photos, drive, médias"}'))
+# Groupes proposés à l'invitation : tous ceux de l'annuaire, sauf les groupes techniques (lldap_*) et les groupes
+# exclus (administrateurs) ; ceux-là se gèrent dans l'interface de LLDAP. Descriptions affichées si connues.
+GROUPES_EXCLUS = set(os.environ.get("GROUPES_EXCLUS", "admins").split())
+DESCRIPTIONS = json.loads(os.environ.get("GROUPES_DESCRIPTIONS", "{}"))
 DUREE_LIEN = os.environ.get("DUREE_LIEN_HEURES", "12")
 LIEN_ANNUAIRE = os.environ.get("LIEN_ANNUAIRE", "")
 STATIQUE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "statique")
@@ -91,6 +93,11 @@ class Annuaire:
         return donnees["users"], {g["displayName"]: g["id"] for g in donnees["groups"]}
 
 
+def proposables(groupes):
+    """Groupes que la page peut attribuer, dans l'ordre alphabétique."""
+    return sorted(g for g in groupes if not g.startswith("lldap_") and g not in GROUPES_EXCLUS)
+
+
 def membres(comptes):
     """Comptes de personnes : sans les comptes techniques (groupes lldap_*), triés par nom."""
     personnes = [c for c in comptes if not any(g["displayName"].startswith("lldap_") for g in c["groups"])]
@@ -111,7 +118,7 @@ def inviter(formulaire, admin, adresse_client):
     nom = formulaire.get("nom", "").strip()
     email = formulaire.get("email", "").strip().lower()
     identifiant = formulaire.get("identifiant", "").strip().lower()
-    groupes = [g for g in formulaire.get("groupes", []) if g in GROUPES]
+    groupes = list(dict.fromkeys(formulaire.get("groupes", [])))
     if not prenom or len(prenom) > 64 or len(nom) > 64:
         raise Refus("Indiquez un prénom (64 caractères au plus, comme le nom).")
     if not MOTIF_IDENTIFIANT.match(identifiant):
@@ -126,9 +133,9 @@ def inviter(formulaire, admin, adresse_client):
             raise Refus(f"L'identifiant « {identifiant} » est déjà pris.")
         if any((c["email"] or "").lower() == email for c in comptes):
             raise Refus("Cette adresse e-mail est déjà utilisée par un autre compte.")
-        inconnus = [g for g in groupes if g not in tous_groupes]
-        if inconnus:
-            raise Refus(f"Groupe absent de l'annuaire : {', '.join(inconnus)}.")
+        interdits = [g for g in groupes if g not in proposables(tous_groupes)]
+        if interdits:
+            raise Refus(f"Groupe non attribuable ici : {', '.join(interdits)} (voir l'interface de l'annuaire).")
         nom_affiche = f"{prenom} {nom}".strip()
         annuaire.gql("mutation($u: CreateUserInput!) { createUser(user: $u) { id } }",
                      {"u": {"id": identifiant, "email": email, "displayName": nom_affiche,
@@ -171,16 +178,16 @@ def date_courte(valeur):
         return ""
 
 
-def page(admin, comptes, message=None, formulaire=None):
+def page(admin, comptes, groupes, message=None, formulaire=None):
     formulaire = formulaire or {}
-    coches = formulaire.get("groupes", [next(iter(GROUPES), "")])
+    coches = formulaire.get("groupes", ["famille"])
     alerte = ""
     if message:
         genre, texte = message
         alerte = f'<p class="message message--{genre}" role="status">{texte}</p>'
     choix_groupes = "".join(
         f'<label class="choix"><input type="checkbox" name="groupes" value="{e(g)}"{" checked" if g in coches else ""}>'
-        f'<span><strong>{e(g)}</strong><small>{e(d)}</small></span></label>' for g, d in GROUPES.items())
+        f'<span><strong>{e(g)}</strong><small>{e(DESCRIPTIONS.get(g, ""))}</small></span></label>' for g in groupes)
     lignes = "".join(
         f'<tr><td><strong>{e(c["displayName"] or c["id"])}</strong></td><td class="mono">{e(c["id"])}</td>'
         f'<td>{e(c["email"])}</td>'
@@ -335,11 +342,12 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
     def afficher(self, admin, message=None, formulaire=None, code=200):
         try:
             with Annuaire() as annuaire:
-                comptes = membres(annuaire.etat()[0])
+                comptes, groupes = annuaire.etat()
+            comptes, groupes = membres(comptes), proposables(groupes)
         except (urllib.error.URLError, OSError, RuntimeError, KeyError) as erreur:
             journal(action="erreur", detail=f"annuaire : {erreur}")
-            comptes, message = [], ("erreur", "Annuaire injoignable : réessayez dans un instant.")
-        return self.envoyer(code, page(self.nom_admin, comptes, message, formulaire).encode())
+            comptes, groupes, message = [], [], ("erreur", "Annuaire injoignable : réessayez dans un instant.")
+        return self.envoyer(code, page(self.nom_admin, comptes, groupes, message, formulaire).encode())
 
     def do_POST(self):
         admin = self.administrateur()
@@ -377,5 +385,5 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     serveur = http.server.ThreadingHTTPServer(("0.0.0.0", 8080), Gestionnaire)
-    journal(action="demarrage", sources=[str(s) for s in SOURCES], groupes=list(GROUPES))
+    journal(action="demarrage", sources=[str(s) for s in SOURCES], exclus=sorted(GROUPES_EXCLUS))
     serveur.serve_forever()

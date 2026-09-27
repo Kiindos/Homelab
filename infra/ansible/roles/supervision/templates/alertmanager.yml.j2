@@ -1,5 +1,6 @@
 # {{ ansible_managed }}
-# Alertes critiques : e-mail + notification sur téléphone (ntfy). Avertissements : affichés sur le NOC seulement.
+# Alertes critiques : e-mail + notification sur téléphone (ntfy){% if supervision_sms_free.cle is defined %} + SMS (Free Mobile){% endif %}.
+# Avertissements : affichés sur le NOC seulement.
 global:
   smtp_smarthost: "{{ supervision_smtp.serveur }}:587"
   smtp_from: "Supervision homelab <{{ supervision_smtp.expediteur }}>"
@@ -33,6 +34,11 @@ receivers:
           basic_auth:
             username: alertmanager
             password_file: /etc/alertmanager/secrets/ntfy
+{% if supervision_sms_free.cle is defined %}
+      # SMS au titulaire de la ligne Free Mobile (relais « sms » de la pile).
+      - url: "http://sms:8080/alertmanager"
+        send_resolved: true
+{% endif %}
 
 # Une alerte critique masque l'avertissement équivalent sur la même machine.
 inhibit_rules:
