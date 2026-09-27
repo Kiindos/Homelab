@@ -11,6 +11,29 @@
     # www-data (33) dans l'image officielle ; les données sont sur le dataset ZFS partagé par virtiofs.
     - { chemin: "{{ nextcloud_donnees }}", mode: "0770", proprietaire: "33" }
 
+# Écrits par Nextcloud (www-data, 33), lisibles par les autres services qui les montent en lecture seule.
+- name: Créer les dossiers des stockages externes
+  ansible.builtin.file:
+    path: "{{ item.hote }}"
+    state: directory
+    owner: "33"
+    group: "33"
+    mode: "0755"
+  loop: "{{ nextcloud_stockages_externes }}"
+  loop_control:
+    label: "{{ item.hote }}"
+
+- name: Créer les sous-dossiers des stockages externes
+  ansible.builtin.file:
+    path: "{{ item.0.hote }}/{{ item.1 }}"
+    state: directory
+    owner: "33"
+    group: "33"
+    mode: "0755"
+  loop: "{{ nextcloud_stockages_externes | subelements('sous_dossiers', skip_missing=true) }}"
+  loop_control:
+    label: "{{ item.0.hote }}/{{ item.1 }}"
+
 - name: Écrire les secrets de Nextcloud
   ansible.builtin.copy:
     dest: "{{ nextcloud_dossier }}/secrets/{{ item.nom }}"
@@ -127,3 +150,84 @@
     cmd: docker compose exec -T -u www-data app php occ background:cron
     chdir: "{{ nextcloud_dossier }}"
   changed_when: false
+
+# --- Stockages externes (files_external) ------------------------------------------------------------
+
+- name: Activer les stockages externes
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u www-data app php occ app:enable files_external
+    chdir: "{{ nextcloud_dossier }}"
+  register: nextcloud_files_external
+  changed_when: "'enabled' in nextcloud_files_external.stdout and 'already' not in nextcloud_files_external.stdout"
+  when: nextcloud_stockages_externes | length > 0
+
+# Sinon, un utilisateur pourrait monter un partage distant arbitraire (requêtes vers le réseau interne).
+- name: Interdire aux utilisateurs d'ajouter leurs propres stockages externes
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u www-data app php occ config:app:set files_external allow_user_mounting --value=no
+    chdir: "{{ nextcloud_dossier }}"
+  changed_when: false
+  when: nextcloud_stockages_externes | length > 0
+
+- name: Lister les stockages externes déclarés
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u www-data app php occ files_external:list --output=json
+    chdir: "{{ nextcloud_dossier }}"
+  register: nextcloud_stockages_actuels
+  changed_when: false
+  when: nextcloud_stockages_externes | length > 0
+
+- name: Déclarer les stockages externes (dossier local de l'hôte)
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - exec
+      - -T
+      - -u
+      - www-data
+      - app
+      - php
+      - occ
+      - files_external:create
+      - "{{ item.point }}"
+      - local
+      - null::null
+      - "-c"
+      - "datadir=/srv/stockages/{{ item.hote | basename }}"
+    chdir: "{{ nextcloud_dossier }}"
+  loop: "{{ nextcloud_stockages_externes }}"
+  loop_control:
+    label: "{{ item.point }}"
+  when: item.point not in (nextcloud_stockages_actuels.stdout | from_json | map(attribute='mount_point') | list)
+  changed_when: true
+
+- name: Relire les stockages externes
+  ansible.builtin.command:
+    cmd: docker compose exec -T -u www-data app php occ files_external:list --output=json
+    chdir: "{{ nextcloud_dossier }}"
+  register: nextcloud_stockages_actuels
+  changed_when: false
+  when: nextcloud_stockages_externes | length > 0
+
+# Utilisateurs autorisés, et prise en compte des fichiers ajoutés hors de Nextcloud (vérifiés à chaque accès).
+- name: Régler l'accès et la détection des changements
+  vars:
+    montage: "{{ nextcloud_stockages_actuels.stdout | from_json | selectattr('mount_point', 'equalto', item.point) | first }}"
+  ansible.builtin.shell:
+    cmd: >-
+      set -e;
+      {% for u in item.utilisateurs | default([]) if u not in montage.applicable_users %}
+      docker compose exec -T -u www-data app php occ files_external:applicable --add-user={{ u | quote }} {{ montage.mount_id }};
+      {% endfor %}
+      {% if (montage.configuration.filesystem_check_changes | default(montage.options.filesystem_check_changes | default(0))) | int != 1 %}
+      docker compose exec -T -u www-data app php occ files_external:option {{ montage.mount_id }} filesystem_check_changes 1;
+      {% endif %}
+      echo fin
+    chdir: "{{ nextcloud_dossier }}"
+    executable: /bin/bash
+  loop: "{{ nextcloud_stockages_externes }}"
+  loop_control:
+    label: "{{ item.point }}"
+  register: nextcloud_reglages_stockages
+  changed_when: nextcloud_reglages_stockages.stdout_lines | length > 1

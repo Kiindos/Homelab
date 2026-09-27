@@ -5,5 +5,9 @@ nextcloud_image_valkey: valkey/valkey:9.1.2-alpine
 nextcloud_donnees: /srv/drive
 nextcloud_domaine: "drive.{{ domaine_public }}"
 nextcloud_issuer: "https://auth.{{ domaine_public }}"
+# Stockages externes (application files_external) : dossiers de l'hôte présentés dans le drive, partagés avec
+# d'autres services qui les lisent. Les utilisateurs ne peuvent pas ajouter leurs propres stockages externes.
+#   - { point: /Partage, hote: /srv/partage, sous_dossiers: [Documents], utilisateurs: [alice] }
+nextcloud_stockages_externes: []
 # Applications désactivées : chaque application active élargit la surface d'attaque.
 nextcloud_applis_desactivees: [dashboard, weather_status, firstrunwizard, recommendations, survey_client, support, app_api, photos]

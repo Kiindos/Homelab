@@ -48,5 +48,10 @@ configuration n'aurait changé.
   les connexions vérifient maintenant qu'elles sont vivantes.
 - **Une valeur par défaut peut trahir.** Une règle OWASP a pris l'adresse de retour de la connexion en ligne de
   commande (`http://localhost`) pour une attaque SSRF : exclusion ciblée sur ce seul paramètre.
+- **Un montage peut casser ce qu'il vise.** Monter un fichier dans un dossier que l'application crée elle-même
+  au démarrage fait créer ce dossier par Docker, en root : l'application, non privilégiée, ne peut plus s'installer.
+  Le fichier est désormais copié une fois l'application prête.
+- **Une limite de débit se mesure sur le vrai usage.** Deux requêtes par seconde suffisent pour une page, pas pour
+  une application qui en envoie des dizaines au démarrage.
 - **Un nom mal résolu se cache bien.** La supervision ne se voyait pas elle-même : le nom de la machine pointait
   vers l'adresse de boucle locale. Corrigé à la source, pour toutes les machines.

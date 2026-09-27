@@ -15,7 +15,6 @@ services:
       - bw-donnees:/data
       - ./erreurs:/var/www/html/homelab/erreurs:ro
       - ./charte:/var/www/html/homelab/charte:ro
-      - ./crowdsec-liste-blanche.yaml:/etc/crowdsec/parsers/s02-enrich/homelab-liste-blanche.yaml:ro
     environment:
       TZ: Europe/Paris
       # Pas d'interface d'administration exposée : la configuration vient uniquement d'Ansible.

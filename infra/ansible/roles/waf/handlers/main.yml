@@ -1,0 +1,3 @@
+- name: Recharger CrowdSec
+  ansible.builtin.command: docker exec waf-bunkerweb-1 sh -c 'kill -HUP "$(pidof crowdsec)"'
+  changed_when: true

@@ -56,4 +56,47 @@
     project_src: "{{ waf_dossier }}"
     state: present
     pull: missing
-    recreate: "{{ 'always' if (waf_compose.changed or waf_liste_blanche.changed) else 'auto' }}"
+    recreate: "{{ 'always' if waf_compose.changed else 'auto' }}"
+
+# --- Liste blanche CrowdSec ------------------------------------------------------------------------
+# Pas de montage : Docker créerait /etc/crowdsec/parsers en root, et CrowdSec (non privilégié) ne pourrait plus y
+# installer ses composants au démarrage (constaté le 27/09 : CrowdSec arrêté, WebSocket refusés). Le fichier est
+# copié une fois CrowdSec prêt, puis CrowdSec relit sa configuration.
+
+- name: Attendre que CrowdSec ait installé ses composants
+  ansible.builtin.command: docker exec waf-bunkerweb-1 test -d /etc/crowdsec/parsers/s02-enrich
+  register: waf_crowdsec_pret
+  until: waf_crowdsec_pret.rc == 0
+  retries: 30
+  delay: 5
+  changed_when: false
+
+- name: Lire la liste blanche en place dans CrowdSec
+  ansible.builtin.command: docker exec waf-bunkerweb-1 cat /etc/crowdsec/parsers/s02-enrich/homelab-liste-blanche.yaml
+  register: waf_liste_blanche_actuelle
+  changed_when: false
+  failed_when: false
+
+- name: Lire la liste blanche voulue
+  ansible.builtin.slurp:
+    src: "{{ waf_dossier }}/crowdsec-liste-blanche.yaml"
+  register: waf_liste_blanche_voulue
+
+- name: Installer la liste blanche dans CrowdSec
+  ansible.builtin.command: >-
+    docker cp {{ waf_dossier }}/crowdsec-liste-blanche.yaml
+    waf-bunkerweb-1:/etc/crowdsec/parsers/s02-enrich/homelab-liste-blanche.yaml
+  when: waf_liste_blanche_actuelle.stdout | trim != waf_liste_blanche_voulue.content | b64decode | trim
+  changed_when: true
+  notify: Recharger CrowdSec
+
+- name: Appliquer le rechargement de CrowdSec avant la vérification
+  ansible.builtin.meta: flush_handlers
+
+- name: Vérifier que l'API locale de CrowdSec répond
+  ansible.builtin.command: docker exec waf-bunkerweb-1 cscli lapi status
+  register: waf_crowdsec_lapi
+  until: waf_crowdsec_lapi.rc == 0
+  retries: 12
+  delay: 5
+  changed_when: false

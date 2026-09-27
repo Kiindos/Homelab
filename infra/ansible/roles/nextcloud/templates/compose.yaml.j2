@@ -9,6 +9,9 @@ x-nextcloud: &nextcloud
   volumes:
     - html:/var/www/html
     - {{ nextcloud_donnees }}:/var/www/html/data
+{% for s in nextcloud_stockages_externes %}
+    - {{ s.hote }}:/srv/stockages/{{ s.hote | basename }}
+{% endfor %}
   secrets: [postgres_password, admin_password, redis_password]
   environment:
     TZ: Europe/Paris
