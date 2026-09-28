@@ -1,0 +1,84 @@
+# Recréer tous les conteneurs Docker des machines, maintenant ou à une heure donnée (maintenance annoncée).
+# Sert à appliquer un réglage du démon Docker qui ne vaut que pour les nouveaux conteneurs (pilote de journaux…).
+# Chaque machine recrée ses propres piles à l'heure dite (minuterie systemd locale) : ni VPN ni poste d'admin
+# nécessaires au moment de la maintenance. Images déjà présentes seulement (aucun téléchargement).
+#
+#   ansible-playbook … recreer-conteneurs.yml -e 'quand="2026-09-29 12:00:00"'   # programmer (heure de la machine)
+#   ansible-playbook … recreer-conteneurs.yml -e quand=maintenant --limit web01    # tout de suite
+#   ansible-playbook … recreer-conteneurs.yml -e annuler=true                      # retirer la programmation
+#   ssh <machine> 'systemctl list-timers recreer-conteneurs.timer; journalctl -u recreer-conteneurs'   # suivre
+
+- name: Recréer les conteneurs Docker
+  hosts: plateforme
+  gather_facts: false
+  become: true
+  vars:
+    quand: ""
+    annuler: false
+  tasks:
+    - name: Vérifier la demande
+      ansible.builtin.assert:
+        that: annuler | bool or quand | length > 0
+        fail_msg: "Préciser -e quand=\"AAAA-MM-JJ HH:MM:SS\" (ou quand=maintenant), ou -e annuler=true."
+        quiet: true
+      run_once: true
+      delegate_to: localhost
+
+    - name: Machines sans Docker ignorées
+      ansible.builtin.meta: end_host
+      when: not (docker_active | default(true))
+
+    - name: Déposer le script de recréation
+      ansible.builtin.copy:
+        dest: /usr/local/sbin/recreer-conteneurs
+        owner: root
+        group: root
+        mode: "0750"
+        content: |
+          #!/bin/bash
+          # Géré par Ansible (playbook recreer-conteneurs) : recrée chaque pile Docker Compose en service sur la
+          # machine, l'une après l'autre, avec les images déjà présentes. Journal : journalctl -u recreer-conteneurs.
+          set -uo pipefail
+          statut=0
+          while IFS=$'\t' read -r projet fichiers; do
+            options=()
+            IFS=, read -ra liste <<< "$fichiers"
+            for fichier in "${liste[@]}"; do options+=(-f "$fichier"); done
+            debut=$(date +%s)
+            if (cd "$(dirname "${liste[0]}")" && docker compose -p "$projet" "${options[@]}" up -d --force-recreate --pull never); then
+              echo "Pile $projet recréée en $(( $(date +%s) - debut )) s"
+            else
+              echo "Pile $projet : ÉCHEC de la recréation"
+              statut=1
+            fi
+          done < <(docker compose ls --format json | python3 -c 'import json, sys
+          for p in json.load(sys.stdin): print(p["Name"] + "\t" + p["ConfigFiles"])')
+          docker ps --format '{{ "{{" }}.Names{{ "}}" }} {{ "{{" }}.Status{{ "}}" }}'
+          exit $statut
+
+    - name: Retirer une programmation existante
+      ansible.builtin.systemd_service:
+        name: recreer-conteneurs.timer
+        state: stopped
+      failed_when: false
+      when: annuler | bool or quand != "maintenant"
+
+    - name: Programmer la recréation
+      ansible.builtin.command: >-
+        systemd-run --unit=recreer-conteneurs --collect
+        --description="Recréation des conteneurs (maintenance annoncée)"
+        --on-calendar="{{ quand }}" --timer-property=AccuracySec=1s
+        /usr/local/sbin/recreer-conteneurs
+      when: not (annuler | bool) and quand != "maintenant"
+      changed_when: true
+
+    - name: Recréer maintenant
+      ansible.builtin.command: /usr/local/sbin/recreer-conteneurs
+      when: not (annuler | bool) and quand == "maintenant"
+      register: recreation
+      changed_when: true
+
+    - name: Résultat
+      ansible.builtin.debug:
+        var: recreation.stdout_lines
+      when: recreation is not skipped
