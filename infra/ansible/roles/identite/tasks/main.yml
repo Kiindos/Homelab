@@ -47,6 +47,23 @@
   no_log: true
   notify: Redémarrer la pile identité
 
+# Accès aux quotas (Nextcloud, Immich) : fichiers vides tant que les secrets ne sont pas fournis (fonction inactive).
+- name: Écrire les secrets de la page des comptes
+  ansible.builtin.copy:
+    dest: "{{ identite_dossier }}/secrets/{{ item.nom }}"
+    content: "{{ item.valeur }}"
+    owner: root
+    group: root
+    mode: "0444"
+  loop:
+    - { nom: comptes_nextcloud, valeur: "{{ identite_comptes_quotas.nextcloud.mot_de_passe | default('') }}" }
+    - { nom: comptes_immich, valeur: "{{ identite_comptes_quotas.immich.cle | default('') }}" }
+  loop_control:
+    label: "{{ item.nom }}"
+  when: identite_page_comptes | bool
+  no_log: true
+  notify: Redémarrer la page des comptes
+
 - name: Écrire la graine de clé de LLDAP (variable d'environnement uniquement)
   ansible.builtin.copy:
     dest: "{{ identite_dossier }}/.env"

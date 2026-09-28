@@ -77,12 +77,19 @@ services:
       GROUPES_DESCRIPTIONS: {{ identite_comptes_descriptions | to_json | to_json }}
       DUREE_LIEN_HEURES: "{{ identite_duree_lien_heures }}"
       LIEN_ANNUAIRE: "{{ identite_comptes_lien_annuaire }}"
+      # Quotas (drive, photos) : inactifs tant que leur secret est vide.
+      NEXTCLOUD_URL: "{{ identite_comptes_quotas.nextcloud.url | default('') }}"
+      NEXTCLOUD_HOTE: "{{ identite_comptes_quotas.nextcloud.hote | default('') }}"
+      NEXTCLOUD_UTILISATEUR: "{{ identite_comptes_quotas.nextcloud.utilisateur | default('') }}"
+      NEXTCLOUD_MOT_DE_PASSE_FICHIER: /run/secrets/comptes_nextcloud
+      IMMICH_URL: "{{ identite_comptes_quotas.immich.url | default('') }}"
+      IMMICH_CLE_FICHIER: /run/secrets/comptes_immich
       TZ: Europe/Paris
     ports:
       - "{{ identite_comptes_port }}:8080"
     volumes:
       - ./comptes:/app:ro
-    secrets: [lldap_admin_password]
+    secrets: [lldap_admin_password, comptes_nextcloud, comptes_immich]
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
@@ -102,7 +109,7 @@ services:
     security_opt: ["no-new-privileges:true"]
 
 secrets:
-{% for s in ['lldap_jwt_secret', 'lldap_admin_password', 'ldaps.crt', 'ldaps.key', 'authelia_reset_jwt', 'authelia_session', 'authelia_storage', 'authelia_ldap', 'authelia_oidc_hmac', 'authelia_oidc_jwks'] + (['authelia_smtp'] if identite_smtp is defined else []) %}
+{% for s in ['lldap_jwt_secret', 'lldap_admin_password', 'ldaps.crt', 'ldaps.key', 'authelia_reset_jwt', 'authelia_session', 'authelia_storage', 'authelia_ldap', 'authelia_oidc_hmac', 'authelia_oidc_jwks'] + (['authelia_smtp'] if identite_smtp is defined else []) + (['comptes_nextcloud', 'comptes_immich'] if identite_page_comptes | bool else []) %}
   {{ s }}:
     file: ./secrets/{{ s }}
 {% endfor %}

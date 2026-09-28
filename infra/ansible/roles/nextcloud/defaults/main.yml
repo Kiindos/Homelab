@@ -5,6 +5,13 @@ nextcloud_image_valkey: valkey/valkey:9.1.2-alpine
 nextcloud_donnees: /srv/drive
 nextcloud_domaine: "drive.{{ domaine_public }}"
 nextcloud_issuer: "https://auth.{{ domaine_public }}"
+# Portées demandées au SSO et claim d'où viennent les groupes Nextcloud (un claim dérivé peut traduire le groupe des
+# administrateurs du SSO en groupe « admin » de Nextcloud). Changer ces valeurs : relancer avec nextcloud_oidc_forcer.
+nextcloud_oidc_portees: "openid email profile groups"
+nextcloud_oidc_claim_groupes: groups
+# Compte local dédié à la gestion des quotas (page des comptes) : sous-administrateur des groupes indiqués seulement
+# (il ne peut toucher ni aux administrateurs ni aux autres groupes). { utilisateur, mot_de_passe, groupes: [...] }
+nextcloud_compte_quotas: {}
 # Stockages externes (application files_external) : dossiers de l'hôte présentés dans le drive, partagés avec
 # d'autres services qui les lisent. Les utilisateurs ne peuvent pas ajouter leurs propres stockages externes.
 #   - { point: /Partage, hote: /srv/partage, sous_dossiers: [Documents], utilisateurs: [alice] }

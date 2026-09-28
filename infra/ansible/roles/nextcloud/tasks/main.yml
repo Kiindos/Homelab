@@ -125,17 +125,17 @@
       - --clientid=nextcloud
       - "--clientsecret={{ oidc_clients.nextcloud.secret }}"
       - "--discoveryuri={{ nextcloud_issuer }}/.well-known/openid-configuration"
-      - --scope=openid email profile groups
+      - "--scope={{ nextcloud_oidc_portees }}"
       - --unique-uid=0
       - --mapping-uid=preferred_username
       - --mapping-display-name=name
       - --mapping-email=email
-      - --mapping-groups=groups
+      - "--mapping-groups={{ nextcloud_oidc_claim_groupes }}"
       - --group-provisioning=1
       - --check-bearer=0
       - --send-id-token-hint=1
     chdir: "{{ nextcloud_dossier }}"
-  when: nextcloud_oidc_forcer | default(false) or 'Authelia' not in nextcloud_fournisseurs.stdout
+  when: nextcloud_oidc_forcer | default(false) | bool or 'Authelia' not in nextcloud_fournisseurs.stdout
   no_log: true
   changed_when: true
 
@@ -144,6 +144,73 @@
     cmd: docker compose exec -T -u www-data app php occ config:app:set user_oidc use_pkce --value=1
     chdir: "{{ nextcloud_dossier }}"
   changed_when: false
+
+- name: Préparer le compte de gestion des quotas (sous-administrateur de quelques groupes)
+  when: nextcloud_compte_quotas.mot_de_passe is defined
+  block:
+    - name: Lister les groupes de Nextcloud
+      ansible.builtin.command:
+        cmd: docker compose exec -T -u www-data app php occ group:list --output=json
+        chdir: "{{ nextcloud_dossier }}"
+      register: nextcloud_groupes
+      changed_when: false
+      check_mode: false
+
+    - name: Créer les groupes délégués au compte des quotas
+      ansible.builtin.command:
+        cmd: "docker compose exec -T -u www-data app php occ group:add {{ item }}"
+        chdir: "{{ nextcloud_dossier }}"
+      loop: "{{ nextcloud_compte_quotas.groupes | difference(nextcloud_groupes.stdout | from_json | list) }}"
+      changed_when: true
+
+    - name: Vérifier l'existence du compte des quotas
+      ansible.builtin.command:
+        cmd: "docker compose exec -T -u www-data app php occ user:info {{ nextcloud_compte_quotas.utilisateur }}"
+        chdir: "{{ nextcloud_dossier }}"
+      register: nextcloud_compte_quotas_info
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    # Mot de passe transmis par variable d'environnement : jamais sur une ligne de commande.
+    - name: Créer le compte des quotas
+      ansible.builtin.command:
+        cmd: >-
+          docker compose exec -T -u www-data -e OC_PASS app php occ user:add --password-from-env
+          --display-name "Gestion des quotas" {{ nextcloud_compte_quotas.utilisateur }}
+        chdir: "{{ nextcloud_dossier }}"
+      environment:
+        OC_PASS: "{{ nextcloud_compte_quotas.mot_de_passe }}"
+      when: nextcloud_compte_quotas_info.rc != 0
+      changed_when: true
+      no_log: true
+
+    - name: Lire les groupes délégués au compte des quotas
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8080/ocs/v2.php/cloud/users/{{ nextcloud_compte_quotas.utilisateur }}/subadmins?format=json"
+        headers: { OCS-APIRequest: "true", Host: "{{ nextcloud_domaine }}" }
+        url_username: admin
+        url_password: "{{ nextcloud.admin_password }}"
+        force_basic_auth: true
+      register: nextcloud_sous_admin
+      check_mode: false
+      when: not ansible_check_mode or nextcloud_compte_quotas_info.rc == 0
+      no_log: true
+
+    - name: Déléguer les groupes au compte des quotas
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8080/ocs/v2.php/cloud/users/{{ nextcloud_compte_quotas.utilisateur }}/subadmins?format=json"
+        method: POST
+        headers: { OCS-APIRequest: "true", Host: "{{ nextcloud_domaine }}" }
+        url_username: admin
+        url_password: "{{ nextcloud.admin_password }}"
+        force_basic_auth: true
+        body_format: form-urlencoded
+        body: { groupid: "{{ item }}" }
+      loop: "{{ nextcloud_compte_quotas.groupes | difference(nextcloud_sous_admin.json.ocs.data | default([])) }}"
+      when: nextcloud_sous_admin is not skipped
+      changed_when: true
+      no_log: true
 
 - name: Lancer les tâches de fond par cron (conteneur dédié)
   ansible.builtin.command:

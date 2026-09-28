@@ -6,7 +6,7 @@
     'issuerUrl': immich_issuer,
     'clientId': 'immich',
     'clientSecret': oidc_clients.immich.secret,
-    'scope': 'openid email profile',
+    'scope': immich_oidc_portees,
     'tokenEndpointAuthMethod': 'client_secret_post',
     'signingAlgorithm': 'RS256',
     'profileSigningAlgorithm': 'none',
@@ -14,6 +14,9 @@
     'autoLaunch': true,
     'buttonText': 'Se connecter',
     'storageLabelClaim': 'preferred_username',
+    'roleClaim': immich_claim_role,
+    'storageQuotaClaim': immich_claim_quota,
+    'defaultStorageQuota': immich_quota_defaut,
     'mobileOverrideEnabled': false
   },
   'newVersionCheck': {'enabled': false}

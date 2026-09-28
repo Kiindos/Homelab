@@ -91,6 +91,16 @@ notifier:
     filename: /config/data/notifications.txt
 {% endif %}
 
+{% if identite_attributs_calcules %}
+# Attributs dérivés des groupes (droits dans les applications), calculés à chaque connexion.
+definitions:
+  user_attributes:
+{% for nom, expression in identite_attributs_calcules.items() %}
+    {{ nom }}:
+      expression: {{ expression | to_json }}
+{% endfor %}
+
+{% endif %}
 identity_providers:
   oidc:
     jwks:
@@ -99,20 +109,37 @@ identity_providers:
         use: sig
         key: {{ '{{' }} secret "/run/secrets/authelia_oidc_jwks" | mindent 10 "|" | msquote {{ '}}' }}
     authorization_policies:
-      famille:
+{% for nom, groupes in identite_politiques_oidc.items() %}
+      {{ nom }}:
         default_policy: deny
         rules:
           - policy: two_factor
-            subject: ["group:famille", "group:admins"]
-      admins:
-        default_policy: deny
-        rules:
-          - policy: two_factor
-            subject: "group:admins"
+            subject: {{ groupes | map('regex_replace', '^', 'group:') | list | to_json }}
+{% endfor %}
     claims_policies:
       # Pour les clients qui lisent l'identité dans le jeton d'identité plutôt qu'auprès de /userinfo (Semaphore).
       jeton_id_complet:
         id_token: [email, email_verified, preferred_username, name, groups]
+{% for nom, politique in identite_politiques_claims.items() %}
+      {{ nom }}:
+{% if politique.id_token is defined %}
+        id_token: {{ politique.id_token | to_json }}
+{% endif %}
+{% if politique.custom_claims is defined %}
+        custom_claims:
+{% for claim, attribut in politique.custom_claims.items() %}
+          {{ claim }}:
+            attribute: {{ attribut | to_json }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% if identite_portees_oidc %}
+    scopes:
+{% for nom, claims in identite_portees_oidc.items() %}
+      {{ nom }}:
+        claims: {{ claims | to_json }}
+{% endfor %}
+{% endif %}
     clients:
 {% for c in identite_clients_oidc %}
       - client_id: "{{ c.id }}"
@@ -132,7 +159,7 @@ identity_providers:
         scopes: {{ c.scopes | default(['openid', 'profile', 'email', 'groups']) | to_json }}
         token_endpoint_auth_method: "{{ c.auth_jeton | default('client_secret_post') }}"
         userinfo_signed_response_alg: none
-{% if c.jeton_id_complet | default(false) %}
-        claims_policy: jeton_id_complet
+{% if c.claims is defined or c.jeton_id_complet | default(false) %}
+        claims_policy: {{ c.claims | default('jeton_id_complet') }}
 {% endif %}
 {% endfor %}

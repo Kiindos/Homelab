@@ -7,13 +7,13 @@ Le compte est créé dans LLDAP sans mot de passe, puis Authelia envoie un lien 
 choisisse le sien : aucun mot de passe ne transite. Bibliothèque standard uniquement.
 """
 
+import base64
 import html
 import http.server
 import ipaddress
 import json
 import os
 import re
-import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -42,6 +42,16 @@ CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' 
        "frame-ancestors 'none'; base-uri 'none'")
 MOTIF_IDENTIFIANT = re.compile(r"^[a-z0-9][a-z0-9._-]{1,31}$")
 MOTIF_EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
+# Quotas : drive (API de provisionnement de Nextcloud, compte sous-administrateur des groupes de la famille) et photos
+# (API d'administration d'Immich, clé limitée aux comptes). Chaque service n'est actif que si son secret est présent.
+NEXTCLOUD_URL = os.environ.get("NEXTCLOUD_URL", "").rstrip("/")
+NEXTCLOUD_HOTE = os.environ.get("NEXTCLOUD_HOTE", "")
+NEXTCLOUD_UTILISATEUR = os.environ.get("NEXTCLOUD_UTILISATEUR", "")
+NEXTCLOUD_MDP_FICHIER = os.environ.get("NEXTCLOUD_MOT_DE_PASSE_FICHIER", "")
+IMMICH_URL = os.environ.get("IMMICH_URL", "").rstrip("/")
+IMMICH_CLE_FICHIER = os.environ.get("IMMICH_CLE_FICHIER", "")
+GIO = 1024 ** 3
+QUOTA_MAX_GO = 10_000
 
 
 class Refus(Exception):
@@ -165,6 +175,150 @@ def renvoyer(formulaire, admin, adresse_client):
     return identifiant, compte["email"]
 
 
+# --- Espace de stockage (quotas du drive et des photos) ---------------------------------------------------------
+
+def lire_secret(chemin):
+    try:
+        with open(chemin, encoding="utf-8") as fichier:
+            return fichier.read().strip()
+    except (OSError, TypeError):
+        return ""
+
+
+class Indisponible(Exception):
+    """Service de stockage injoignable ou refusant l'accès."""
+
+
+class Drive:
+    """Nextcloud : compte sous-administrateur des groupes de la famille (ni administrateurs ni autres groupes)."""
+
+    nom = "drive"
+
+    def __init__(self):
+        self.mot_de_passe = lire_secret(NEXTCLOUD_MDP_FICHIER) if NEXTCLOUD_URL and NEXTCLOUD_UTILISATEUR else ""
+        self.actif = bool(self.mot_de_passe)
+
+    def _appel(self, methode, identifiant, donnees=None):
+        jeton = base64.b64encode(f"{NEXTCLOUD_UTILISATEUR}:{self.mot_de_passe}".encode()).decode()
+        requete = urllib.request.Request(
+            f"{NEXTCLOUD_URL}/ocs/v2.php/cloud/users/{urllib.parse.quote(identifiant)}?format=json", method=methode,
+            data=urllib.parse.urlencode(donnees).encode() if donnees else None,
+            headers={"OCS-APIRequest": "true", "Authorization": f"Basic {jeton}", "Host": NEXTCLOUD_HOTE,
+                     "Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"})
+        try:
+            with urllib.request.urlopen(requete, timeout=5) as reponse:
+                return json.load(reponse)["ocs"]
+        except urllib.error.HTTPError as erreur:
+            if erreur.code in (403, 404):
+                return None   # pas encore de compte, ou administrateur (hors délégation)
+            raise Indisponible(f"Nextcloud : HTTP {erreur.code}") from erreur
+        except (urllib.error.URLError, OSError, ValueError, KeyError) as erreur:
+            raise Indisponible(f"Nextcloud : {erreur}") from erreur
+
+    def espaces(self, comptes):
+        resultat = {}
+        for compte in comptes:
+            ocs = self._appel("GET", compte["id"])
+            if ocs:
+                quota = ocs["data"].get("quota", {})
+                total = quota.get("quota")
+                resultat[compte["id"]] = {"utilise": quota.get("used", 0),
+                                         "quota": total if isinstance(total, (int, float)) and total >= 0 else None}
+        return resultat
+
+    def fixer(self, compte, cible, octets):
+        ocs = self._appel("PUT", compte["id"], {"key": "quota", "value": "none" if octets is None else str(octets)})
+        if not ocs or ocs.get("meta", {}).get("statuscode") not in (100, 200):
+            raise Refus("Nextcloud a refusé le quota (compte administrateur ou hors des groupes délégués).")
+
+
+class Photos:
+    """Immich : clé d'API d'un administrateur, limitée à la lecture et à la modification des comptes."""
+
+    nom = "photos"
+
+    def __init__(self):
+        self.cle = lire_secret(IMMICH_CLE_FICHIER) if IMMICH_URL else ""
+        self.actif = bool(self.cle)
+
+    def _appel(self, methode, chemin, donnees=None):
+        requete = urllib.request.Request(
+            f"{IMMICH_URL}{chemin}", method=methode, data=json.dumps(donnees).encode() if donnees is not None else None,
+            headers={"x-api-key": self.cle, "Accept": "application/json", "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(requete, timeout=5) as reponse:
+                return json.load(reponse)
+        except urllib.error.HTTPError as erreur:
+            raise Indisponible(f"Immich : HTTP {erreur.code}") from erreur
+        except (urllib.error.URLError, OSError, ValueError) as erreur:
+            raise Indisponible(f"Immich : {erreur}") from erreur
+
+    def espaces(self, comptes):
+        par_email = {u["email"].lower(): u for u in self._appel("GET", "/api/admin/users")}
+        resultat = {}
+        for compte in comptes:
+            utilisateur = par_email.get((compte["email"] or "").lower())
+            if utilisateur:
+                resultat[compte["id"]] = {"utilise": utilisateur.get("quotaUsageInBytes") or 0,
+                                         "quota": utilisateur.get("quotaSizeInBytes"), "id": utilisateur["id"]}
+        return resultat
+
+    def fixer(self, compte, cible, octets):
+        self._appel("PUT", f"/api/admin/users/{cible['id']}", {"quotaSizeInBytes": octets})
+
+
+def etat_stockage(comptes):
+    """Espace de chaque membre par service ; un service injoignable est signalé sans bloquer la page."""
+    services = {}
+    for service in (Drive(), Photos()):
+        if not service.actif:
+            services[service.nom] = {"etat": "non configuré", "espaces": {}}
+            continue
+        try:
+            services[service.nom] = {"etat": "ok", "espaces": service.espaces(comptes)}
+        except Indisponible as erreur:
+            journal(action="erreur", detail=str(erreur))
+            services[service.nom] = {"etat": "injoignable", "espaces": {}}
+    return services
+
+
+def octets_depuis(valeur):
+    valeur = (valeur or "").strip().replace(",", ".")
+    if not valeur:
+        return None
+    try:
+        go = float(valeur)
+    except ValueError:
+        raise Refus("Quota invalide : un nombre de Go, ou vide pour « illimité ».") from None
+    if not 1 <= go <= QUOTA_MAX_GO:
+        raise Refus(f"Quota invalide : entre 1 et {QUOTA_MAX_GO} Go (vide = illimité).")
+    return int(go * GIO)
+
+
+def modifier_quotas(formulaire, admin, adresse_client):
+    identifiant = formulaire.get("identifiant", "").strip()
+    with Annuaire() as annuaire:
+        compte = next((c for c in membres(annuaire.etat()[0]) if c["id"] == identifiant), None)
+    if compte is None:
+        raise Refus("Compte inconnu, ou compte technique.")
+    changements = []
+    for service in (Drive(), Photos()):
+        if not service.actif or service.nom not in formulaire:
+            continue
+        voulu = octets_depuis(formulaire[service.nom])
+        try:
+            cible = service.espaces([compte]).get(compte["id"])
+            if cible is None or cible["quota"] == voulu:
+                continue
+            service.fixer(compte, cible, voulu)
+        except Indisponible as erreur:
+            raise Refus(f"{erreur} : quota non modifié.") from erreur
+        changements.append(service.nom)
+        journal(admin=admin, action="quota", compte=identifiant, service=service.nom,
+                quota_go=None if voulu is None else round(voulu / GIO, 2))
+    return identifiant, ", ".join(changements) or "aucun changement"
+
+
 # --- Page ----------------------------------------------------------------------------------------------------
 
 def e(texte):
@@ -178,7 +332,27 @@ def date_courte(valeur):
         return ""
 
 
-def page(admin, comptes, groupes, message=None, formulaire=None):
+def taille(octets):
+    return f"{(octets or 0) / GIO:.1f}".replace(".", ",") + " Go"
+
+
+def cellule_quota(service, compte, stockage):
+    etat = stockage.get(service, {"etat": "non configuré", "espaces": {}})
+    if etat["etat"] != "ok":
+        return f'<td class="mono">{e(etat["etat"])}</td>'
+    espace = etat["espaces"].get(compte["id"])
+    if espace is None:
+        return '<td class="discret" title="Aucun compte (première connexion à venir) ou compte administrateur">—</td>'
+    quota = espace["quota"]
+    valeur = "" if quota is None else f"{quota / GIO:g}"
+    return (f'<td><div class="quota"><input type="number" name="{service}" form="q-{e(compte["id"])}" min="1" '
+            f'max="{QUOTA_MAX_GO}" step="any" inputmode="decimal" value="{e(valeur)}" placeholder="illimité" '
+            f'aria-label="Quota {service} (Go)"><span>Go</span></div>'
+            f'<small>{taille(espace["utilise"])} utilisés</small></td>')
+
+
+def page(admin, comptes, groupes, message=None, formulaire=None, stockage=None):
+    stockage = stockage or {}
     formulaire = formulaire or {}
     coches = formulaire.get("groupes", ["famille"])
     alerte = ""
@@ -195,6 +369,12 @@ def page(admin, comptes, groupes, message=None, formulaire=None):
         f'<td class="mono">{date_courte(c.get("creationDate"))}</td>'
         f'<td><form method="post" action="/lien"><input type="hidden" name="identifiant" value="{e(c["id"])}">'
         f'<button class="bouton bouton--discret" type="submit">Renvoyer un lien</button></form></td></tr>'
+        for c in comptes)
+    lignes_espace = "".join(
+        f'<tr><td><strong>{e(c["displayName"] or c["id"])}</strong><br><small class="mono">{e(c["id"])}</small></td>'
+        f'{cellule_quota("drive", c, stockage)}{cellule_quota("photos", c, stockage)}'
+        f'<td><form method="post" action="/quotas" id="q-{e(c["id"])}"><input type="hidden" name="identifiant" '
+        f'value="{e(c["id"])}"><button class="bouton bouton--discret" type="submit">Enregistrer</button></form></td></tr>'
         for c in comptes)
     annuaire = (f'<p class="pied__note">Groupes, suppression, comptes techniques : '
                 f'<a href="{e(LIEN_ANNUAIRE)}">interface de l\'annuaire</a>.</p>' if LIEN_ANNUAIRE else "")
@@ -260,6 +440,18 @@ def page(admin, comptes, groupes, message=None, formulaire=None):
       <table>
         <thead><tr><th>Nom</th><th>Identifiant</th><th>E-mail</th><th>Groupes</th><th>Créé le</th><th></th></tr></thead>
         <tbody>{lignes or '<tr><td colspan="6">Aucun compte.</td></tr>'}</tbody>
+      </table>
+    </div>
+  </section>
+  <section class="carte" id="espace" aria-labelledby="titre-espace">
+    <div class="carte__titre">
+      <h2 id="titre-espace">Espace de stockage</h2>
+      <p>Quota en Go, appliqué aussitôt ; vide = illimité. « — » : pas encore de compte, ou administrateur.</p>
+    </div>
+    <div class="tableau-defilant">
+      <table>
+        <thead><tr><th>Membre</th><th>Drive</th><th>Photos</th><th></th></tr></thead>
+        <tbody>{lignes_espace or '<tr><td colspan="4">Aucun compte.</td></tr>'}</tbody>
       </table>
     </div>
   </section>
@@ -337,6 +529,8 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
             message = ("ok", f"Compte <strong>{e(compte)}</strong> créé : invitation envoyée à {e(email)}.")
         elif parametres.get("fait") == ["lien"]:
             message = ("ok", f"Lien envoyé à {e(email)} (compte <strong>{e(compte)}</strong>).")
+        elif parametres.get("fait") == ["quotas"]:
+            message = ("ok", f"Quotas de <strong>{e(compte)}</strong> : {e(email)}.")
         return self.afficher(admin, message)
 
     def afficher(self, admin, message=None, formulaire=None, code=200):
@@ -347,7 +541,8 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
         except (urllib.error.URLError, OSError, RuntimeError, KeyError) as erreur:
             journal(action="erreur", detail=f"annuaire : {erreur}")
             comptes, groupes, message = [], [], ("erreur", "Annuaire injoignable : réessayez dans un instant.")
-        return self.envoyer(code, page(self.nom_admin, comptes, groupes, message, formulaire).encode())
+        stockage = etat_stockage(comptes)
+        return self.envoyer(code, page(self.nom_admin, comptes, groupes, message, formulaire, stockage).encode())
 
     def do_POST(self):
         admin = self.administrateur()
@@ -363,11 +558,14 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
         longueur = int(self.headers.get("Content-Length") or 0)
         if longueur > 4096 or not self.headers.get("Content-Type", "").startswith("application/x-www-form-urlencoded"):
             return self.envoyer(400, "Requête invalide.".encode(), "text/plain; charset=utf-8")
-        champs = urllib.parse.parse_qs(self.rfile.read(longueur).decode("utf-8", "replace"), max_num_fields=20)
+        # Champs vides conservés : un quota vidé signifie « illimité ».
+        champs = urllib.parse.parse_qs(self.rfile.read(longueur).decode("utf-8", "replace"), keep_blank_values=True,
+                                       max_num_fields=20)
         formulaire = {cle: valeurs[0] for cle, valeurs in champs.items() if cle != "groupes"}
         formulaire["groupes"] = champs.get("groupes", [])
         chemin = urllib.parse.urlsplit(self.path).path
-        actions = {"/inviter": ("invitation", inviter), "/lien": ("lien", renvoyer)}
+        actions = {"/inviter": ("invitation", inviter), "/lien": ("lien", renvoyer),
+                   "/quotas": ("quotas", modifier_quotas)}
         if chemin not in actions:
             return self.envoyer(404, "Page introuvable.".encode(), "text/plain; charset=utf-8")
         fait, action = actions[chemin]
@@ -380,10 +578,12 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
             return self.afficher(admin, ("erreur", "Échec de l'opération (voir les journaux du conteneur)."),
                                  formulaire if fait == "invitation" else None, 502)
         suite = urllib.parse.urlencode({"fait": fait, "compte": compte, "email": email})
-        return self.envoyer(303, b"", entetes={"Location": f"/?{suite}", "Cache-Control": "no-store"})
+        ancre = "#espace" if fait == "quotas" else ""
+        return self.envoyer(303, b"", entetes={"Location": f"/?{suite}{ancre}", "Cache-Control": "no-store"})
 
 
 if __name__ == "__main__":
     serveur = http.server.ThreadingHTTPServer(("0.0.0.0", 8080), Gestionnaire)
-    journal(action="demarrage", sources=[str(s) for s in SOURCES], exclus=sorted(GROUPES_EXCLUS))
+    journal(action="demarrage", sources=[str(s) for s in SOURCES], exclus=sorted(GROUPES_EXCLUS),
+            quotas={"drive": Drive().actif, "photos": Photos().actif})
     serveur.serve_forever()

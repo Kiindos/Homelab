@@ -3,3 +3,10 @@ immich_version: v3.2.2
 immich_bibliotheque: /srv/photos
 immich_url: "https://photos.{{ domaine_public }}"
 immich_issuer: "https://auth.{{ domaine_public }}"
+# Portées demandées au SSO ; ajouter celle qui porte le claim de rôle pour qu'Immich suive le groupe des admins.
+immich_oidc_portees: "openid email profile"
+# Claim donnant le rôle (« admin » ou « user »), appliqué à chaque connexion ; claim du quota (Gio, à la création).
+immich_claim_role: immich_role
+immich_claim_quota: immich_quota
+# Quota par défaut des nouveaux comptes (Gio ; vide = illimité).
+immich_quota_defaut: null

@@ -114,6 +114,16 @@ td:last-child { text-align: right; }
 .puce { display: inline-block; font: 600 .7rem/1 var(--mono); padding: .3rem .5rem; margin: .1rem .25rem .1rem 0; border-radius: 999px; background: var(--accent-fond); color: var(--accent); }
 .pied__note { color: var(--texte-faible); font-size: .88rem; }
 
+/* Espace de stockage : quota modifiable sur place, espace utilisé en dessous */
+input[type=number] {
+  font: inherit; color: var(--texte); background: var(--surface-creuse); border: 1px solid var(--bordure-forte);
+  border-radius: 8px; padding: .35rem .5rem; width: 6.5rem;
+}
+input[type=number]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-fond); }
+.quota { display: flex; align-items: center; gap: .4rem; color: var(--texte-doux); font-size: .85rem; }
+td small { display: block; margin-top: .25rem; color: var(--texte-faible); font-size: .78rem; }
+td.discret { color: var(--texte-faible); }
+
 @media (max-width: 720px) {
   .formulaire { grid-template-columns: 1fr; }
   .marque__nom, .utilisateur { display: none; }

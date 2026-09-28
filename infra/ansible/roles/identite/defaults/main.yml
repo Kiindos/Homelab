@@ -22,7 +22,20 @@ identite_sujet_emails: "[Homelab] Sécurité de votre compte"
 
 identite_groupes: [famille, admins]
 
-# Clients OpenID Connect (le condensat du secret vient des secrets chiffrés).
+# Politiques d'autorisation des clients OpenID Connect : nom => groupes autorisés (double authentification exigée).
+# Un client la désigne par « politique ». Ex. : un groupe par service, plus des groupes qui ouvrent tout.
+identite_politiques_oidc:
+  famille: [famille, admins]
+  admins: [admins]
+# Attributs calculés à partir des groupes (expressions CEL d'Authelia), exposés aux applications par des claims :
+# nom => expression. Ex. : { role_appli: '"admins" in groups ? "admin" : "user"' }
+identite_attributs_calcules: {}
+# Politiques de claims supplémentaires : nom => { custom_claims: { claim: attribut }, id_token: [claims] }.
+identite_politiques_claims: {}
+# Portées personnalisées : nom => [claims] (un client doit la demander pour recevoir ces claims).
+identite_portees_oidc: {}
+# Clients OpenID Connect (le condensat du secret vient des secrets chiffrés) ; « claims » désigne une politique de
+# identite_politiques_claims (ou « jeton_id_complet »).
 identite_clients_oidc: []
 # Sites protégés par le WAF en « auth_request » (sans OpenID Connect) : règles d'accès d'Authelia, dans l'ordre.
 # [{ domaine, politique: bypass|one_factor|two_factor, ressources: [regex], sujets: ["group:…"] }]
@@ -40,3 +53,7 @@ identite_comptes_groupes_exclus: ["{{ identite_comptes_groupe_admin }}"]
 identite_comptes_descriptions:
   famille: "Photos, drive, médias"
 identite_comptes_lien_annuaire: ""
+# Quotas du drive et des photos sur la page des comptes (inactifs si le secret manque) :
+# { nextcloud: { url, hote, utilisateur, mot_de_passe }, immich: { url, cle } }. Nextcloud : compte sous-administrateur
+# des groupes de la famille ; Immich : clé d'API limitée à la lecture et à la modification des comptes.
+identite_comptes_quotas: {}
