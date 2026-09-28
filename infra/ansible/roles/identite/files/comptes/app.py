@@ -19,6 +19,8 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
+import bienvenue
+
 LLDAP = os.environ.get("LLDAP_URL", "http://lldap:17170")
 LLDAP_UTILISATEUR = os.environ.get("LLDAP_UTILISATEUR", "admin")
 LLDAP_MDP_FICHIER = os.environ.get("LLDAP_MOT_DE_PASSE_FICHIER", "/run/secrets/lldap_admin_password")
@@ -161,18 +163,44 @@ def inviter(formulaire, admin, adresse_client):
         raise Refus(f"Compte « {identifiant} » créé, mais l'envoi du lien a échoué : "
                     "réessayez avec « Renvoyer un lien » ci-dessous.") from erreur
     journal(admin=admin, action="invitation", compte=identifiant)
-    return identifiant, email
+    return {"compte": identifiant, "email": email, "bienvenue": souhaiter_bienvenue(admin, email, prenom, identifiant, groupes)}
 
 
-def renvoyer(formulaire, admin, adresse_client):
-    identifiant = formulaire.get("identifiant", "").strip()
+def souhaiter_bienvenue(admin, email, prenom, identifiant, groupes):
+    """E-mail de bienvenue (services selon les groupes) ; un échec est signalé sans annuler l'invitation."""
+    if not bienvenue.actif():
+        return "inactif"
+    try:
+        services = bienvenue.envoyer(email, prenom, identifiant, groupes, DUREE_LIEN)
+    except (OSError, ValueError) as erreur:   # smtplib.SMTPException hérite d'OSError
+        journal(admin=admin, action="erreur", compte=identifiant, detail=f"bienvenue : {erreur}")
+        return "echec"
+    journal(admin=admin, action="bienvenue", compte=identifiant, services=services)
+    return "envoye"
+
+
+def membre(identifiant):
     with Annuaire() as annuaire:
         compte = next((c for c in membres(annuaire.etat()[0]) if c["id"] == identifiant), None)
     if compte is None:
         raise Refus("Compte inconnu, ou compte technique (à gérer dans l'interface de LLDAP).")
-    envoyer_lien(identifiant, adresse_client)
-    journal(admin=admin, action="lien", compte=identifiant)
-    return identifiant, compte["email"]
+    return compte
+
+
+def renvoyer(formulaire, admin, adresse_client):
+    compte = membre(formulaire.get("identifiant", "").strip())
+    envoyer_lien(compte["id"], adresse_client)
+    journal(admin=admin, action="lien", compte=compte["id"])
+    return {"compte": compte["id"], "email": compte["email"]}
+
+
+def renvoyer_bienvenue(formulaire, admin, adresse_client):
+    compte = membre(formulaire.get("identifiant", "").strip())
+    prenom = (compte["displayName"] or compte["id"]).split(" ")[0]
+    etat = souhaiter_bienvenue(admin, compte["email"], prenom, compte["id"], [g["displayName"] for g in compte["groups"]])
+    if etat != "envoye":
+        raise Refus("E-mail de bienvenue non envoyé (envoi non configuré ou refusé : voir les journaux).")
+    return {"compte": compte["id"], "email": compte["email"]}
 
 
 # --- Espace de stockage (quotas du drive et des photos) ---------------------------------------------------------
@@ -316,7 +344,7 @@ def modifier_quotas(formulaire, admin, adresse_client):
         changements.append(service.nom)
         journal(admin=admin, action="quota", compte=identifiant, service=service.nom,
                 quota_go=None if voulu is None else round(voulu / GIO, 2))
-    return identifiant, ", ".join(changements) or "aucun changement"
+    return {"compte": identifiant, "modifies": ", ".join(changements) or "aucun changement"}
 
 
 # --- Page ----------------------------------------------------------------------------------------------------
@@ -367,8 +395,12 @@ def page(admin, comptes, groupes, message=None, formulaire=None, stockage=None):
         f'<td>{e(c["email"])}</td>'
         f'<td>{"".join(f"<span class=puce>{e(g["displayName"])}</span>" for g in c["groups"]) or "—"}</td>'
         f'<td class="mono">{date_courte(c.get("creationDate"))}</td>'
-        f'<td><form method="post" action="/lien"><input type="hidden" name="identifiant" value="{e(c["id"])}">'
-        f'<button class="bouton bouton--discret" type="submit">Renvoyer un lien</button></form></td></tr>'
+        f'<td><div class="actions"><form method="post" action="/lien"><input type="hidden" name="identifiant" '
+        f'value="{e(c["id"])}"><button class="bouton bouton--discret" type="submit">Renvoyer un lien</button></form>'
+        + (f'<form method="post" action="/bienvenue"><input type="hidden" name="identifiant" value="{e(c["id"])}">'
+           f'<button class="bouton bouton--discret" type="submit" title="Services et modes d\'emploi selon ses groupes">'
+           f'Bienvenue</button></form>' if bienvenue.actif() else "")
+        + '</div></td></tr>'
         for c in comptes)
     lignes_espace = "".join(
         f'<tr><td><strong>{e(c["displayName"] or c["id"])}</strong><br><small class="mono">{e(c["id"])}</small></td>'
@@ -524,13 +556,19 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
             return self.envoyer(404, "Page introuvable.".encode(), "text/plain; charset=utf-8")
         message = None
         parametres = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
-        compte, email = parametres.get("compte", [""])[0], parametres.get("email", [""])[0]
-        if parametres.get("fait") == ["invitation"]:
-            message = ("ok", f"Compte <strong>{e(compte)}</strong> créé : invitation envoyée à {e(email)}.")
-        elif parametres.get("fait") == ["lien"]:
+        valeur = lambda cle: parametres.get(cle, [""])[0]   # noqa: E731 - lecture courte des paramètres
+        compte, email, fait = valeur("compte"), valeur("email"), valeur("fait")
+        suite_bienvenue = {"envoye": " E-mail de bienvenue envoyé.", "inactif": "",
+                           "echec": " E-mail de bienvenue <strong>non envoyé</strong> : réessayer avec « Bienvenue »."}
+        if fait == "invitation":
+            message = ("ok", f"Compte <strong>{e(compte)}</strong> créé : invitation envoyée à {e(email)}."
+                             f"{suite_bienvenue.get(valeur('bienvenue'), '')}")
+        elif fait == "lien":
             message = ("ok", f"Lien envoyé à {e(email)} (compte <strong>{e(compte)}</strong>).")
-        elif parametres.get("fait") == ["quotas"]:
-            message = ("ok", f"Quotas de <strong>{e(compte)}</strong> : {e(email)}.")
+        elif fait == "bienvenue":
+            message = ("ok", f"E-mail de bienvenue envoyé à {e(email)} (compte <strong>{e(compte)}</strong>).")
+        elif fait == "quotas":
+            message = ("ok", f"Quotas de <strong>{e(compte)}</strong> : {e(valeur('modifies'))}.")
         return self.afficher(admin, message)
 
     def afficher(self, admin, message=None, formulaire=None, code=200):
@@ -565,19 +603,19 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
         formulaire["groupes"] = champs.get("groupes", [])
         chemin = urllib.parse.urlsplit(self.path).path
         actions = {"/inviter": ("invitation", inviter), "/lien": ("lien", renvoyer),
-                   "/quotas": ("quotas", modifier_quotas)}
+                   "/bienvenue": ("bienvenue", renvoyer_bienvenue), "/quotas": ("quotas", modifier_quotas)}
         if chemin not in actions:
             return self.envoyer(404, "Page introuvable.".encode(), "text/plain; charset=utf-8")
         fait, action = actions[chemin]
         try:
-            compte, email = action(formulaire, admin, self.adresse_client())
+            resultat = action(formulaire, admin, self.adresse_client())
         except Refus as refus:
             return self.afficher(admin, ("erreur", e(refus)), formulaire if fait == "invitation" else None, 422)
         except (urllib.error.URLError, OSError, RuntimeError, KeyError) as erreur:
             journal(action="erreur", admin=admin, detail=str(erreur))
             return self.afficher(admin, ("erreur", "Échec de l'opération (voir les journaux du conteneur)."),
                                  formulaire if fait == "invitation" else None, 502)
-        suite = urllib.parse.urlencode({"fait": fait, "compte": compte, "email": email})
+        suite = urllib.parse.urlencode({"fait": fait, **resultat})
         ancre = "#espace" if fait == "quotas" else ""
         return self.envoyer(303, b"", entetes={"Location": f"/?{suite}{ancre}", "Cache-Control": "no-store"})
 
@@ -585,5 +623,5 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
 if __name__ == "__main__":
     serveur = http.server.ThreadingHTTPServer(("0.0.0.0", 8080), Gestionnaire)
     journal(action="demarrage", sources=[str(s) for s in SOURCES], exclus=sorted(GROUPES_EXCLUS),
-            quotas={"drive": Drive().actif, "photos": Photos().actif})
+            quotas={"drive": Drive().actif, "photos": Photos().actif}, bienvenue=bienvenue.actif())
     serveur.serve_forever()

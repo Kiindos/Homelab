@@ -25,6 +25,14 @@ La page des comptes affiche l'espace utilisé sur le drive et dans la galerie ph
 place. Chaque accès est taillé au plus juste : un compte délégué qui ne gère que les groupes de la famille, une clé
 d'API limitée aux comptes. Si un service ne répond pas, la page le dit et reste utilisable.
 
+## Bienvenue
+
+Un nouveau membre reçoit maintenant, en plus du lien pour choisir son mot de passe, un **e-mail de bienvenue** qui
+ne présente que ses services, avec leur mode d'emploi (application à installer, adresse, façon de se connecter). La
+même chose existe en page web, derrière la barrière SSO : une **page d'accueil** qui affiche les cartes des services
+de la personne connectée, à partir des groupes transmis par le pare-feu applicatif. Un seul catalogue alimente les
+deux ; la page n'accepte que le pare-feu applicatif et ne reprend de l'identité reçue que des caractères sûrs.
+
 ## Documentation
 
 La documentation interne reprend la charte du site (palette, logo, titres, tableaux en cartes), sans police

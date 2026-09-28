@@ -84,12 +84,21 @@ services:
       NEXTCLOUD_MOT_DE_PASSE_FICHIER: /run/secrets/comptes_nextcloud
       IMMICH_URL: "{{ identite_comptes_quotas.immich.url | default('') }}"
       IMMICH_CLE_FICHIER: /run/secrets/comptes_immich
+{% if identite_smtp is defined %}
+      # E-mail de bienvenue : même expéditeur (et même jeton SMTP) qu'Authelia ; services du catalogue.
+      SMTP_SERVEUR: "{{ identite_smtp.serveur }}"
+      SMTP_UTILISATEUR: "{{ identite_smtp.utilisateur }}"
+      SMTP_EXPEDITEUR: "{{ identite_smtp.expediteur }}"
+      SMTP_MOT_DE_PASSE_FICHIER: /run/secrets/authelia_smtp
+      CATALOGUE_FICHIER: /app/catalogue.json
+      CONTACT_ADMINISTRATEUR: "{{ identite_comptes_contact }}"
+{% endif %}
       TZ: Europe/Paris
     ports:
       - "{{ identite_comptes_port }}:8080"
     volumes:
       - ./comptes:/app:ro
-    secrets: [lldap_admin_password, comptes_nextcloud, comptes_immich]
+    secrets: [lldap_admin_password, comptes_nextcloud, comptes_immich{% if identite_smtp is defined %}, authelia_smtp{% endif %}]
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]

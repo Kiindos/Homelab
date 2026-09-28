@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Accueil · homelab</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="accueil.css">
+<script src="accueil.js" defer></script>
+</head>
+<body>
+<div class="halos" aria-hidden="true"><span></span><span></span></div>
+<header class="entete">
+  <div class="enveloppe entete__barre">
+    <a class="marque" href="./" aria-label="Accueil du homelab">
+      <span class="marque__logo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 22V10l8 7 8-7v12"/></svg></span>
+      <span class="marque__nom">maxime<span class="marque__point">.</span>bertrand</span>
+      <span class="marque__tag">accueil</span>
+    </a>
+    <div class="entete__droite">
+      <span class="utilisateur" id="utilisateur"></span>
+      <a class="lien-discret" id="deconnexion" href="#">Se déconnecter</a>
+    </div>
+  </div>
+</header>
+<main class="enveloppe" id="contenu">
+  <section class="accroche">
+    <p class="surtitre">Homelab de la famille</p>
+    <h1 id="bonjour">Bonjour</h1>
+    <p class="accroche__texte">Vos services, au même endroit. Une seule connexion pour tous (sauf mention contraire),
+      avec la double authentification.</p>
+  </section>
+  <p class="message" id="message" hidden></p>
+  <section class="grille" id="services" aria-label="Vos services"></section>
+</main>
+<template id="modele-service">
+  <article class="carte service">
+    <div class="service__tete">
+      <span class="service__pastille" aria-hidden="true"></span>
+      <div>
+        <h2 class="service__nom"></h2>
+        <p class="service__appli"></p>
+      </div>
+    </div>
+    <p class="service__description"></p>
+    <a class="bouton service__ouvrir" target="_blank" rel="noopener">Ouvrir</a>
+    <details class="service__guide">
+      <summary>Mode d'emploi</summary>
+      <p class="service__connexion"></p>
+      <ol class="service__etapes"></ol>
+      <ul class="service__applis"></ul>
+    </details>
+  </article>
+</template>
+</body>
+</html>

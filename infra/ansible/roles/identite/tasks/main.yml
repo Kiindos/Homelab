@@ -99,6 +99,16 @@
   when: identite_page_comptes | bool
   notify: Redémarrer la page des comptes
 
+# Relu à chaque envoi : pas de redémarrage nécessaire.
+- name: Écrire le catalogue des services (e-mail de bienvenue)
+  ansible.builtin.copy:
+    content: "{{ identite_comptes_catalogue | to_nice_json }}\n"
+    dest: "{{ identite_dossier }}/comptes/catalogue.json"
+    owner: root
+    group: root
+    mode: "0644"
+  when: identite_page_comptes | bool
+
 # Une configuration refusée empêcherait Authelia de redémarrer (plus aucun SSO) : elle est d'abord validée par
 # Authelia lui-même, dans le conteneur en service, avant de remplacer celle en production.
 - name: Préparer la configuration d'Authelia

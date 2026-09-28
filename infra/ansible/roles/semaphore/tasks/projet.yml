@@ -97,12 +97,17 @@
     body_format: json
     body: >-
       {{ {'name': item.nom, 'type': item.type, 'project_id': semaphore_pid | int}
-         | combine({'ssh': {'login': '', 'passphrase': '', 'private_key': item.cle}} if item.type == 'ssh' else {}) }}
+         | combine({'ssh': {'login': '', 'passphrase': '', 'private_key': item.cle}} if item.type == 'ssh' else {})
+         | combine({'login_password': {'login': item.cle.login, 'password': item.cle.mot_de_passe}}
+                   if item.type == 'login_password' else {}) }}
     status_code: [200, 201, 204]
+  # Clés SSH, et identifiant + mot de passe (ex. jeton GitHub en lecture seule pour cloner en HTTPS).
   loop: >-
     {{ [{'nom': 'aucune', 'type': 'none', 'cle': ''}]
        + (semaphore_projet.cles_ssh | dict2items(key_name='nom', value_name='cle')
-          | map('combine', {'type': 'ssh'}) | list) }}
+          | map('combine', {'type': 'ssh'}) | list)
+       + (semaphore_projet.cles_connexion | default({}) | dict2items(key_name='nom', value_name='cle')
+          | selectattr('cle.mot_de_passe') | map('combine', {'type': 'login_password'}) | list) }}
   loop_control:
     label: "{{ item.nom }}"
   when: item.nom not in (semaphore_cles.json | map(attribute='name'))

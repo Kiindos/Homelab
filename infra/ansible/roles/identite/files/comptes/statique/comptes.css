@@ -123,6 +123,11 @@ input[type=number]:focus { outline: none; border-color: var(--accent); box-shado
 .quota { display: flex; align-items: center; gap: .4rem; color: var(--texte-doux); font-size: .85rem; }
 td small { display: block; margin-top: .25rem; color: var(--texte-faible); font-size: .78rem; }
 td.discret { color: var(--texte-faible); }
+.actions { display: flex; gap: .4rem; justify-content: flex-end; flex-wrap: wrap; }
+/* Thème clair : dégradé plus foncé, texte blanc pour rester lisible. */
+@media (prefers-color-scheme: light) {
+  .bouton:not(.bouton--discret) { color: #ffffff; }
+}
 
 @media (max-width: 720px) {
   .formulaire { grid-template-columns: 1fr; }

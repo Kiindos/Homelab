@@ -6,6 +6,9 @@ web_image_cloudflared: cloudflare/cloudflared:2026.9.3
 web_sites: {}
 #  public:  { depot: https://github.com/…/Homelab.git, branche: site-publie, port: 8080, csp: "…" }  # publié par la CI
 #  interne: { source: /chemin/vers/Homelab-interne, generateur: mkdocs, port: 8081 }
+#  accueil: { generateur: fichiers, fichiers: accueil, port: 8082, sources_sso: [<WAF>], catalogue: {…} }
+#    « fichiers » : dossier du rôle copié tel quel ; « catalogue » : écrit en services.json. Avec « sources_sso », seul
+#    le WAF (qui impose le SSO) est accepté, et /moi.json renvoie l'identité et les groupes qu'il transmet.
 web_mkdocs: "{{ lookup('env', 'HOME') }}/.local/share/homelab/venv/bin/mkdocs"
 web_hugo: "{{ lookup('env', 'HOME') }}/.local/bin/hugo"
 # Jeton du tunnel Cloudflare (sortie de la pile OpenTofu cloudflare) : si absent, pas de tunnel.

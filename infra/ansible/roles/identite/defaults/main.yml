@@ -57,3 +57,7 @@ identite_comptes_lien_annuaire: ""
 # { nextcloud: { url, hote, utilisateur, mot_de_passe }, immich: { url, cle } }. Nextcloud : compte sous-administrateur
 # des groupes de la famille ; Immich : clé d'API limitée à la lecture et à la modification des comptes.
 identite_comptes_quotas: {}
+# E-mail de bienvenue (après l'invitation) : catalogue des services { accueil, portail, services: [{ id, nom, appli,
+# url, groupes, description, connexion, etapes, applis }] } ; inactif sans catalogue ou sans SMTP.
+identite_comptes_catalogue: {}
+identite_comptes_contact: "l'administrateur du homelab"

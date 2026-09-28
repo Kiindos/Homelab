@@ -1,17 +1,52 @@
 # {{ ansible_managed }}
 server_tokens off;
+{% if web_sites.values() | selectattr('sources_sso', 'defined') | list | length > 0 %}
+
+# Identité transmise par le WAF après vérification par Authelia (sites « sources_sso ») : seuls des caractères sûrs
+# sont repris.
+map $http_remote_user $sso_utilisateur {
+    "~^(?<u>[A-Za-z0-9._-]{1,64})$" $u;
+    default "";
+}
+map $http_remote_groups $sso_groupes {
+    "~^(?<g>[A-Za-z0-9._,-]{1,512})$" $g;
+    default "";
+}
+{% endif %}
 {% for nom, site in web_sites.items() %}
 
 server {
     listen {{ site.port }};
     root /usr/share/nginx/{{ nom }};
     index index.html;
+    charset utf-8;
+    charset_types application/json;
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy same-origin always;
     add_header X-Frame-Options DENY always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 {% if site.csp is defined %}
     add_header Content-Security-Policy "{{ site.csp }}" always;
+{% elif site.sources_sso is defined %}
+    add_header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'" always;
+{% endif %}
+{% if site.sources_sso is defined %}
+    # Seul le WAF, qui impose la connexion SSO, peut joindre ce site.
+{% for source in site.sources_sso %}
+    allow {{ source }};
+{% endfor %}
+    allow 127.0.0.1;
+    deny all;
+
+    location = /moi.json {
+        default_type application/json;
+        expires -1;
+        return 200 '{"utilisateur":"$sso_utilisateur","groupes":"$sso_groupes"}';
+    }
+
+    location = /services.json {
+        expires -1;
+    }
 {% endif %}
     error_page 404 /404.html;
     location / {

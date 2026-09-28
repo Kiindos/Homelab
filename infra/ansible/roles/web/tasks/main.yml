@@ -10,7 +10,9 @@
   delegate_to: localhost
   become: false
   run_once: true
-  loop: "{{ web_sites | dict2items | rejectattr('value.depot', 'defined') | list }}"
+  loop: >-
+    {{ web_sites | dict2items | rejectattr('value.depot', 'defined')
+       | rejectattr('value.generateur', 'equalto', 'fichiers') | list }}
   loop_control:
     label: "{{ item.key }}"
   changed_when: true
@@ -33,7 +35,31 @@
     owner: root
     group: root
     mode: "u=rwX,go=rX"
-  loop: "{{ web_sites | dict2items | rejectattr('value.depot', 'defined') | list }}"
+  loop: >-
+    {{ web_sites | dict2items | rejectattr('value.depot', 'defined')
+       | rejectattr('value.generateur', 'equalto', 'fichiers') | list }}
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Publier les sites fournis tels quels par le rôle
+  ansible.builtin.copy:
+    src: "{{ item.value.fichiers }}/"
+    dest: "{{ web_dossier }}/{{ item.key }}/"
+    owner: root
+    group: root
+    mode: "u=rwX,go=rX"
+  loop: "{{ web_sites | dict2items | selectattr('value.generateur', 'defined') | selectattr('value.generateur', 'equalto', 'fichiers') | list }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Écrire le catalogue des sites qui en ont un (services.json)
+  ansible.builtin.copy:
+    content: "{{ item.value.catalogue | to_nice_json }}\n"
+    dest: "{{ web_dossier }}/{{ item.key }}/services.json"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ web_sites | dict2items | selectattr('value.catalogue', 'defined') | list }}"
   loop_control:
     label: "{{ item.key }}"
 
