@@ -98,6 +98,12 @@
       [{{ hyperviseur_racine_donnees }}]
       	use_template = donnees
       	recursive = yes
+      {% for dataset in hyperviseur_sans_instantanes %}
+
+      [{{ hyperviseur_racine_donnees }}/{{ dataset }}]
+      	use_template = donnees
+      	autosnap = no
+      {% endfor %}
 
       [template_donnees]
       	frequently = 0
