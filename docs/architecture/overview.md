@@ -23,7 +23,7 @@ tags: [architecture]
 | Identité | LLDAP (annuaire), Authelia (SSO et double authentification), page des comptes (invitations sans mot de passe transmis) |
 | Provisionnement | OpenTofu (bpg/proxmox, opnsense, cloudflare), Ansible, lancé aussi depuis Semaphore UI |
 | Applications | Docker Compose dans des VM dédiées par zone ; Kubernetes (k3s, Argo CD) pour l'environnement de test |
-| Secrets | Coffre OpenBao (SSO, AppRole, audit ; en test), SOPS + age pour le démarrage |
+| Secrets | Coffre OpenBao (SSO, AppRole, audit), SOPS + age pour le démarrage |
 | Observabilité | Prometheus, Alertmanager, NOC sur mesure, Grafana (interne), ntfy et SMS (alertes sur téléphone), sonde externe UptimeRobot ; Loki plus tard |
 | Services d'infra | NetBox (source de vérité), Semaphore UI (lancement des playbooks) |
 

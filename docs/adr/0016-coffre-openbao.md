@@ -2,7 +2,7 @@
 title: "ADR 0016 : Un coffre à secrets OpenBao, à côté de SOPS"
 description: Les secrets passent dans un coffre OpenBao (connexion SSO, accès par identité, audit) ; SOPS reste le magasin de démarrage.
 date: 2026-09-27
-status: proposé
+status: accepté
 tags: [secrets, openbao, securite, sso]
 ---
 
@@ -26,7 +26,8 @@ Les secrets de la plateforme sont dans un fichier chiffré par SOPS et age, vers
 
 ## Décision
 
-**OpenBao**, en test, sur une petite VM dédiée dans la zone identité, sans Docker :
+**OpenBao**, sur une petite VM dédiée dans la zone identité, sans Docker (mis en test le 27/09/2026, retenu le
+28/09/2026 : Semaphore y lit ses secrets en production) :
 
 - **connexion des personnes par le SSO** (OpenID Connect via Authelia, second facteur, groupe des administrateurs) ;
 - **connexion des machines par AppRole** : Semaphore n'obtient qu'un droit de **lecture** sur les secrets de la
@@ -48,5 +49,6 @@ l'autre selon une variable, pour une bascule progressive et réversible.
   de fonctionner (leurs secrets sont déjà sur les machines).
 - La clé de descellement et les clés de récupération sont conservées **hors ligne** : sans elles, les données du
   coffre sont irrécupérables.
-- À venir si le test est concluant : secrets dynamiques (certificats SSH à courte durée plutôt que des clés fixes),
-  jetons des outils rangés dans le coffre, sauvegarde régulière de sa base.
+- À venir : secrets dynamiques (certificats SSH à courte durée plutôt que des clés fixes), jetons des outils rangés
+  dans le coffre, sauvegarde régulière de sa base, révocation du jeton racine une fois la connexion SSO validée
+  par l'administrateur.
