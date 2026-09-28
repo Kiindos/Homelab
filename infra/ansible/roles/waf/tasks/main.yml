@@ -97,6 +97,7 @@
   ansible.builtin.command: docker exec waf-bunkerweb-1 cscli lapi status
   register: waf_crowdsec_lapi
   until: waf_crowdsec_lapi.rc == 0
-  retries: 12
+  # Conteneur recréé : CrowdSec retélécharge ses règles avant d'ouvrir son API (plusieurs minutes).
+  retries: 60
   delay: 5
   changed_when: false

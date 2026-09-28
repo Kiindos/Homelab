@@ -50,6 +50,19 @@
     mode: "0755"
   loop: [bibliotheque, telechargements]
 
+# Dépôt de fichiers depuis un poste : clé dédiée, rsync enfermé dans la bibliothèque (rrsync), écriture seule,
+# sans suppression ni remplacement, liens symboliques neutralisés, et seulement depuis l'adresse VPN du poste.
+- name: Autoriser le dépôt de médias depuis les postes (rsync restreint)
+  ansible.posix.authorized_key:
+    user: root
+    key: "{{ item.cle }}"
+    key_options: >-
+      from="{{ item.depuis }}",restrict,command="/usr/bin/rrsync -wo -no-del -no-overwrite -munge
+      /{{ hyperviseur_racine_donnees }}/medias/bibliotheque"
+  loop: "{{ hyperviseur_depot_medias }}"
+  loop_control:
+    label: "{{ item.cle.split()[-1] }}"
+
 - name: Configurer les instantanés des données
   ansible.builtin.copy:
     dest: /etc/sanoid/sanoid.conf
