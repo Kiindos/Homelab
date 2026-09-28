@@ -28,9 +28,13 @@ authentication_backend:
     user: "uid=authelia,ou=people,{{ identite_base_dn }}"
 
 password_policy:
-  zxcvbn:
+  standard:
     enabled: true
-    min_score: 3
+    min_length: {{ identite_mots_de_passe.longueur_min }}
+    require_lowercase: {{ identite_mots_de_passe.minuscule | bool | lower }}
+    require_uppercase: {{ identite_mots_de_passe.majuscule | bool | lower }}
+    require_number: {{ identite_mots_de_passe.chiffre | bool | lower }}
+    require_special: {{ identite_mots_de_passe.special | bool | lower }}
 
 identity_validation:
   reset_password:

@@ -94,6 +94,7 @@ services:
       SMTP_MOT_DE_PASSE_FICHIER: /run/secrets/authelia_smtp
       CATALOGUE_FICHIER: /app/catalogue.json
       CONTACT_ADMINISTRATEUR: "{{ identite_comptes_contact }}"
+      REGLE_MOT_DE_PASSE: "{{ identite_regle_mot_de_passe }}"
 {% endif %}
       TZ: Europe/Paris
     ports:

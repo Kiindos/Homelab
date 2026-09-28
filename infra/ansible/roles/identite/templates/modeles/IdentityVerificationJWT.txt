@@ -13,6 +13,9 @@ Pour choisir votre mot de passe, ouvrez ce lien (personnel, à usage unique, val
 
 {{ .LinkURL }}
 
+Votre mot de passe doit comporter [[ identite_regle_mot_de_passe ]].
+Idée simple et solide : une petite phrase, par exemple « LeChatDort3Fois ».
+
 ----------------------------------------
 
 Vous n'êtes pas à l'origine de cette demande ?

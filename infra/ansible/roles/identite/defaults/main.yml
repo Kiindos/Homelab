@@ -63,3 +63,22 @@ identite_comptes_quotas: {}
 # url, groupes, description, connexion, etapes, applis }] } ; inactif sans catalogue ou sans SMTP.
 identite_comptes_catalogue: {}
 identite_comptes_contact: "l'administrateur du homelab"
+# Règle des mots de passe (mode « standard » d'Authelia) : chaque exigence manquante est listée en direct, en
+# français, pendant la saisie sur la page « choisir son mot de passe ». Le mode zxcvbn n'y montrait qu'une jauge,
+# sans dire quoi changer : refus sans explication. Pas de caractère spécial imposé (saisie sur une télécommande).
+identite_mots_de_passe:
+  longueur_min: 12
+  minuscule: true
+  majuscule: true
+  chiffre: true
+  special: false
+# La même règle en toutes lettres (e-mails, page d'accueil) : « au moins 12 caractères, dont une minuscule… ».
+identite_mdp_exigences: >-
+  {{ ['une minuscule' if identite_mots_de_passe.minuscule else '',
+      'une majuscule' if identite_mots_de_passe.majuscule else '',
+      'un chiffre' if identite_mots_de_passe.chiffre else '',
+      'un caractère spécial' if identite_mots_de_passe.special else ''] | select | list }}
+identite_regle_mot_de_passe: >-
+  au moins {{ identite_mots_de_passe.longueur_min }} caractères{% if identite_mdp_exigences | length > 1 %}, dont
+  {{ identite_mdp_exigences[:-1] | join(', ') }} et {{ identite_mdp_exigences[-1] }}{% elif identite_mdp_exigences %},
+  dont {{ identite_mdp_exigences[0] }}{% endif %}

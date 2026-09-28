@@ -19,6 +19,7 @@ SMTP_EXPEDITEUR = os.environ.get("SMTP_EXPEDITEUR", "")
 SMTP_MDP_FICHIER = os.environ.get("SMTP_MOT_DE_PASSE_FICHIER", "")
 CATALOGUE_FICHIER = os.environ.get("CATALOGUE_FICHIER", "")
 CONTACT = os.environ.get("CONTACT_ADMINISTRATEUR", "l'administrateur du homelab")
+REGLE_MDP = os.environ.get("REGLE_MOT_DE_PASSE", "")
 
 
 def catalogue():
@@ -47,7 +48,7 @@ def texte_brut(prenom, identifiant, services, accueil, duree_lien):
               f"Un compte vient d'être créé pour vous sur le homelab de la famille. Votre identifiant : {identifiant}", "",
               "Pour commencer :",
               f"1. Choisissez votre mot de passe grâce au second e-mail « Choisir votre mot de passe » "
-              f"(lien personnel, valable {duree_lien} heures).",
+              f"(lien personnel, valable {duree_lien} heures)." + (f" Il doit comporter {REGLE_MDP}." if REGLE_MDP else ""),
               "2. À la première connexion, enregistrez une double authentification : une application sur le téléphone "
               "(Aegis, Google Authenticator, Microsoft Authenticator…) ou une clé de sécurité.",
               f"3. Tous vos services, au même endroit : {accueil}", "",
@@ -95,7 +96,7 @@ def texte_html(prenom, identifiant, services, accueil, duree_lien):
       <p style="margin:0 0 14px;">Un compte vient d'être créé pour vous sur le homelab de la famille.
         Votre identifiant : <strong style="font-family:ui-monospace,Menlo,Consolas,monospace;">{e(identifiant)}</strong></p>
       <ol style="margin:0 0 18px;padding-left:20px;">
-        <li style="margin:4px 0;"><strong>Choisissez votre mot de passe</strong> avec le second e-mail « Choisir votre mot de passe » (lien personnel, valable {e(duree_lien)} heures).</li>
+        <li style="margin:4px 0;"><strong>Choisissez votre mot de passe</strong> avec le second e-mail « Choisir votre mot de passe » (lien personnel, valable {e(duree_lien)} heures).{f" Il doit comporter <strong>{e(REGLE_MDP)}</strong>." if REGLE_MDP else ""}</li>
         <li style="margin:4px 0;">À la première connexion, <strong>enregistrez une double authentification</strong> : une application sur le téléphone (Aegis, Google Authenticator, Microsoft Authenticator…) ou une clé de sécurité.</li>
         <li style="margin:4px 0;">Retrouvez <strong>tous vos services</strong> sur la page d'accueil.</li>
       </ol>
