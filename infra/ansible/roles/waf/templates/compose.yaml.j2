@@ -115,6 +115,15 @@ location = /.homelab-sso {
       {{ fqdn }}_REVERSE_PROXY_AUTH_REQUEST_SIGNIN_URL: "{{ site.sso.portail }}/?rd=$$scheme://$$http_host$$request_uri"
       {{ fqdn }}_REVERSE_PROXY_AUTH_REQUEST_SET: "$$sso_utilisateur $$upstream_http_remote_user;$$sso_groupes $$upstream_http_remote_groups"
       {{ fqdn }}_REVERSE_PROXY_HEADERS: "Remote-User $$sso_utilisateur;Remote-Groups $$sso_groupes"
+{% for chemin in site.sso.sans_sso | default([]) %}
+      # {{ chemin }} : même cible sans la barrière SSO (applications qui s'authentifient elles-mêmes, ex. applis
+      # mobiles) ; l'identité envoyée par le client est effacée, pour que la cible ne puisse jamais s'y fier.
+      {{ fqdn }}_REVERSE_PROXY_URL_{{ loop.index }}: "{{ chemin }}"
+      {{ fqdn }}_REVERSE_PROXY_HOST_{{ loop.index }}: "{{ site.cible }}"
+      {{ fqdn }}_REVERSE_PROXY_HEADERS_{{ loop.index }}: 'Remote-User "";Remote-Groups ""'
+      {{ fqdn }}_REVERSE_PROXY_KEEPALIVE_{{ loop.index }}: "yes"
+      {{ fqdn }}_REVERSE_PROXY_INTERCEPT_ERRORS_{{ loop.index }}: "no"
+{% endfor %}
 {% endif %}
 {% set conf = (conf_charte if site.charte | default(false) else '') ~ (conf_sso if site.sso is defined else '') %}
 {% if conf %}

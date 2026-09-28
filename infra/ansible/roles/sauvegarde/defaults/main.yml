@@ -27,6 +27,8 @@ sauvegarde_horaire: "*-*-* 02:30:00"
 # Rétention des instantanés restic ; nettoyage du dépôt et vérification d'un échantillon le jour de maintenance.
 sauvegarde_retention: { quotidiennes: 7, hebdomadaires: 4, mensuelles: 6 }
 sauvegarde_jour_maintenance: Sun
-sauvegarde_echantillon_verification: "2%"
 # Métriques lues par node_exporter (collecteur « textfile ») : alertes en cas d'échec ou de retard.
 sauvegarde_textfile: /var/lib/prometheus/node-exporter
+# Vérification de fin de passage : nombre de fichiers de chaque dataset tirés au hasard et comparés (SHA-256) à leur
+# copie relue chez l'hébergeur ; les exports de VM le sont tous. Le dépôt entier est relu en une semaine.
+sauvegarde_echantillon_fichiers: 20

@@ -176,6 +176,27 @@ def stockage():
     }
 
 
+def sauvegarde():
+    """Sauvegarde hors site (métriques publiées par le script de l'hyperviseur) ; None si jamais exécutée."""
+    valeurs = {m["__name__"].removeprefix("homelab_sauvegarde_"): v
+               for m, v in requete('{__name__=~"homelab_sauvegarde_.*"}')}
+    if "statut" not in valeurs:
+        return None
+    maintenant = time.time()
+    age = lambda cle: int(maintenant - valeurs[cle]) if cle in valeurs else None  # noqa: E731
+    return {
+        "ok": valeurs["statut"] == 1,
+        "depuis_reussite_s": age("derniere_reussite_timestamp"),
+        "duree_s": int(valeurs.get("duree_secondes", 0)),
+        "ajoute_octets": int(valeurs.get("ajoute_octets", 0)),
+        "espace": arrondi(valeurs["espace_utilise_ratio"]) if "espace_utilise_ratio" in valeurs else None,
+        "verification": int(valeurs.get("verification_statut", -1)),
+        "depuis_verification_s": age("verification_derniere_reussite_timestamp"),
+        "fichiers_verifies": int(valeurs.get("verification_fichiers", 0)),
+        "octets_verifies": int(valeurs.get("verification_octets", 0)),
+    }
+
+
 def alertes():
     url = f"{ALERTMANAGER}/api/v2/alerts?" + urllib.parse.urlencode(
         {"active": "true", "silenced": "false", "inhibited": "false"}
@@ -212,12 +233,13 @@ def historique():
     return series
 
 
-def etat_global(bloc_services, bloc_alertes, bloc_stockage):
+def etat_global(bloc_services, bloc_alertes, bloc_stockage, bloc_sauvegarde):
     if any(a["severite"] == "critique" for a in bloc_alertes):
         return "incident"
     en_panne = [s for s in bloc_services if not s["ok"]]
     pool_degrade = any(p["etat"] != "online" for p in bloc_stockage["pools"])
-    if en_panne or pool_degrade or bloc_alertes:
+    sauvegarde_ko = bloc_sauvegarde is not None and (not bloc_sauvegarde["ok"] or bloc_sauvegarde["verification"] == 0)
+    if en_panne or pool_degrade or sauvegarde_ko or bloc_alertes:
         return "degrade"
     return "ok"
 
@@ -242,18 +264,20 @@ def main():
             bloc_services = services(libelles.get("services", {}))
             bloc_alertes = alertes()
             bloc_stockage = stockage()
+            bloc_sauvegarde = sauvegarde()
             if time.time() - historique_date > INTERVALLE_HISTORIQUE:
                 historique_cache, historique_date = historique(), time.time()
             ecrire({
                 "genere": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 "intervalle": INTERVALLE,
                 "collecte": {"ok": True},
-                "etat": etat_global(bloc_services, bloc_alertes, bloc_stockage),
+                "etat": etat_global(bloc_services, bloc_alertes, bloc_stockage, bloc_sauvegarde),
                 "services": bloc_services,
                 "outils": outils(libelles.get("outils", {})),
                 "machines": machines(libelles.get("machines", {})),
                 "vms": machines_virtuelles(),
                 "stockage": bloc_stockage,
+                "sauvegarde": bloc_sauvegarde,
                 "alertes": bloc_alertes,
                 "historique": historique_cache,
             })

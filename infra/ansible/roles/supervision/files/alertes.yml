@@ -82,6 +82,18 @@ groups:
         annotations:
           resume: "Aucune sauvegarde réussie depuis plus de 30 heures"
           description: "La dernière sauvegarde hors site réussie date de plus de 30 heures (minuterie arrêtée, stockage distant injoignable ?)."
+      - alert: SauvegardeVerificationEchouee
+        expr: homelab_sauvegarde_verification_statut == 0
+        labels: { severite: critique }
+        annotations:
+          resume: "Sauvegarde non conforme : empreintes différentes ou dépôt abîmé"
+          description: "{{ $value }} : la copie relue chez l'hébergeur ne correspond pas à la source, ou le contrôle du dépôt restic a échoué. Ne pas se fier à cette sauvegarde : journalctl -u sauvegarde-homelab."
+      - alert: SauvegardeVerificationEnRetard
+        expr: time() - homelab_sauvegarde_verification_derniere_reussite_timestamp > 30 * 3600
+        labels: { severite: critique }
+        annotations:
+          resume: "Aucune sauvegarde vérifiée depuis plus de 30 heures"
+          description: "Les empreintes de la sauvegarde n'ont pas été contrôlées avec succès depuis plus de 30 heures."
       - alert: SauvegardeEspaceRempli
         expr: homelab_sauvegarde_espace_utilise_ratio > 0.8
         for: 1h

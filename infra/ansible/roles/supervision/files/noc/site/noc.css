@@ -285,3 +285,4 @@ td.nombre, th.nombre { text-align: right; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+.bloc__titre--suite { margin-top: 1.4rem; }

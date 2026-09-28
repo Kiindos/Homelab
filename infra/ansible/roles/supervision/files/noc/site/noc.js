@@ -224,6 +224,32 @@ function rendreStockage(stockage) {
       el("tbody", {}, lignes))));
 }
 
+function octets(n) {
+  const unites = ["o", "Ko", "Mo", "Go", "To"];
+  let i = 0;
+  while (n >= 1024 && i < unites.length - 1) { n /= 1024; i += 1; }
+  return `${n.toFixed(i >= 3 ? 1 : 0).replace(".", ",")} ${unites[i]}`;
+}
+
+function rendreSauvegarde(s) {
+  if (!s) {
+    remplacer("sauvegarde", el("div", { classe: "panneau" }, el("p", { classe: "discret", texte: "Aucune sauvegarde encore exécutée." })));
+    return;
+  }
+  const verification = s.verification === 1 ? true : s.verification === 0 ? false : "avert";
+  const ligne = (libelle, ...contenu) => el("tr", {}, el("td", { texte: libelle }), el("td", {}, ...contenu));
+  remplacer("sauvegarde", el("div", { classe: "panneau" },
+    el("div", { classe: "panneau__tete" },
+      el("p", {}, el("strong", { texte: "Dernier passage " }), statut(s.ok, "réussi", "en échec")),
+      s.espace !== null ? jauge("Stockage distant", s.espace) : null),
+    el("table", {}, el("tbody", {},
+      ligne("Dernière réussite", el("span", { texte: s.depuis_reussite_s === null ? "jamais" : `il y a ${duree(s.depuis_reussite_s)}` })),
+      ligne("Empreintes (SHA-256)", statut(verification, "conformes", s.verification === 0 ? "ÉCART" : "non vérifiées"),
+        el("span", { classe: "discret", texte: ` ${s.fichiers_verifies} fichiers, ${octets(s.octets_verifies)}` })),
+      ligne("Dernière vérification réussie", el("span", { texte: s.depuis_verification_s === null ? "jamais" : `il y a ${duree(s.depuis_verification_s)}` })),
+      ligne("Durée, données ajoutées", el("span", { texte: `${duree(s.duree_s)}, ${octets(s.ajoute_octets)}` }))))));
+}
+
 function rendreVms(vms) {
   const lignes = vms.map((v) =>
     el("tr", {},
@@ -252,6 +278,7 @@ function rendre(etat) {
   rendreServices(etat.services ?? [], etat.historique);
   rendreMachines(etat.machines ?? [], etat.historique);
   rendreStockage(etat.stockage ?? {});
+  rendreSauvegarde(etat.sauvegarde ?? null);
   rendreVms(etat.vms ?? []);
   rendreOutils(etat.outils ?? []);
 }

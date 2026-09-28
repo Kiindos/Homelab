@@ -18,6 +18,11 @@ METRIQUES='{{ sauvegarde_textfile }}/sauvegarde.prom'
 DATASETS=({% for d in sauvegarde_datasets %}'{{ d.dataset }}' {% endfor %})
 DEBUT=$(date +%s)
 AJOUTE=0
+# Vérification de fin de passage : -1 = pas atteinte (échec avant), 0 = empreintes différentes, 1 = conforme.
+VERIF=-1
+VERIF_FICHIERS=0
+VERIF_OCTETS=0
+VERIF_ECARTS=0
 
 # Instantanés créés par ce script seulement (nom fixe « sauvegarde »), supprimés à la fin de chaque passage.
 nettoyer() {
@@ -31,6 +36,9 @@ nettoyer() {
 ecrire_metriques() {
     local statut=$1 reussite espace reussi=0
     reussite=$(sed -n 's/^homelab_sauvegarde_derniere_reussite_timestamp \([0-9]*\)$/\1/p' "$METRIQUES" 2>/dev/null || true)
+    local verif_ok
+    verif_ok=$(sed -n 's/^homelab_sauvegarde_verification_derniere_reussite_timestamp \([0-9]*\)$/\1/p' "$METRIQUES" 2>/dev/null || true)
+    if [ "$VERIF" -eq 1 ]; then verif_ok=$(date +%s); fi
     if [ "$statut" -eq 0 ]; then
         reussi=1
         reussite=$(date +%s)
@@ -45,6 +53,12 @@ ecrire_metriques() {
         echo "homelab_sauvegarde_duree_secondes $(( $(date +%s) - DEBUT ))"
         echo "homelab_sauvegarde_ajoute_octets ${AJOUTE:-0}"
         if [ -n "$espace" ]; then echo "homelab_sauvegarde_espace_utilise_ratio $espace"; fi
+        echo "# HELP homelab_sauvegarde_verification_statut 1 : empreintes SHA-256 conformes ; 0 : écart ; -1 : non atteinte."
+        echo "homelab_sauvegarde_verification_statut $VERIF"
+        echo "homelab_sauvegarde_verification_ecarts $VERIF_ECARTS"
+        echo "homelab_sauvegarde_verification_fichiers $VERIF_FICHIERS"
+        echo "homelab_sauvegarde_verification_octets $VERIF_OCTETS"
+        if [ -n "$verif_ok" ]; then echo "homelab_sauvegarde_verification_derniere_reussite_timestamp $verif_ok"; fi
     } > "${METRIQUES}.tmp"
     mv "${METRIQUES}.tmp" "$METRIQUES"
 }
@@ -89,9 +103,48 @@ echo "== Rétention"
 restic forget --tag homelab --keep-daily {{ sauvegarde_retention.quotidiennes }} \
     --keep-weekly {{ sauvegarde_retention.hebdomadaires }} --keep-monthly {{ sauvegarde_retention.mensuelles }}
 
+# --- Vérification : ce qui est chez l'hébergeur est bien ce qui a été envoyé --------------------------------
+# 1. De bout en bout : empreinte SHA-256 de chaque export de VM et d'un échantillon de fichiers de données, calculée
+#    sur la source puis sur le fichier relu depuis l'instantané restic qui vient d'être créé (téléchargé).
+# 2. Dépôt : chaque nuit, un septième des données stockées est relu et ses empreintes contrôlées
+#    (restic check --read-data-subset=N/7) : tout le dépôt est vérifié en une semaine.
+INSTANTANE=$(sed -n 's/.*"snapshot_id":"\([0-9a-f]*\)".*/\1/p' "$LOCAL/dernier-envoi.json" | tail -1)
+[ -n "$INSTANTANE" ] || { echo "Identifiant de l'instantané introuvable : vérification impossible."; VERIF=0; exit 1; }
+echo "== Vérification des empreintes (instantané ${INSTANTANE:0:8})"
+verifier() {
+    local chemin=$1 source restitue
+    source=$(sha256sum "$chemin" | cut -d' ' -f1)
+    # Relecture impossible (réseau, dépôt) : comptée comme un écart, jamais comme un succès.
+    restitue=$(restic dump --quiet "$INSTANTANE" "$chemin" | sha256sum | cut -d' ' -f1) || restitue="relecture-impossible"
+    VERIF_FICHIERS=$((VERIF_FICHIERS + 1))
+    VERIF_OCTETS=$((VERIF_OCTETS + $(stat -c %s "$chemin")))
+    if [ "$source" != "$restitue" ]; then
+        echo "ÉCART : $chemin (source ${source:0:16}…, relu ${restitue:0:16}…)"
+        VERIF_ECARTS=$((VERIF_ECARTS + 1))
+    fi
+}
+{% if sauvegarde_vm %}
+while IFS= read -r -d '' export_vm; do
+    verifier "$export_vm"
+done < <(find "$LOCAL/vzdump" -maxdepth 1 -type f -name 'vzdump-qemu-*' ! -name '*.log' ! -name '*.notes' -print0)
+{% endif %}
+{% for d in sauvegarde_datasets %}
+while IFS= read -r -d '' fichier; do
+    verifier "$fichier"
+done < <(find '/{{ d.dataset }}/.zfs/snapshot/sauvegarde' -type f{% for e in d.exclusions | default([]) %} ! -path '/{{ d.dataset }}/.zfs/snapshot/sauvegarde/{{ e }}/*'{% endfor %} -print0 \
+         | shuf -z -n {{ sauvegarde_echantillon_fichiers }})
+{% endfor %}
+echo "$VERIF_FICHIERS fichiers comparés ($((VERIF_OCTETS / 1048576)) Mio), $VERIF_ECARTS écart(s)."
+
+echo "== Vérification du dépôt (part $(date +%u)/7 des données relue)"
+DEPOT_OK=1
+restic check --read-data-subset="$(date +%u)/7" || DEPOT_OK=0
+# Verdict posé à la toute fin seulement : tout échec avant laisse « non atteinte » (-1).
+if [ "$VERIF_ECARTS" -eq 0 ] && [ "$DEPOT_OK" -eq 1 ] && [ "$VERIF_FICHIERS" -gt 0 ]; then VERIF=1; else VERIF=0; fi
+
 if [ "$(LC_ALL=C date +%a)" = "{{ sauvegarde_jour_maintenance }}" ]; then
-    echo "== Maintenance : nettoyage du dépôt et vérification d'un échantillon"
+    echo "== Maintenance : nettoyage du dépôt"
     restic prune
-    restic check --read-data-subset={{ sauvegarde_echantillon_verification }}
 fi
-echo "Sauvegarde terminée."
+[ "$VERIF" -eq 1 ] || { echo "Vérification en échec : la sauvegarde n'est pas digne de confiance."; exit 1; }
+echo "Sauvegarde terminée et vérifiée."

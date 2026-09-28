@@ -25,6 +25,7 @@ waf_sites: {}
 #    sso:                                 # connexion obligatoire par Authelia (auth_request)
 #      portail: https://auth.example
 #      verification: http://auth01.example:9091/api/authz/auth-request
+#      sans_sso: ["/rest/"]               # chemins exemptés (l'application s'authentifie elle-même), identité effacée
 
 # Pages d'erreur personnalisées (générées depuis templates/erreur.html.j2) : code => textes.
 waf_erreurs:
