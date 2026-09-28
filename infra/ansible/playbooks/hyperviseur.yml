@@ -1,4 +1,10 @@
 # Hyperviseur Proxmox : durcissement commun + configuration propre à Proxmox.
+- name: Charger les secrets (SOPS ou coffre OpenBao, selon secrets_source)
+  hosts: hyperviseurs
+  gather_facts: false
+  roles:
+    - secrets
+
 - name: Configurer l'hyperviseur
   hosts: hyperviseurs
   become: false
@@ -11,3 +17,5 @@
     - role: agent_supervision
       vars:
         agent_supervision_smart: true
+    - role: sauvegarde
+      when: sauvegarde_active | default(false) | bool

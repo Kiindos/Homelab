@@ -33,6 +33,17 @@ même chose existe en page web, derrière la barrière SSO : une **page d'accuei
 de la personne connectée, à partir des groupes transmis par le pare-feu applicatif. Un seul catalogue alimente les
 deux ; la page n'accepte que le pare-feu applicatif et ne reprend de l'identité reçue que des caractères sûrs.
 
+## Des sauvegardes hors site
+
+Le serveur unique avait un angle mort : le sinistre (vol, incendie, erreur, rançongiciel). Chaque nuit, les exports
+des machines virtuelles, les photos et les fichiers partent désormais **chiffrés** vers un stockage distant de 1 To
+([ADR 0019](../adr/0019-sauvegardes-hors-site.md)) ; la vidéothèque, recopiable, n'en fait pas partie. Les clés
+d'hôte du stockage ont été comparées à celles publiées par l'hébergeur avant d'être épinglées, et la supervision
+alerte si une nuit échoue ou si le stockage se remplit.
+
+Semaphore, lui, a enfin lancé sa première tâche : clone des dépôts, lecture des secrets dans le coffre, passage à
+blanc sur une machine.
+
 ## Documentation
 
 La documentation interne reprend la charte du site (palette, logo, titres, tableaux en cartes), sans police

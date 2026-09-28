@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Sauvegarde hors site du homelab, chaque nuit
+
+[Timer]
+OnCalendar={{ sauvegarde_horaire }}
+RandomizedDelaySec=10min
+# Machine éteinte à l'heure prévue : la sauvegarde est lancée au redémarrage.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

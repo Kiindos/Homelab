@@ -1,0 +1,131 @@
+- name: Installer restic
+  ansible.builtin.apt:
+    name: restic
+    state: present
+
+- name: Créer le dataset des exports de VM (sans instantanés automatiques)
+  community.general.zfs:
+    name: "{{ sauvegarde_dataset_local }}"
+    state: present
+    extra_zfs_properties:
+      "com.sun:auto-snapshot": "false"
+
+- name: Créer les dossiers de la sauvegarde
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - "/{{ sauvegarde_dataset_local }}"
+    - "/{{ sauvegarde_dataset_local }}/vzdump"
+    - /root/.config/restic
+    - /var/cache/restic
+
+# --- Accès au stockage distant : clé SSH dédiée, clés d'hôte épinglées ----------------------------
+
+- name: Générer la clé SSH de la sauvegarde
+  community.crypto.openssh_keypair:
+    path: /root/.ssh/sauvegarde_ed25519
+    type: ed25519
+    comment: "sauvegarde@{{ inventory_hostname }}"
+  register: sauvegarde_cle
+
+- name: Épingler les clés d'hôte du stockage distant
+  ansible.builtin.copy:
+    content: |
+      {% for cle in sauvegarde_cles_hote %}
+      [{{ sauvegarde_ssh.hote }}]:{{ sauvegarde_ssh.port }} {{ cle }}
+      {% endfor %}
+    dest: /root/.ssh/known_hosts_sauvegarde
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Déclarer le stockage distant dans la configuration SSH de root
+  ansible.builtin.blockinfile:
+    path: /root/.ssh/config
+    create: true
+    owner: root
+    group: root
+    mode: "0600"
+    marker: "# {mark} sauvegarde hors site (Ansible)"
+    block: |
+      Host sauvegarde-distante
+          HostName {{ sauvegarde_ssh.hote }}
+          Port {{ sauvegarde_ssh.port }}
+          User {{ sauvegarde_ssh.utilisateur }}
+          IdentityFile /root/.ssh/sauvegarde_ed25519
+          IdentitiesOnly yes
+          StrictHostKeyChecking yes
+          UserKnownHostsFile /root/.ssh/known_hosts_sauvegarde
+          ServerAliveInterval 30
+
+- name: Écrire le mot de passe du dépôt restic
+  ansible.builtin.copy:
+    content: "{{ sauvegarde_mot_de_passe }}"
+    dest: /root/.config/restic/homelab
+    owner: root
+    group: root
+    mode: "0400"
+  no_log: true
+
+# --- Script et planification -------------------------------------------------------------------
+
+- name: Déposer le script de sauvegarde
+  ansible.builtin.template:
+    src: sauvegarde.sh.j2
+    dest: /usr/local/sbin/sauvegarde-homelab
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Déposer le service et la minuterie
+  ansible.builtin.template:
+    src: "sauvegarde-homelab.{{ item }}.j2"
+    dest: "/etc/systemd/system/sauvegarde-homelab.{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [service, timer]
+  register: sauvegarde_unites
+
+# --- Dépôt : initialisé dès que la clé est acceptée par le stockage distant ----------------------
+
+- name: Vérifier l'accès au stockage distant (clé déposée ?)
+  ansible.builtin.command: ssh -o BatchMode=yes -o ConnectTimeout=10 sauvegarde-distante ls
+  register: sauvegarde_acces
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Clé publique à déposer sur le stockage distant
+  ansible.builtin.debug:
+    msg: >-
+      Accès refusé : déposer la clé publique « {{ sauvegarde_cle.public_key }} » sur le compte
+      {{ sauvegarde_ssh.utilisateur }} (voir le runbook des sauvegardes), puis relancer.
+  when: sauvegarde_acces.rc != 0
+
+- name: Vérifier l'existence du dépôt restic
+  ansible.builtin.command: restic -r "{{ sauvegarde_depot }}" --password-file /root/.config/restic/homelab cat config
+  register: sauvegarde_depot_existe
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: sauvegarde_acces.rc == 0
+
+- name: Initialiser le dépôt restic (chiffré)
+  ansible.builtin.command: restic -r "{{ sauvegarde_depot }}" --password-file /root/.config/restic/homelab init
+  when:
+    - sauvegarde_acces.rc == 0
+    - sauvegarde_depot_existe.rc | default(0) != 0
+  changed_when: true
+
+- name: Activer la minuterie de sauvegarde
+  ansible.builtin.systemd_service:
+    name: sauvegarde-homelab.timer
+    state: started
+    enabled: true
+    daemon_reload: "{{ sauvegarde_unites is changed }}"
+  when: sauvegarde_acces.rc == 0

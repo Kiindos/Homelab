@@ -68,6 +68,28 @@ groups:
           resume: "{{ $labels.instance }} : {{ $labels.mountpoint }} presque plein"
           description: "Moins de 5 % d'espace libre : les services vont bientôt échouer."
 
+  - name: sauvegardes
+    rules:
+      - alert: SauvegardeEchouee
+        expr: homelab_sauvegarde_statut == 0
+        labels: { severite: critique }
+        annotations:
+          resume: "La sauvegarde hors site a échoué"
+          description: "Le dernier passage de la sauvegarde a échoué : journalctl -u sauvegarde-homelab sur l'hyperviseur."
+      - alert: SauvegardeEnRetard
+        expr: time() - homelab_sauvegarde_derniere_reussite_timestamp > 30 * 3600
+        labels: { severite: critique }
+        annotations:
+          resume: "Aucune sauvegarde réussie depuis plus de 30 heures"
+          description: "La dernière sauvegarde hors site réussie date de plus de 30 heures (minuterie arrêtée, stockage distant injoignable ?)."
+      - alert: SauvegardeEspaceRempli
+        expr: homelab_sauvegarde_espace_utilise_ratio > 0.8
+        for: 1h
+        labels: { severite: avertissement }
+        annotations:
+          resume: "Stockage des sauvegardes rempli à plus de 80 %"
+          description: "Le stockage distant des sauvegardes est rempli à {{ $value | humanizePercentage }} : revoir la rétention ou le périmètre."
+
   - name: ressources
     rules:
       - alert: MemoireSaturee

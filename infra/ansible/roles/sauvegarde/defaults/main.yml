@@ -1,0 +1,32 @@
+# Sauvegardes hors site par restic (dépôt chiffré côté client, dédupliqué, compressé), lancées depuis l'hyperviseur :
+# instantanés ZFS des données, exports complets des VM (vzdump non compressé : restic déduplique et compresse
+# lui-même) et configuration de l'hyperviseur. Envoi en SFTP vers un stockage distant (clé SSH dédiée).
+sauvegarde_active: false
+
+# Stockage distant (SFTP) : hôte, port, compte ; clés d'hôte épinglées (lignes « type clé », empreintes vérifiées
+# contre la documentation de l'hébergeur avant de les inscrire ici).
+sauvegarde_ssh:
+  hote: ""
+  port: 23
+  utilisateur: ""
+sauvegarde_cles_hote: []
+sauvegarde_depot: "sftp:sauvegarde-distante:restic-homelab"
+# Mot de passe du dépôt restic (secrets chiffrés) : sans lui, les sauvegardes sont illisibles. À garder hors ligne.
+sauvegarde_mot_de_passe: ""
+
+# Dossier local des exports de VM (dataset sans instantanés automatiques ; seul le dernier export est gardé).
+sauvegarde_dataset_local: rpool/sauvegardes
+# Datasets figés par un instantané pendant l'envoi : [{ dataset, exclusions: [chemins relatifs] }].
+sauvegarde_datasets: []
+# Chemins de l'hyperviseur envoyés tels quels.
+sauvegarde_chemins: [/etc, /var/lib/pve-cluster, /root]
+# Identifiants des VM exportées chaque nuit (instantané à chaud, sans arrêt).
+sauvegarde_vm: []
+
+sauvegarde_horaire: "*-*-* 02:30:00"
+# Rétention des instantanés restic ; nettoyage du dépôt et vérification d'un échantillon le jour de maintenance.
+sauvegarde_retention: { quotidiennes: 7, hebdomadaires: 4, mensuelles: 6 }
+sauvegarde_jour_maintenance: Sun
+sauvegarde_echantillon_verification: "2%"
+# Métriques lues par node_exporter (collecteur « textfile ») : alertes en cas d'échec ou de retard.
+sauvegarde_textfile: /var/lib/prometheus/node-exporter

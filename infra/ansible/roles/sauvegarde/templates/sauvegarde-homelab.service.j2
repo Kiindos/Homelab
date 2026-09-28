@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Sauvegarde hors site du homelab (restic)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sauvegarde-homelab
+# Priorité basse : les services du homelab passent avant.
+Nice=10
+IOSchedulingClass=idle

@@ -1,0 +1,97 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# Sauvegarde hors site : exports des VM, instantanés ZFS des données, configuration de l'hyperviseur -> restic.
+# Journal : journalctl -u sauvegarde-homelab ; état : {{ sauvegarde_textfile }}/sauvegarde.prom
+set -euo pipefail
+
+exec 9>/run/sauvegarde-homelab.lock
+flock -n 9 || { echo "Une sauvegarde est déjà en cours."; exit 0; }
+
+export RESTIC_REPOSITORY='{{ sauvegarde_depot }}'
+export RESTIC_PASSWORD_FILE=/root/.config/restic/homelab
+export RESTIC_CACHE_DIR=/var/cache/restic
+# Mémoire limitée sur l'hyperviseur : ramasse-miettes de Go plus fréquent.
+export GOGC=40
+
+LOCAL='/{{ sauvegarde_dataset_local }}'
+METRIQUES='{{ sauvegarde_textfile }}/sauvegarde.prom'
+DATASETS=({% for d in sauvegarde_datasets %}'{{ d.dataset }}' {% endfor %})
+DEBUT=$(date +%s)
+AJOUTE=0
+
+# Instantanés créés par ce script seulement (nom fixe « sauvegarde »), supprimés à la fin de chaque passage.
+nettoyer() {
+    for ds in "${DATASETS[@]}"; do
+        if zfs list -H -o name "${ds}@sauvegarde" >/dev/null 2>&1; then
+            zfs destroy "${ds}@sauvegarde"
+        fi
+    done
+}
+
+ecrire_metriques() {
+    local statut=$1 reussite espace reussi=0
+    reussite=$(sed -n 's/^homelab_sauvegarde_derniere_reussite_timestamp \([0-9]*\)$/\1/p' "$METRIQUES" 2>/dev/null || true)
+    if [ "$statut" -eq 0 ]; then
+        reussi=1
+        reussite=$(date +%s)
+    fi
+    espace=$(ssh -o BatchMode=yes sauvegarde-distante df 2>/dev/null | awk 'NR==2 && $2>0 {printf "%.4f", $3/$2}' || true)
+    {
+        echo "# HELP homelab_sauvegarde_statut 1 si la dernière sauvegarde a réussi."
+        echo "# TYPE homelab_sauvegarde_statut gauge"
+        echo "homelab_sauvegarde_statut $reussi"
+        echo "homelab_sauvegarde_derniere_execution_timestamp $(date +%s)"
+        if [ -n "$reussite" ]; then echo "homelab_sauvegarde_derniere_reussite_timestamp $reussite"; fi
+        echo "homelab_sauvegarde_duree_secondes $(( $(date +%s) - DEBUT ))"
+        echo "homelab_sauvegarde_ajoute_octets ${AJOUTE:-0}"
+        if [ -n "$espace" ]; then echo "homelab_sauvegarde_espace_utilise_ratio $espace"; fi
+    } > "${METRIQUES}.tmp"
+    mv "${METRIQUES}.tmp" "$METRIQUES"
+}
+
+fin() {
+    local statut=$?
+    nettoyer || statut=1
+    ecrire_metriques "$statut"
+    exit "$statut"
+}
+trap fin EXIT
+
+{% if sauvegarde_vm %}
+echo "== Exports des VM (instantané à chaud, non compressés)"
+vzdump {{ sauvegarde_vm | join(' ') }} --mode snapshot --compress 0 --dumpdir "$LOCAL/vzdump" \
+    --prune-backups keep-last=1 --quiet 1
+{% endif %}
+
+echo "== Instantanés des données"
+nettoyer
+for ds in "${DATASETS[@]}"; do
+    zfs snapshot "${ds}@sauvegarde"
+done
+
+echo "== Envoi vers le dépôt restic"
+restic backup --tag homelab --exclude-caches --json \
+{% for d in sauvegarde_datasets %}{% for e in d.exclusions | default([]) %}
+    --exclude '/{{ d.dataset }}/.zfs/snapshot/sauvegarde/{{ e }}' \
+{% endfor %}{% endfor %}
+    {{ sauvegarde_chemins | join(' ') }} \
+{% if sauvegarde_vm %}
+    "$LOCAL/vzdump" \
+{% endif %}
+{% for d in sauvegarde_datasets %}
+    '/{{ d.dataset }}/.zfs/snapshot/sauvegarde' \
+{% endfor %}
+    > "$LOCAL/dernier-envoi.json"
+AJOUTE=$(sed -n 's/.*"data_added":\([0-9]*\).*/\1/p' "$LOCAL/dernier-envoi.json" | tail -1)
+grep '"message_type":"summary"' "$LOCAL/dernier-envoi.json" || true
+
+echo "== Rétention"
+restic forget --tag homelab --keep-daily {{ sauvegarde_retention.quotidiennes }} \
+    --keep-weekly {{ sauvegarde_retention.hebdomadaires }} --keep-monthly {{ sauvegarde_retention.mensuelles }}
+
+if [ "$(LC_ALL=C date +%a)" = "{{ sauvegarde_jour_maintenance }}" ]; then
+    echo "== Maintenance : nettoyage du dépôt et vérification d'un échantillon"
+    restic prune
+    restic check --read-data-subset={{ sauvegarde_echantillon_verification }}
+fi
+echo "Sauvegarde terminée."

@@ -31,7 +31,8 @@ Les choix structurants sont expliqués dans les ADR, en particulier l'[ADR 0010]
 (un seul serveur), l'[ADR 0008](../adr/0008-exposition-directe-waf.md) (publication des services),
 l'[ADR 0014](../adr/0014-supervision-noc.md) (supervision), l'[ADR 0015](../adr/0015-semaphore-ansible.md)
 (Semaphore), l'[ADR 0016](../adr/0016-coffre-openbao.md) (coffre à secrets) et l'[ADR 0017](../adr/0017-invitations-page-comptes.md)
-(invitations et page des comptes) et l'[ADR 0018](../adr/0018-droits-par-groupes-quotas.md) (droits par groupes et quotas).
+(invitations et page des comptes), l'[ADR 0018](../adr/0018-droits-par-groupes-quotas.md) (droits par groupes et quotas)
+et l'[ADR 0019](../adr/0019-sauvegardes-hors-site.md) (sauvegardes hors site).
 
 ## Ce qui est exposé
 
