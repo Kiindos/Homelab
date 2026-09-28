@@ -68,6 +68,23 @@ main { padding-block: 2.4rem 3rem; display: grid; grid-template-columns: minmax(
 .accroche h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 800; background: var(--degrade); -webkit-background-clip: text; background-clip: text; color: transparent; width: fit-content; }
 .accroche__texte { color: var(--texte-doux); margin-top: .6rem; max-width: 62ch; }
 
+/* Annonces (maintenance, incident) publiées depuis la page des comptes */
+.annonces { display: grid; gap: .8rem; }
+.annonces[hidden] { display: none; }
+.annonce { padding: 1rem 1.2rem; border-radius: 14px; border: 1px solid var(--bordure-forte); border-left-width: 5px; background: var(--surface); box-shadow: var(--ombre); }
+.annonce__tete { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem; }
+.annonce__type { font: 700 .72rem/1 var(--police); padding: .34rem .6rem; border-radius: 999px; white-space: nowrap; }
+.annonce__infos { color: var(--texte-doux); font-size: .9rem; margin-top: .35rem; }
+.annonce__message { margin-top: .5rem; white-space: pre-line; }
+.annonce--maintenance { border-color: rgba(245, 158, 11, .5); }
+.annonce--maintenance .annonce__type { color: #d97706; background: rgba(245, 158, 11, .15); }
+.annonce--incident { border-color: color-mix(in srgb, var(--danger) 55%, transparent); }
+.annonce--incident .annonce__type { color: var(--danger); background: var(--danger-fond); }
+.annonce--resolu { border-color: rgba(16, 185, 129, .5); }
+.annonce--resolu .annonce__type { color: #059669; background: rgba(16, 185, 129, .14); }
+.annonce--info { border-color: rgba(96, 165, 250, .5); }
+.annonce--info .annonce__type { color: #3b82f6; background: rgba(96, 165, 250, .15); }
+
 .message { padding: .9rem 1.1rem; border-radius: 12px; border: 1px solid var(--bordure-forte); background: var(--surface); }
 .message--erreur { border-color: color-mix(in srgb, var(--danger) 50%, transparent); background: var(--danger-fond); }
 

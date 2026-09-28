@@ -20,6 +20,16 @@
     - { chemin: "{{ identite_dossier }}/amorcage/utilisateurs", mode: "0700" }
     - { chemin: "{{ identite_dossier }}/amorcage/groupes", mode: "0700" }
 
+# Historique des annonces : seul dossier modifiable par la page des comptes (conteneur en lecture seule, nobody).
+- name: Créer le dossier des annonces
+  ansible.builtin.file:
+    path: "{{ identite_dossier }}/annonces"
+    state: directory
+    owner: "65534"
+    group: "65534"
+    mode: "0700"
+  when: identite_page_comptes | bool
+
 # Les fichiers de secrets sont lisibles dans le conteneur (0444) mais inaccessibles sur l'hôte :
 # le dossier parent est réservé à root (0700).
 - name: Écrire les secrets

@@ -47,6 +47,32 @@ server {
     location = /services.json {
         expires -1;
     }
+{% if site.annonces is defined %}
+
+    # Annonces en cours (maintenance, incident), lues à la page des comptes : ni identité ni cookie transmis ;
+    # liste vide si elle ne répond pas (la page d'accueil reste utilisable).
+    location = /annonces.json {
+        proxy_pass {{ site.annonces }};
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header Cookie "";
+        proxy_set_header Remote-User "";
+        proxy_set_header Remote-Groups "";
+        proxy_set_header Remote-Name "";
+        proxy_set_header Remote-Email "";
+        proxy_connect_timeout 2s;
+        proxy_read_timeout 5s;
+        proxy_intercept_errors on;
+        error_page 404 500 502 503 504 =200 /aucune-annonce.json;
+        expires -1;
+    }
+
+    location = /aucune-annonce.json {
+        internal;
+        default_type application/json;
+        return 200 '{"annonces":[]}';
+    }
+{% endif %}
 {% endif %}
     error_page 404 /404.html;
     location / {

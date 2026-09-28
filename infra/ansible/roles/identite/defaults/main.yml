@@ -46,6 +46,8 @@ identite_regles_acces: []
 identite_page_comptes: false
 identite_comptes_port: 8095
 identite_comptes_sources: []
+# Annonces en cours (bandeau de la page d'accueil, sans donnée personnelle) : adresses autorisées à les lire.
+identite_comptes_sources_annonces: []
 identite_comptes_groupe_admin: admins
 # Groupes proposés à l'invitation : tous ceux de l'annuaire sauf les groupes techniques et ceux-ci (gérés dans
 # l'interface de LLDAP) ; descriptions affichées sur la page.

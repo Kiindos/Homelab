@@ -1,5 +1,6 @@
 // Accueil du homelab : affiche les services auxquels la personne a accès (groupes transmis par le SSO du WAF),
-// avec leur mode d'emploi. Données : moi.json (identité) et services.json (catalogue, décrit dans l'inventaire).
+// avec leur mode d'emploi. Données : moi.json (identité), services.json (catalogue, décrit dans l'inventaire) et
+// annonces.json (maintenances et incidents en cours, publiés depuis la page des comptes ; facultatif).
 (async () => {
   const $ = (id) => document.getElementById(id);
   const lire = async (url) => {
@@ -7,9 +8,41 @@
     if (!reponse.ok) throw new Error(`${url} : ${reponse.status}`);
     return reponse.json();
   };
+  const paragraphe = (classe, texte) => {
+    const p = document.createElement("p");
+    p.className = classe;
+    p.textContent = texte;
+    return p;
+  };
+  // Bandeaux : ceux destinés à tout le monde, ou à l'un des groupes de la personne.
+  const afficherAnnonces = (liste, groupes) => {
+    const zone = $("annonces");
+    const visibles = liste.filter((a) => !(a.groupes || []).length || a.groupes.some((g) => groupes.has(g)));
+    for (const annonce of visibles) {
+      const bloc = document.createElement("article");
+      bloc.className = `annonce annonce--${annonce.type}`;
+      bloc.setAttribute("role", annonce.type === "incident" ? "alert" : "status");
+      const tete = document.createElement("p");
+      tete.className = "annonce__tete";
+      const etiquette = document.createElement("span");
+      etiquette.className = "annonce__type";
+      etiquette.textContent = annonce.libelle;
+      const titre = document.createElement("strong");
+      titre.textContent = annonce.titre;
+      tete.append(etiquette, titre);
+      bloc.appendChild(tete);
+      const infos = [annonce.periode, (annonce.services || []).length ? `Services : ${annonce.services.join(", ")}` : ""];
+      if (infos.some(Boolean)) bloc.appendChild(paragraphe("annonce__infos", infos.filter(Boolean).join(" · ")));
+      if (annonce.message) bloc.appendChild(paragraphe("annonce__message", annonce.message));
+      zone.appendChild(bloc);
+    }
+    zone.hidden = !visibles.length;
+  };
   try {
-    const [moi, catalogue] = await Promise.all([lire("moi.json"), lire("services.json")]);
+    const [moi, catalogue, annonces] = await Promise.all([
+      lire("moi.json"), lire("services.json"), lire("annonces.json").catch(() => ({ annonces: [] }))]);
     const groupes = new Set((moi.groupes || "").split(",").map((g) => g.trim()).filter(Boolean));
+    afficherAnnonces(annonces.annonces || [], groupes);
     $("utilisateur").textContent = moi.utilisateur || "";
     $("bonjour").textContent = moi.utilisateur ? `Bonjour ${moi.utilisateur}` : "Bonjour";
     $("deconnexion").href = `${catalogue.portail}/logout`;

@@ -97,7 +97,7 @@ input:not([type]):focus, input[type=email]:focus { outline: none; border-color: 
 .choix input { accent-color: var(--accent); margin-top: .3rem; }
 .choix span { display: grid; }
 .choix small { color: var(--texte-faible); }
-.formulaire__actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+.formulaire__actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: .6rem; flex-wrap: wrap; }
 
 .bouton { font: 650 .95rem var(--police); color: #041014; background: var(--degrade); border: 0; border-radius: 10px; padding: .7rem 1.2rem; cursor: pointer; }
 .bouton:hover { filter: brightness(1.08); }
@@ -124,6 +124,29 @@ input[type=number]:focus { outline: none; border-color: var(--accent); box-shado
 td small { display: block; margin-top: .25rem; color: var(--texte-faible); font-size: .78rem; }
 td.discret { color: var(--texte-faible); }
 .actions { display: flex; gap: .4rem; justify-content: flex-end; flex-wrap: wrap; }
+/* Navigation entre les comptes et les annonces */
+.nav { display: flex; gap: .3rem; margin-right: auto; margin-left: 1.2rem; }
+.nav__lien { font-size: .9rem; font-weight: 600; color: var(--texte-doux); padding: .4rem .75rem; border-radius: 999px; }
+.nav__lien:hover { text-decoration: none; color: var(--texte); background: var(--surface-creuse); }
+.nav__lien[aria-current="page"] { color: var(--accent); background: var(--accent-fond); }
+
+/* Annonces : texte long, dates, liste, étiquettes par type */
+.champ--large { grid-column: 1 / -1; }
+textarea, select, input[type=datetime-local] {
+  font: inherit; font-weight: 400; color: var(--texte); background: var(--surface-creuse);
+  border: 1px solid var(--bordure-forte); border-radius: 10px; padding: .6rem .8rem; width: 100%;
+}
+textarea { resize: vertical; min-height: 8rem; line-height: 1.5; }
+textarea:focus, select:focus, input[type=datetime-local]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-fond); }
+.choix--compact { padding: .5rem .8rem; align-items: center; }
+.choix--compact input { margin-top: 0; }
+td strong + small { display: block; }
+.etiquette { display: inline-block; justify-self: start; width: fit-content; font: 700 .72rem/1 var(--police); padding: .32rem .6rem; border-radius: 999px; white-space: nowrap; }
+.etiquette--maintenance { color: #f59e0b; background: rgba(245, 158, 11, .14); }
+.etiquette--incident { color: var(--danger); background: var(--danger-fond); }
+.etiquette--resolu { color: var(--ok); background: var(--ok-fond); }
+.etiquette--info { color: #60a5fa; background: rgba(96, 165, 250, .14); }
+
 /* Thème clair : dégradé plus foncé, texte blanc pour rester lisible. */
 @media (prefers-color-scheme: light) {
   .bouton:not(.bouton--discret) { color: #ffffff; }
@@ -131,7 +154,8 @@ td.discret { color: var(--texte-faible); }
 
 @media (max-width: 720px) {
   .formulaire { grid-template-columns: 1fr; }
-  .marque__nom, .utilisateur { display: none; }
+  .marque__nom, .utilisateur, .marque__tag { display: none; }
+  .nav { margin-left: .4rem; }
   .formulaire__actions .bouton { width: 100%; }
   .carte { padding: 1.2rem; }
 }

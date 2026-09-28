@@ -13,8 +13,9 @@
     });
   }
   for (const formulaire of document.querySelectorAll("form")) {
-    formulaire.addEventListener("submit", () => {
-      const bouton = formulaire.querySelector("button[type=submit]");
+    formulaire.addEventListener("submit", (evenement) => {
+      // Le bouton cliqué (un formulaire peut en avoir deux : « M'envoyer un test » et « Publier »).
+      const bouton = evenement.submitter || formulaire.querySelector("button[type=submit]");
       if (bouton) { bouton.disabled = true; bouton.dataset.envoi = ""; }
     });
   }

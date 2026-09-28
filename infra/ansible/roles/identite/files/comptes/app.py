@@ -19,6 +19,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
+import annonces
 import bienvenue
 
 LLDAP = os.environ.get("LLDAP_URL", "http://lldap:17170")
@@ -27,6 +28,8 @@ LLDAP_MDP_FICHIER = os.environ.get("LLDAP_MOT_DE_PASSE_FICHIER", "/run/secrets/l
 AUTHELIA = os.environ.get("AUTHELIA_URL", "http://authelia:9091")
 PORTAIL = os.environ.get("PORTAIL", "https://auth.example.com").rstrip("/")
 SOURCES = [ipaddress.ip_network(s) for s in os.environ.get("SOURCES_AUTORISEES", "127.0.0.1/32").split()]
+# Annonces en cours (bandeau de la page d'accueil), sans donnée personnelle : lisibles par ces adresses seulement.
+SOURCES_ANNONCES = [ipaddress.ip_network(s) for s in os.environ.get("SOURCES_ANNONCES", "").split()]
 GROUPE_ADMIN = os.environ.get("GROUPE_ADMIN", "admins")
 # Groupes proposés à l'invitation : tous ceux de l'annuaire, sauf les groupes techniques (lldap_*) et les groupes
 # exclus (administrateurs) ; ceux-là se gèrent dans l'interface de LLDAP. Descriptions affichées si connues.
@@ -347,6 +350,57 @@ def modifier_quotas(formulaire, admin, adresse_client):
     return {"compte": identifiant, "modifies": ", ".join(changements) or "aucun changement"}
 
 
+# --- Annonces (maintenance, incident) -------------------------------------------------------------------------
+
+def annuaire_complet():
+    with Annuaire() as annuaire:
+        return annuaire.etat()
+
+
+def groupes_annonces(groupes):
+    """Groupes destinataires possibles : ceux de l'invitation, plus les administrateurs (pour un essai restreint)."""
+    return sorted(set(proposables(groupes)) | ({GROUPE_ADMIN} & set(groupes)))
+
+
+def publier_annonce(formulaire, admin, adresse_client):
+    comptes, groupes = annuaire_complet()
+    catalogue = bienvenue.catalogue()
+    annonce = annonces.preparer(formulaire, admin, catalogue, groupes_annonces(groupes))
+    if annonce["courriel"] and not bienvenue.actif():
+        raise Refus("Envoi d'e-mails non configuré : décochez l'e-mail pour publier le seul bandeau.")
+    personnes = annonces.destinataires(membres(comptes), annonce["groupes"]) if annonce["courriel"] else []
+    annonces.publier(annonce, personnes, catalogue)
+    journal(admin=admin, action="annonce", annonce=annonce["id"], type=annonce["type"], groupes=annonce["groupes"],
+            envoyes=annonce["envoyes"], echecs=annonce["echecs"], bandeau=annonce["bandeau"])
+    return {"titre": annonce["titre"], "envoyes": annonce["envoyes"], "echecs": annonce["echecs"],
+            "bandeau": int(annonce["bandeau"])}
+
+
+def tester_annonce(formulaire, admin):
+    """L'e-mail tel que les destinataires le recevront, envoyé au seul administrateur ; rien n'est enregistré."""
+    comptes, groupes = annuaire_complet()
+    catalogue = bienvenue.catalogue()
+    annonce = annonces.preparer({**formulaire, "courriel": "1"}, admin, catalogue, groupes_annonces(groupes))
+    moi = next((c for c in comptes if c["id"] == admin), None)
+    if not moi or not moi.get("email"):
+        raise Refus("Votre compte n'a pas d'adresse e-mail dans l'annuaire.")
+    if not bienvenue.actif():
+        raise Refus("Envoi d'e-mails non configuré.")
+    annonces.envoyer(annonce, [{"email": moi["email"], "prenom": (moi["displayName"] or admin).split(" ")[0]}],
+                     catalogue)
+    journal(admin=admin, action="annonce-test", type=annonce["type"])
+    return moi["email"]
+
+
+def retirer_annonce(formulaire, admin, adresse_client):
+    try:
+        annonce = annonces.retirer(formulaire.get("annonce", ""))
+    except annonces.Invalide as erreur:
+        raise Refus(str(erreur)) from erreur
+    journal(admin=admin, action="annonce-retiree", annonce=annonce["id"])
+    return {"titre": annonce["titre"]}
+
+
 # --- Page ----------------------------------------------------------------------------------------------------
 
 def e(texte):
@@ -410,33 +464,7 @@ def page(admin, comptes, groupes, message=None, formulaire=None, stockage=None):
         for c in comptes)
     annuaire = (f'<p class="pied__note">Groupes, suppression, comptes techniques : '
                 f'<a href="{e(LIEN_ANNUAIRE)}">interface de l\'annuaire</a>.</p>' if LIEN_ANNUAIRE else "")
-    return f"""<!doctype html>
-<html lang="fr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>Comptes · homelab</title>
-<link rel="icon" href="/statique/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/statique/comptes.css">
-<script src="/statique/comptes.js" defer></script>
-</head>
-<body>
-<div class="halos" aria-hidden="true"><span></span><span></span></div>
-<header class="entete">
-  <div class="enveloppe entete__barre">
-    <a class="marque" href="/" aria-label="Comptes du homelab, accueil">
-      <span class="marque__logo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 22V10l8 7 8-7v12"/></svg></span>
-      <span class="marque__nom">maxime<span class="marque__point">.</span>bertrand</span>
-      <span class="marque__tag">comptes</span>
-    </a>
-    <div class="entete__droite">
-      <span class="utilisateur">{e(admin)}</span>
-      <a class="lien-discret" href="{e(PORTAIL)}/logout">Se déconnecter</a>
-    </div>
-  </div>
-</header>
-<main class="enveloppe">
+    return gabarit(admin, "Comptes", "/", f"""
   <section class="accroche">
     <p class="surtitre">Annuaire du homelab</p>
     <h1>Comptes</h1>
@@ -487,7 +515,172 @@ def page(admin, comptes, groupes, message=None, formulaire=None, stockage=None):
       </table>
     </div>
   </section>
-  {annuaire}
+  {annuaire}""")
+
+
+def message_annonce(valeur):
+    if valeur("fait") == "publiee":
+        envoyes, echecs = valeur("envoyes"), valeur("echecs")
+        details = []
+        if envoyes and envoyes != "0":
+            details.append(f"{e(envoyes)} e-mail(s) envoyé(s)")
+        if echecs and echecs != "0":
+            details.append(f"<strong>{e(echecs)} adresse(s) refusée(s)</strong>")
+        if valeur("bandeau") == "1":
+            details.append("bandeau affiché sur la page d'accueil")
+        return ("ok", f"Annonce « {e(valeur('titre'))} » publiée : {', '.join(details) or 'rien à diffuser'}.")
+    if valeur("fait") == "retiree":
+        return ("ok", f"Bandeau retiré : « {e(valeur('titre'))} ».")
+    return None
+
+
+def horodatage(valeur):
+    try:
+        return datetime.fromisoformat(valeur).strftime("%d/%m %H:%M")
+    except (TypeError, ValueError):
+        return ""
+
+
+def etat_bandeau(annonce):
+    if not annonce.get("bandeau"):
+        return "—"
+    if annonce.get("retire_le"):
+        return f'retiré {horodatage(annonce["retire_le"])}'
+    if annonces.bandeau_actif(annonce):
+        return (f'<form method="post" action="/annonces/retirer"><input type="hidden" name="annonce" '
+                f'value="{e(annonce["id"])}"><button class="bouton bouton--discret" type="submit">Retirer</button></form>')
+    return "terminé"
+
+
+def page_annonces(admin, groupes, message=None, formulaire=None):
+    catalogue = bienvenue.catalogue()
+    historique = annonces.charger()
+    formulaire = formulaire or {"type": "maintenance", "public": "tous", "courriel": "1", "bandeau": "1"}
+    alerte = f'<p class="message message--{message[0]}" role="status">{message[1]}</p>' if message else ""
+    coche = lambda condition: " checked" if condition else ""   # noqa: E731 - attribut court
+    types = "".join(
+        f'<label class="choix"><input type="radio" name="type" value="{cle}"{coche(formulaire.get("type") == cle)}>'
+        f'<span><strong><span class="etiquette etiquette--{cle}">{e(t["libelle"])}</span></strong>'
+        f'<small>{e(aide)}</small></span></label>'
+        for (cle, t), aide in zip(annonces.TYPES.items(), (
+            "Date de début obligatoire ; le bandeau reste jusqu'à la fin prévue.",
+            "Début = maintenant si vide ; bandeau jusqu'à la résolution.",
+            "Clôt un incident ou une maintenance ; bandeau 24 h.",
+            "Nouveauté, rappel ; bandeau 3 jours.")))
+    services = "".join(
+        f'<label class="choix"><input type="checkbox" name="services" value="{e(sv["id"])}"'
+        f'{coche(sv["id"] in formulaire.get("services", []))}><span><strong>{e(sv["nom"])}</strong>'
+        f'<small>{e(sv.get("appli", ""))}</small></span></label>' for sv in catalogue.get("services", []))
+    choix_groupes = "".join(
+        f'<label class="choix choix--compact"><input type="checkbox" name="groupes" value="{e(g)}"'
+        f'{coche(g in formulaire.get("groupes", []))}><span><strong>{e(g)}</strong></span></label>' for g in groupes)
+    ouvertes = annonces.a_resoudre(historique)
+    resout = ""
+    if ouvertes:
+        options = "".join(f'<option value="{e(a["id"])}"{" selected" if formulaire.get("resout") == a["id"] else ""}>'
+                          f'{e(annonces.TYPES[a["type"]]["libelle"])} : {e(a["titre"])}</option>' for a in ouvertes)
+        resout = (f'<label class="champ champ--large"><span>Clôt l\'annonce (type « Résolu »)</span>'
+                  f'<select name="resout"><option value="">—</option>{options}</select>'
+                  f'<small>Son bandeau est retiré à la publication.</small></label>')
+    smtp = bienvenue.actif()
+    lignes = "".join(
+        f'<tr><td class="mono">{horodatage(a["cree_le"])}</td>'
+        f'<td><span class="etiquette etiquette--{e(a["type"])}">{e(annonces.TYPES[a["type"]]["libelle"])}</span></td>'
+        f'<td><strong>{e(a["titre"])}</strong><small>{e(annonces.periode(a))}</small></td>'
+        f'<td>{e(", ".join(a["groupes"]) or "tout le monde")}</td>'
+        f'<td class="mono">{a["envoyes"] if a.get("courriel") else "—"}'
+        f'{f" ({a['echecs']} refusé·s)" if a.get("echecs") else ""}</td>'
+        f'<td>{etat_bandeau(a)}</td></tr>' for a in historique[:30])
+    return gabarit(admin, "Annonces", "/annonces", f"""  <section class="accroche">
+    <p class="surtitre">Communication</p>
+    <h1>Annonces</h1>
+    <p class="accroche__texte">Prévenir d'une maintenance ou d'un incident : un e-mail par personne (les adresses restent
+    privées) et un bandeau sur la page d'accueil. « M'envoyer un test » : l'e-mail à vous seul, rien n'est publié.</p>
+  </section>
+  {alerte}
+  <section class="carte" aria-labelledby="titre-annonce">
+    <h2 id="titre-annonce">Nouvelle annonce</h2>
+    <form method="post" action="/annonces/publier" class="formulaire">
+      <fieldset class="groupes"><legend>Type</legend>{types}</fieldset>
+      <label class="champ champ--large"><span>Titre</span>
+        <input name="titre" required maxlength="{annonces.TITRE_MAX}" autocomplete="off"
+          placeholder="Redémarrage du serveur, photos indisponibles…" value="{e(formulaire.get("titre"))}"></label>
+      <label class="champ"><span>Début</span>
+        <input type="datetime-local" name="debut" value="{e(formulaire.get("debut"))}"></label>
+      <label class="champ"><span>Fin prévue</span>
+        <input type="datetime-local" name="fin" value="{e(formulaire.get("fin"))}">
+        <small>Le bandeau disparaît à cette heure.</small></label>
+      <label class="champ champ--large"><span>Message</span>
+        <textarea name="message" rows="6" maxlength="{annonces.MESSAGE_MAX}"
+          placeholder="Ce qui ne marchera pas, combien de temps, que faire en attendant.">{e(formulaire.get("message"))}</textarea></label>
+      <fieldset class="groupes"><legend>Services concernés</legend>{services}</fieldset>
+      <fieldset class="groupes"><legend>Destinataires</legend>
+        <label class="choix choix--compact"><input type="radio" name="public" value="tous"{coche(formulaire.get("public") != "groupes")}>
+          <span><strong>Tout le monde</strong></span></label>
+        <label class="choix choix--compact"><input type="radio" name="public" value="groupes"{coche(formulaire.get("public") == "groupes")}>
+          <span><strong>Seulement les groupes cochés :</strong></span></label>
+        {choix_groupes}</fieldset>
+      {resout}
+      <fieldset class="groupes"><legend>Diffusion</legend>
+        <label class="choix choix--compact"><input type="checkbox" name="courriel" value="1"{coche(formulaire.get("courriel") and smtp)}{"" if smtp else " disabled"}>
+          <span><strong>E-mail</strong>{"" if smtp else "<small>non configuré</small>"}</span></label>
+        <label class="choix choix--compact"><input type="checkbox" name="bandeau" value="1"{coche(formulaire.get("bandeau"))}>
+          <span><strong>Bandeau sur la page d'accueil</strong></span></label></fieldset>
+      <div class="formulaire__actions">
+        <button class="bouton bouton--discret" type="submit" formaction="/annonces/test">M'envoyer un test</button>
+        <button class="bouton" type="submit">Publier</button>
+      </div>
+    </form>
+  </section>
+  <section class="carte" aria-labelledby="titre-historique">
+    <div class="carte__titre">
+      <h2 id="titre-historique">Historique</h2>
+      <p>Les 30 dernières ; « Retirer » efface le bandeau sans rien envoyer.</p>
+    </div>
+    <div class="tableau-defilant">
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Annonce</th><th>Pour</th><th>E-mails</th><th>Bandeau</th></tr></thead>
+        <tbody>{lignes or '<tr><td colspan="6">Aucune annonce.</td></tr>'}</tbody>
+      </table>
+    </div>
+  </section>""")
+
+
+def gabarit(admin, titre, actif, contenu):
+    """Page complète : en-tête (navigation entre les comptes et les annonces), puis le contenu."""
+    liens = []
+    for chemin, nom in (("/", "Comptes"), ("/annonces", "Annonces")):
+        courant = ' aria-current="page"' if chemin == actif else ""
+        liens.append(f'<a class="nav__lien" href="{chemin}"{courant}>{nom}</a>')
+    return f"""<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{e(titre)} · homelab</title>
+<link rel="icon" href="/statique/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/statique/comptes.css">
+<script src="/statique/comptes.js" defer></script>
+</head>
+<body>
+<div class="halos" aria-hidden="true"><span></span><span></span></div>
+<header class="entete">
+  <div class="enveloppe entete__barre">
+    <a class="marque" href="/" aria-label="Comptes du homelab, accueil">
+      <span class="marque__logo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 22V10l8 7 8-7v12"/></svg></span>
+      <span class="marque__nom">maxime<span class="marque__point">.</span>bertrand</span>
+      <span class="marque__tag">comptes</span>
+    </a>
+    <nav class="nav" aria-label="Sections">{"".join(liens)}</nav>
+    <div class="entete__droite">
+      <span class="utilisateur">{e(admin)}</span>
+      <a class="lien-discret" href="{e(PORTAIL)}/logout">Se déconnecter</a>
+    </div>
+  </div>
+</header>
+<main class="enveloppe">
+{contenu}
 </main>
 </body>
 </html>
@@ -549,14 +742,18 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
             with open(os.path.join(STATIQUE, chemin[10:]), "rb") as fichier:
                 return self.envoyer(200, fichier.read(), FICHIERS_STATIQUES[chemin[10:]],
                                     {"Cache-Control": "public, max-age=3600"})
+        if chemin == "/annonces.json":
+            return self.annonces_en_cours()
         admin = self.administrateur()
         if admin is None:
             return None
+        parametres = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+        valeur = lambda cle: parametres.get(cle, [""])[0]   # noqa: E731 - lecture courte des paramètres
+        if chemin == "/annonces":
+            return self.afficher_annonces(admin, message_annonce(valeur))
         if chemin != "/":
             return self.envoyer(404, "Page introuvable.".encode(), "text/plain; charset=utf-8")
         message = None
-        parametres = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
-        valeur = lambda cle: parametres.get(cle, [""])[0]   # noqa: E731 - lecture courte des paramètres
         compte, email, fait = valeur("compte"), valeur("email"), valeur("fait")
         suite_bienvenue = {"envoye": " E-mail de bienvenue envoyé.", "inactif": "",
                            "echec": " E-mail de bienvenue <strong>non envoyé</strong> : réessayer avec « Bienvenue »."}
@@ -582,6 +779,24 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
         stockage = etat_stockage(comptes)
         return self.envoyer(code, page(self.nom_admin, comptes, groupes, message, formulaire, stockage).encode())
 
+    def afficher_annonces(self, admin, message=None, formulaire=None, code=200):
+        try:
+            groupes = groupes_annonces(annuaire_complet()[1])
+        except (urllib.error.URLError, OSError, RuntimeError, KeyError) as erreur:
+            journal(action="erreur", detail=f"annuaire : {erreur}")
+            groupes, message = [], ("erreur", "Annuaire injoignable : réessayez dans un instant.")
+        return self.envoyer(code, page_annonces(self.nom_admin, groupes, message, formulaire).encode())
+
+    def annonces_en_cours(self):
+        """Bandeaux actifs pour la page d'accueil : adresses autorisées seulement, sans donnée personnelle."""
+        source = ipaddress.ip_address(self.client_address[0])
+        if not any(source in reseau for reseau in SOURCES_ANNONCES + SOURCES):
+            return self.envoyer(403, b"", "text/plain; charset=utf-8")
+        catalogue = bienvenue.catalogue()
+        actives = [annonces.vue_publique(a, catalogue) for a in annonces.charger() if annonces.bandeau_actif(a)]
+        return self.envoyer(200, json.dumps({"annonces": actives}, ensure_ascii=False).encode(),
+                            "application/json; charset=utf-8")
+
     def do_POST(self):
         admin = self.administrateur()
         if admin is None:
@@ -593,15 +808,23 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
                 or not (site or origine):
             journal(action="refus", admin=admin, detail="requête intersite")
             return self.envoyer(403, "Requête refusée (origine).".encode(), "text/plain; charset=utf-8")
+        chemin = urllib.parse.urlsplit(self.path).path
+        annonce = chemin.startswith("/annonces/")
         longueur = int(self.headers.get("Content-Length") or 0)
-        if longueur > 4096 or not self.headers.get("Content-Type", "").startswith("application/x-www-form-urlencoded"):
+        if longueur > (32768 if annonce else 4096) \
+                or not self.headers.get("Content-Type", "").startswith("application/x-www-form-urlencoded"):
             return self.envoyer(400, "Requête invalide.".encode(), "text/plain; charset=utf-8")
         # Champs vides conservés : un quota vidé signifie « illimité ».
-        champs = urllib.parse.parse_qs(self.rfile.read(longueur).decode("utf-8", "replace"), keep_blank_values=True,
-                                       max_num_fields=20)
-        formulaire = {cle: valeurs[0] for cle, valeurs in champs.items() if cle != "groupes"}
-        formulaire["groupes"] = champs.get("groupes", [])
-        chemin = urllib.parse.urlsplit(self.path).path
+        try:
+            champs = urllib.parse.parse_qs(self.rfile.read(longueur).decode("utf-8", "replace"),
+                                           keep_blank_values=True, max_num_fields=100 if annonce else 20)
+        except ValueError:
+            return self.envoyer(400, "Requête invalide.".encode(), "text/plain; charset=utf-8")
+        listes = ("groupes", "services")
+        formulaire = {cle: valeurs[0] for cle, valeurs in champs.items() if cle not in listes}
+        formulaire.update({cle: champs.get(cle, []) for cle in listes})
+        if annonce:
+            return self.traiter_annonce(chemin, formulaire, admin)
         actions = {"/inviter": ("invitation", inviter), "/lien": ("lien", renvoyer),
                    "/bienvenue": ("bienvenue", renvoyer_bienvenue), "/quotas": ("quotas", modifier_quotas)}
         if chemin not in actions:
@@ -618,6 +841,27 @@ class Gestionnaire(http.server.BaseHTTPRequestHandler):
         suite = urllib.parse.urlencode({"fait": fait, **resultat})
         ancre = "#espace" if fait == "quotas" else ""
         return self.envoyer(303, b"", entetes={"Location": f"/?{suite}{ancre}", "Cache-Control": "no-store"})
+
+    def traiter_annonce(self, chemin, formulaire, admin):
+        try:
+            if chemin == "/annonces/test":
+                adresse = tester_annonce(formulaire, admin)
+                # Page réaffichée avec le formulaire rempli : on peut corriger puis publier.
+                return self.afficher_annonces(admin, ("ok", f"Test envoyé à {e(adresse)} : vérifiez, puis publiez."),
+                                              formulaire)
+            actions = {"/annonces/publier": ("publiee", publier_annonce), "/annonces/retirer": ("retiree", retirer_annonce)}
+            if chemin not in actions:
+                return self.envoyer(404, "Page introuvable.".encode(), "text/plain; charset=utf-8")
+            fait, action = actions[chemin]
+            resultat = action(formulaire, admin, self.adresse_client())
+        except (Refus, annonces.Invalide) as refus:
+            return self.afficher_annonces(admin, ("erreur", e(refus)), formulaire, 422)
+        except (urllib.error.URLError, OSError, RuntimeError, KeyError) as erreur:
+            journal(action="erreur", admin=admin, detail=f"annonce : {erreur}")
+            return self.afficher_annonces(admin, ("erreur", "Échec (annuaire ou envoi des e-mails) : voir les journaux "
+                                                  "du conteneur. Rien n'a été publié si l'envoi a échoué."), formulaire, 502)
+        suite = urllib.parse.urlencode({"fait": fait, **resultat})
+        return self.envoyer(303, b"", entetes={"Location": f"/annonces?{suite}", "Cache-Control": "no-store"})
 
 
 if __name__ == "__main__":

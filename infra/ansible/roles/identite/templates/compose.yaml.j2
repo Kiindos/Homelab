@@ -72,6 +72,8 @@ services:
       AUTHELIA_URL: http://authelia:9091
       PORTAIL: "{{ identite_url_portail }}"
       SOURCES_AUTORISEES: "{{ identite_comptes_sources | join(' ') }}"
+      SOURCES_ANNONCES: "{{ identite_comptes_sources_annonces | join(' ') }}"
+      ANNONCES_FICHIER: /donnees/annonces.json
       GROUPE_ADMIN: "{{ identite_comptes_groupe_admin }}"
       GROUPES_EXCLUS: "{{ identite_comptes_groupes_exclus | join(' ') }}"
       GROUPES_DESCRIPTIONS: {{ identite_comptes_descriptions | to_json | to_json }}
@@ -98,6 +100,7 @@ services:
       - "{{ identite_comptes_port }}:8080"
     volumes:
       - ./comptes:/app:ro
+      - ./annonces:/donnees
     secrets: [lldap_admin_password, comptes_nextcloud, comptes_immich{% if identite_smtp is defined %}, authelia_smtp{% endif %}]
     read_only: true
     cap_drop: [ALL]
