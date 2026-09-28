@@ -63,6 +63,9 @@ identite_comptes_quotas: {}
 # url, groupes, description, connexion, etapes, applis }] } ; inactif sans catalogue ou sans SMTP.
 identite_comptes_catalogue: {}
 identite_comptes_contact: "l'administrateur du homelab"
+# Double authentification proposée d'abord à la première connexion : webauthn = clé d'accès (empreinte ou visage du
+# téléphone ou de l'ordinateur, sans application) ; totp = application de codes. L'autre reste dans « Méthodes ».
+identite_methode_2fa_defaut: webauthn
 # Règle des mots de passe (mode « standard » d'Authelia) : chaque exigence manquante est listée en direct, en
 # français, pendant la saisie sur la page « choisir son mot de passe ». Le mode zxcvbn n'y montrait qu'une jauge,
 # sans dire quoi changer : refus sans explication. Pas de caractère spécial imposé (saisie sur une télécommande).

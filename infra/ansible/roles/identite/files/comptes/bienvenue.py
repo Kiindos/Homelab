@@ -49,8 +49,10 @@ def texte_brut(prenom, identifiant, services, accueil, duree_lien):
               "Pour commencer :",
               f"1. Choisissez votre mot de passe grâce au second e-mail « Choisir votre mot de passe » "
               f"(lien personnel, valable {duree_lien} heures)." + (f" Il doit comporter {REGLE_MDP}." if REGLE_MDP else ""),
-              "2. À la première connexion, enregistrez une double authentification : une application sur le téléphone "
-              "(Aegis, Google Authenticator, Microsoft Authenticator…) ou une clé de sécurité.",
+              "2. À la première connexion, enregistrez une double authentification. Le plus simple : une clé d'accès, "
+              "c'est-à-dire l'empreinte ou le visage de votre téléphone (ou le code PIN de l'ordinateur), sans "
+              "application à installer. Une application de codes (Aegis, Google Authenticator…) reste possible : "
+              "bouton « Méthodes » en haut du portail.",
               f"3. Tous vos services, au même endroit : {accueil}", "",
               "Vos services", "-----------"]
     for service in services:
@@ -97,7 +99,7 @@ def texte_html(prenom, identifiant, services, accueil, duree_lien):
         Votre identifiant : <strong style="font-family:ui-monospace,Menlo,Consolas,monospace;">{e(identifiant)}</strong></p>
       <ol style="margin:0 0 18px;padding-left:20px;">
         <li style="margin:4px 0;"><strong>Choisissez votre mot de passe</strong> avec le second e-mail « Choisir votre mot de passe » (lien personnel, valable {e(duree_lien)} heures).{f" Il doit comporter <strong>{e(REGLE_MDP)}</strong>." if REGLE_MDP else ""}</li>
-        <li style="margin:4px 0;">À la première connexion, <strong>enregistrez une double authentification</strong> : une application sur le téléphone (Aegis, Google Authenticator, Microsoft Authenticator…) ou une clé de sécurité.</li>
+        <li style="margin:4px 0;">À la première connexion, <strong>enregistrez une double authentification</strong>. Le plus simple : une <strong>clé d'accès</strong>, c'est-à-dire l'empreinte ou le visage de votre téléphone (ou le code PIN de l'ordinateur), sans application à installer. Une application de codes (Aegis, Google Authenticator…) reste possible : bouton « Méthodes » en haut du portail.</li>
         <li style="margin:4px 0;">Retrouvez <strong>tous vos services</strong> sur la page d'accueil.</li>
       </ol>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:4px 0 22px;">

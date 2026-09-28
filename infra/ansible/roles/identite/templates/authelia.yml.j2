@@ -12,6 +12,9 @@ log:
 ntp:
   address: "udp://{{ ansible_default_ipv4.gateway }}:123"
 
+# Méthode proposée à qui n'en a pas encore choisi (le choix de chacun est ensuite retenu).
+default_2fa_method: "{{ identite_methode_2fa_defaut }}"
+
 totp:
   issuer: "{{ domaine_public }}"
 
