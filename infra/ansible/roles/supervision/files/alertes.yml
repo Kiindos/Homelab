@@ -131,3 +131,10 @@ groups:
         annotations:
           resume: "Collecte {{ $labels.job }} en échec"
           description: "La supervision n'obtient plus les métriques de {{ $labels.job }} ({{ $labels.instance }})."
+      - alert: JournauxNonRecus
+        expr: sum(rate(vl_rows_ingested_total[30m])) == 0
+        for: 30m
+        labels: { severite: avertissement }
+        annotations:
+          resume: "Aucun journal reçu depuis 30 minutes"
+          description: "VictoriaLogs ne reçoit plus rien : envoi des machines (systemd-journal-upload) ou entrée en panne."

@@ -9,7 +9,16 @@ supervision_images:
   noc_web: nginxinc/nginx-unprivileged:1.30.5-alpine-slim
   noc_collecte: python:3.14.7-alpine3.24
   sms: python:3.14.7-alpine3.24
+  victorialogs: victoriametrics/victoria-logs:v1.52.0
 supervision_retention: 30d
+# Journaux centralisés (ADR 0020) : VictoriaLogs, alimenté par systemd-journal-upload (VM, hyperviseur) et syslog
+# (pare-feu). Les machines n'atteignent que l'entrée en écriture ; la lecture se fait par Grafana.
+supervision_journaux: true
+supervision_journaux_retention: 30d
+supervision_journaux_espace_max: 10GiB
+supervision_journaux_port: 9428
+supervision_journaux_syslog_port: 5140
+supervision_grafana_plugin_journaux: victoriametrics-logs-datasource@0.32.0
 # SMS des alertes critiques par l'option gratuite « Notifications par SMS » de Free Mobile (au titulaire de la ligne
 # seulement) : { utilisateur: identifiant Free Mobile, cle: clé de l'option }. Vide = pas de SMS.
 supervision_sms_free: {}

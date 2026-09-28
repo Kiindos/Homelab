@@ -55,3 +55,61 @@
         state: started
         enabled: true
         daemon_reload: true
+
+# --- Journaux centralisés (ADR 0020) : le journal systemd part vers la supervision, sans agent supplémentaire ---
+- name: Envoi du journal vers la supervision
+  when: agent_supervision_journaux_url | length > 0
+  block:
+    - name: Installer systemd-journal-upload (paquet systemd-journal-remote)
+      ansible.builtin.apt:
+        name: systemd-journal-remote
+        state: present
+        install_recommends: false
+
+    # Le paquet fournit aussi un récepteur (port 19532) : jamais utilisé ici, donc masqué.
+    - name: Masquer le récepteur de journaux, inutile
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+        masked: true
+      loop: [systemd-journal-remote.socket, systemd-journal-remote.service]
+
+    - name: Créer les dossiers de réglages de l'envoi
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop: [/etc/systemd/journal-upload.conf.d, /etc/systemd/system/systemd-journal-upload.service.d]
+
+    - name: Configurer l'envoi du journal
+      ansible.builtin.copy:
+        dest: /etc/systemd/journal-upload.conf.d/homelab.conf
+        content: |
+          # Géré par Ansible (rôle agent_supervision)
+          [Upload]
+          URL={{ agent_supervision_journaux_url }}
+        mode: "0644"
+      notify: Redémarrer l'envoi du journal
+
+    # Supervision injoignable (redémarrage, maintenance) : nouvel essai toutes les 30 s, sans abandon ; l'envoi
+    # reprend au curseur enregistré, sans trou.
+    - name: Relancer l'envoi du journal après une coupure
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/systemd-journal-upload.service.d/homelab.conf
+        content: |
+          # Géré par Ansible (rôle agent_supervision)
+          [Unit]
+          StartLimitIntervalSec=0
+          [Service]
+          Restart=always
+          RestartSec=30s
+        mode: "0644"
+      notify: Redémarrer l'envoi du journal
+
+    - name: Démarrer l'envoi du journal
+      ansible.builtin.systemd_service:
+        name: systemd-journal-upload
+        state: started
+        enabled: true
+        daemon_reload: true

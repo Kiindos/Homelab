@@ -35,10 +35,11 @@
     mode: "0644"
   vars:
     docker_daemon:
-      # Journaux bornés : un conteneur bavard ne remplit pas le disque.
-      log-driver: json-file
-      log-opts: { max-size: "10m", max-file: "3" }
-      # Les conteneurs continuent de tourner pendant une mise à jour du démon.
+      log-driver: "{{ docker_pilote_journaux }}"
+      # json-file : journaux bornés (un conteneur bavard ne remplit pas le disque) ; journald : la taille est
+      # celle du journal systemd, le nom du conteneur sert d'identifiant.
+      log-opts: "{{ {'max-size': '10m', 'max-file': '3'} if docker_pilote_journaux == 'json-file' else {'tag': docker_journald_etiquette} }}"
+      # Les conteneurs continuent de tourner pendant une mise à jour ou un redémarrage du démon.
       live-restore: true
   notify: Redémarrer Docker
 

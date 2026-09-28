@@ -1,3 +1,6 @@
+# Journaux centralisés (ADR 0020) : adresse d'écriture de VictoriaLogs pour systemd-journal-upload
+# (ex. http://supervision:9428/insert/journald). Vide = pas d'envoi.
+agent_supervision_journaux_url: ""
 # Exporteur SMART (disques physiques) : uniquement sur l'hyperviseur.
 agent_supervision_smart: false
 agent_supervision_smart_version: "0.14.0"

@@ -85,4 +85,4 @@ scrape_configs:
 
   - job_name: supervision
     static_configs:
-      - targets: ["localhost:9090", "alertmanager:9093"]
+      - targets: ["localhost:9090", "alertmanager:9093"{% if supervision_journaux | bool %}, "victorialogs:9428"{% endif %}]

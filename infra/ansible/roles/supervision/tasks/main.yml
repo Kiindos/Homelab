@@ -17,6 +17,7 @@
     - { chemin: noc, mode: "0755" }
     - { chemin: noc/site, mode: "0755" }
     - { chemin: sms, mode: "0755" }
+    - { chemin: journaux, mode: "0755" }
   loop_control:
     label: "{{ item.chemin or supervision_dossier }}"
 
@@ -105,6 +106,7 @@
     - { src: ntfy.yml.j2, dest: ntfy.yml }
     - { src: grafana/sources.yml.j2, dest: grafana/provisioning/datasources/sources.yml }
     - { src: grafana/tableaux.yml.j2, dest: grafana/provisioning/dashboards/tableaux.yml }
+    - { src: journaux-entree.conf.j2, dest: journaux/entree.conf }
     - { src: compose.yaml.j2, dest: compose.yaml }
     - { src: blackbox.yml.j2, dest: blackbox.yml }
   loop_control:

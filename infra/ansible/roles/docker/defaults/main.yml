@@ -1,1 +1,6 @@
 docker_depot: https://download.docker.com/linux/debian
+# Pilote de journaux des conteneurs : json-file (fichiers bornés) ou journald (journal systemd, donc journaux
+# centralisés avec le reste de la machine, ADR 0020). Pris en compte à la recréation de chaque conteneur.
+docker_pilote_journaux: json-file
+# Identifiant des lignes dans le journal (gabarit de Docker, pas d'Ansible : non interprété).
+docker_journald_etiquette: !unsafe "{{.Name}}"

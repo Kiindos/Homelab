@@ -54,8 +54,8 @@ et protéger le serveur contre les attaques. **Base légale** : la fourniture du
 rejoignant le homelab, et l'intérêt légitime de l'éditeur à le sécuriser.
 
 **Où et combien de temps** : sur le serveur de l'éditeur, en France, tant que le compte existe ; les contenus sont
-effacés avec le compte, à votre demande. Les journaux de sécurité sont effacés par rotation (quelques semaines au
-plus). Les sauvegardes, chiffrées, restent sur des équipements de l'éditeur ou chez un prestataire situé dans
+effacés avec le compte, à votre demande. Les journaux de sécurité sont regroupés sur le serveur de supervision,
+consultables par l'éditeur seul, et effacés automatiquement au bout de **30 jours**. Les sauvegardes, chiffrées, restent sur des équipements de l'éditeur ou chez un prestataire situé dans
 l'Union européenne.
 
 **Destinataires et sous-traitants** :

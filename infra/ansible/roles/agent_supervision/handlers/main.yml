@@ -3,3 +3,9 @@
     name: smartctl_exporter
     state: restarted
     daemon_reload: true
+
+- name: Redémarrer l'envoi du journal
+  ansible.builtin.systemd_service:
+    name: systemd-journal-upload
+    state: restarted
+    daemon_reload: true
