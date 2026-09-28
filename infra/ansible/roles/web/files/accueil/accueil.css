@@ -87,6 +87,7 @@ main { padding-block: 2.4rem 3rem; display: grid; grid-template-columns: minmax(
 .service__guide p { margin-top: .6rem; }
 .service__guide ol, .service__guide ul { margin: .5rem 0 0; padding-left: 1.2rem; }
 .service__guide li + li { margin-top: .25rem; }
+.service__capture { display: block; width: 100%; height: auto; margin-top: .7rem; border-radius: 10px; border: 1px solid var(--bordure-forte); }
 
 @media (prefers-color-scheme: light) {
   .bouton { color: #ffffff; }

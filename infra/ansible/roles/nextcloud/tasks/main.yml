@@ -212,6 +212,16 @@
       changed_when: true
       no_log: true
 
+# Connexion par le seul SSO : la page de connexion renvoie directement vers le portail ; le formulaire local reste
+# joignable par /login?direct=1 (compte administrateur de secours).
+- name: Choisir la connexion par le SSO seul ou avec le formulaire local
+  ansible.builtin.command:
+    cmd: >-
+      docker compose exec -T -u www-data app php occ config:app:set
+      --value={{ '0' if nextcloud_sso_seul | bool else '1' }} user_oidc allow_multiple_user_backends
+    chdir: "{{ nextcloud_dossier }}"
+  changed_when: false
+
 - name: Lancer les tâches de fond par cron (conteneur dédié)
   ansible.builtin.command:
     cmd: docker compose exec -T -u www-data app php occ background:cron

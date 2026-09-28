@@ -52,6 +52,17 @@
   loop_control:
     label: "{{ item.key }}"
 
+- name: Publier les fichiers supplémentaires (fournis par l'inventaire, ex. captures d'écran)
+  ansible.builtin.copy:
+    src: "{{ item.value.fichiers_supplementaires.source }}"
+    dest: "{{ web_dossier }}/{{ item.key }}/{{ item.value.fichiers_supplementaires.dossier }}/"
+    owner: root
+    group: root
+    mode: "u=rwX,go=rX"
+  loop: "{{ web_sites | dict2items | selectattr('value.fichiers_supplementaires', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.key }}"
+
 - name: Écrire le catalogue des sites qui en ont un (services.json)
   ansible.builtin.copy:
     content: "{{ item.value.catalogue | to_nice_json }}\n"

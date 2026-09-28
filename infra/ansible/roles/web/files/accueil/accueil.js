@@ -25,6 +25,14 @@
       ouvrir.href = service.url;
       ouvrir.textContent = service.bouton || "Ouvrir";
       carte.querySelector(".service__connexion").textContent = service.connexion || "";
+      if (service.capture) {
+        const image = document.createElement("img");
+        image.src = `guides/${encodeURIComponent(service.capture)}`;
+        image.alt = `Écran de connexion : ${service.nom}`;
+        image.loading = "lazy";
+        image.className = "service__capture";
+        carte.querySelector(".service__connexion").after(image);
+      }
       const etapes = carte.querySelector(".service__etapes");
       for (const etape of service.etapes || []) {
         const li = document.createElement("li");
@@ -42,7 +50,7 @@
         li.appendChild(a);
         applis.appendChild(li);
       }
-      if (!(service.etapes || []).length && !(service.applis || []).length && !service.connexion) {
+      if (!(service.etapes || []).length && !(service.applis || []).length && !service.connexion && !service.capture) {
         carte.querySelector(".service__guide").remove();
       }
       $("services").appendChild(carte);
