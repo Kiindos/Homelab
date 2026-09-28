@@ -14,6 +14,8 @@ nextcloud_sso_seul: true
 # Compte local dédié à la gestion des quotas (page des comptes) : sous-administrateur des groupes indiqués seulement
 # (il ne peut toucher ni aux administrateurs ni aux autres groupes). { utilisateur, mot_de_passe, groupes: [...] }
 nextcloud_compte_quotas: {}
+# Quota par défaut des comptes (ex. « 300 GB » ; vide = illimité). Modifiable compte par compte (page des comptes).
+nextcloud_quota_defaut: ""
 # Stockages externes (application files_external) : dossiers de l'hôte présentés dans le drive, partagés avec
 # d'autres services qui les lisent. Les utilisateurs ne peuvent pas ajouter leurs propres stockages externes.
 #   - { point: /Partage, hote: /srv/partage, sous_dossiers: [Documents], utilisateurs: [alice] }

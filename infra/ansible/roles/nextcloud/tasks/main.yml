@@ -222,6 +222,14 @@
     chdir: "{{ nextcloud_dossier }}"
   changed_when: false
 
+- name: Quota par défaut des comptes
+  ansible.builtin.command:
+    cmd: >-
+      docker compose exec -T -u www-data app php occ config:app:set files default_quota
+      --value="{{ nextcloud_quota_defaut if nextcloud_quota_defaut | length > 0 else 'none' }}"
+    chdir: "{{ nextcloud_dossier }}"
+  changed_when: false
+
 - name: Lancer les tâches de fond par cron (conteneur dédié)
   ansible.builtin.command:
     cmd: docker compose exec -T -u www-data app php occ background:cron

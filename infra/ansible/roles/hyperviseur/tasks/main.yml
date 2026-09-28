@@ -43,6 +43,14 @@
       recordsize: "{{ item.value }}"
   loop: "{{ hyperviseur_datasets | dict2items }}"
 
+- name: Appliquer les quotas des datasets de données
+  community.general.zfs:
+    name: "{{ hyperviseur_racine_donnees }}/{{ item.key }}"
+    state: present
+    extra_zfs_properties:
+      quota: "{{ item.value }}"
+  loop: "{{ hyperviseur_quotas | dict2items }}"
+
 - name: Créer les dossiers du partage « medias »
   ansible.builtin.file:
     path: "/{{ hyperviseur_racine_donnees }}/medias/{{ item }}"

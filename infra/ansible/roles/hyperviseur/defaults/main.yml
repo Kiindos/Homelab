@@ -8,6 +8,8 @@ hyperviseur_racine_donnees: rpool/donnees
 # place tout de suite au lieu de rester retenu par les instantanés (jusqu'à 3 mois). Les instantanés déjà pris
 # expirent normalement.
 hyperviseur_sans_instantanes: []
+# Quotas ZFS par dataset de données (ex. { medias: 3.6T }) : un dataset plein ne prend pas la place des autres.
+hyperviseur_quotas: {}
 # Dossiers du dataset partagé « medias » (le premier reçoit aussi les dépôts depuis les postes).
 hyperviseur_dossiers_medias: [bibliotheque]
 # Dépôt de fichiers depuis un poste, par rsync restreint au premier dossier (ajout seul : ni lecture, ni
