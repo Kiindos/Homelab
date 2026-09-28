@@ -30,7 +30,7 @@ secrets/*
 infra/ansible/inventory/hosts.yml
 
 # Contexte local Claude Code (détails internes, jamais versionné)
-CLAUDE .md
+CLAUDE.md
 # Permissions Claude Code propres au poste (jamais versionnées)
 .claude/settings.local.json
 
