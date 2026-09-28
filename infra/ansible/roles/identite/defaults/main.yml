@@ -53,7 +53,7 @@ identite_comptes_groupe_admin: admins
 # l'interface de LLDAP) ; descriptions affichées sur la page.
 identite_comptes_groupes_exclus: ["{{ identite_comptes_groupe_admin }}"]
 identite_comptes_descriptions:
-  famille: "Photos, drive, médias"
+  famille: "Tous les services de la famille"
 identite_comptes_lien_annuaire: ""
 # Quotas du drive et des photos sur la page des comptes (inactifs si le secret manque) :
 # { nextcloud: { url, hote, utilisateur, mot_de_passe }, immich: { url, cle } }. Nextcloud : compte sous-administrateur

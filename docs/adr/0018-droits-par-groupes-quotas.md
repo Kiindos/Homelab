@@ -25,9 +25,9 @@ L'annuaire (LLDAP) ne sait pas imbriquer les groupes.
 
 ## Décision
 
-- Un groupe par service (`photos`, `drive`, `medias`, `demandes`) ; chaque service accepte son groupe, `famille` et
-  `admins`. La correspondance est décrite **à un seul endroit** de l'inventaire ; les règles d'Authelia (politiques
-  OpenID Connect, barrière du WAF) et le filtre de l'annuaire du lecteur multimédia en sont générés.
+- Un groupe par service (`photos`, `drive`…) ; chaque service accepte son groupe, `famille` et `admins`. La
+  correspondance est décrite **à un seul endroit** de l'inventaire ; les règles d'Authelia (politiques OpenID
+  Connect, barrière du WAF) et les filtres d'annuaire des applications en sont générés.
 - Les **droits d'administration** des applications sont **dérivés du groupe `admins`** à chaque connexion, par des
   attributs calculés d'Authelia (expressions CEL) transmis en claims : rôle dans la galerie photo, groupe
   d'administration du drive.

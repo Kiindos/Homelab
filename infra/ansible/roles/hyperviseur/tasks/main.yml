@@ -43,22 +43,22 @@
       recordsize: "{{ item.value }}"
   loop: "{{ hyperviseur_datasets | dict2items }}"
 
-- name: Créer les dossiers de la bibliothèque médias
+- name: Créer les dossiers du partage « medias »
   ansible.builtin.file:
     path: "/{{ hyperviseur_racine_donnees }}/medias/{{ item }}"
     state: directory
     mode: "0755"
-  loop: [bibliotheque, telechargements]
+  loop: "{{ hyperviseur_dossiers_medias }}"
 
-# Dépôt de fichiers depuis un poste : clé dédiée, rsync enfermé dans la bibliothèque (rrsync), écriture seule,
-# sans suppression ni remplacement, liens symboliques neutralisés, et seulement depuis l'adresse VPN du poste.
-- name: Autoriser le dépôt de médias depuis les postes (rsync restreint)
+# Dépôt de fichiers depuis un poste : clé dédiée, rsync enfermé dans le premier dossier du partage (rrsync), écriture
+# seule, sans suppression ni remplacement, liens symboliques neutralisés, et seulement depuis l'adresse VPN du poste.
+- name: Autoriser le dépôt de fichiers depuis les postes (rsync restreint)
   ansible.posix.authorized_key:
     user: root
     key: "{{ item.cle }}"
     key_options: >-
       from="{{ item.depuis }}",restrict,command="/usr/bin/rrsync -wo -no-del -no-overwrite -munge
-      /{{ hyperviseur_racine_donnees }}/medias/bibliotheque"
+      /{{ hyperviseur_racine_donnees }}/medias/{{ hyperviseur_dossiers_medias[0] }}"
   loop: "{{ hyperviseur_depot_medias }}"
   loop_control:
     label: "{{ item.cle.split()[-1] }}"

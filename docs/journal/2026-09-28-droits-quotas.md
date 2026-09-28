@@ -37,7 +37,8 @@ deux ; la page n'accepte que le pare-feu applicatif et ne reprend de l'identité
 
 Le serveur unique avait un angle mort : le sinistre (vol, incendie, erreur, rançongiciel). Chaque nuit, les exports
 des machines virtuelles, les photos et les fichiers partent désormais **chiffrés** vers un stockage distant de 1 To
-([ADR 0019](../adr/0019-sauvegardes-hors-site.md)) ; la vidéothèque, recopiable, n'en fait pas partie. Les clés
+([ADR 0019](../adr/0019-sauvegardes-hors-site.md)) ; ce qui peut être recopié depuis sa source n'en fait pas
+partie. Les clés
 d'hôte du stockage ont été comparées à celles publiées par l'hébergeur avant d'être épinglées, et la supervision
 alerte si une nuit échoue ou si le stockage se remplit.
 

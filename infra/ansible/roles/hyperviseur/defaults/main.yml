@@ -4,8 +4,10 @@ hyperviseur_datasets:
   drive: "131072"    # 128 Ko : valeur par défaut
   medias: "1048576"   # 1 Mo : gros fichiers
 hyperviseur_racine_donnees: rpool/donnees
-# Dépôt de fichiers depuis un poste, par rsync restreint à la bibliothèque (ajout seul : ni lecture,
-# ni suppression, ni remplacement). Une clé dédiée par poste :
+# Dossiers du dataset partagé « medias » (le premier reçoit aussi les dépôts depuis les postes).
+hyperviseur_dossiers_medias: [bibliotheque]
+# Dépôt de fichiers depuis un poste, par rsync restreint au premier dossier (ajout seul : ni lecture, ni
+# suppression, ni remplacement). Une clé dédiée par poste :
 #   - { cle: "ssh-ed25519 AAAA… depot-medias@poste", depuis: "adresse VPN du poste" }
 hyperviseur_depot_medias: []
 # Cache ZFS (ARC), en octets : plafond et plancher. Vide = réglages de l'installation de Proxmox (plafond à 10 % de
