@@ -8,6 +8,10 @@ hyperviseur_racine_donnees: rpool/donnees
 # ni suppression, ni remplacement). Une clé dédiée par poste :
 #   - { cle: "ssh-ed25519 AAAA… depot-medias@poste", depuis: "adresse VPN du poste" }
 hyperviseur_depot_medias: []
+# Cache ZFS (ARC), en octets : plafond et plancher. Vide = réglages de l'installation de Proxmox (plafond à 10 % de
+# la RAM, plancher à 1/32). Un plancher évite que le cache fonde sous la pression des VM (métadonnées relues sur disque).
+hyperviseur_zfs_arc_max: ""
+hyperviseur_zfs_arc_min: ""
 # Ordre de démarrage : VMID => réglage Proxmox (order, up = secondes d'attente avant la suivante).
 hyperviseur_demarrage: {}
 # Clé de descellement automatique du coffre (OpenBao, « static seal ») : générée ici, jamais copiée sur une VM.
