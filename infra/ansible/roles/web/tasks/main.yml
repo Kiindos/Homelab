@@ -25,7 +25,9 @@
     state: directory
     owner: root
     group: root
-    mode: "0755"
+    # Secrets (jeton du tunnel) : dossier réservé à root, comme dans les autres rôles ; le conteneur lit le fichier
+    # monté, quel que soit le mode du dossier.
+    mode: "{{ '0700' if item == 'secrets' else '0755' }}"
   loop: "{{ ['', 'secrets'] + (web_sites.keys() | list) }}"
 
 - name: Publier les fichiers statiques construits sur le poste d'admin
