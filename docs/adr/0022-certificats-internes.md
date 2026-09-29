@@ -1,8 +1,8 @@
 ---
 title: "ADR 0022 : Autorité de certification interne et TLS vérifié sur les flux internes"
-description: Une autorité interne (racine hors ligne, intermédiaire dans le coffre, ACME) pour chiffrer et authentifier chaque flux entre machines, et rendre inopérante une usurpation DNS ou ARP.
+description: Une autorité interne (racine hors ligne, intermédiaire sur le pare-feu) pour chiffrer et authentifier chaque flux entre machines, et rendre inopérante une usurpation DNS ou ARP.
 date: 2026-09-29
-# Validé par Maxime le 29/09/2026.
+# Validé par Maxime le 29/09/2026 ; autorité sur le pare-feu (choix de Maxime, même jour).
 status: accepté
 tags: [securite, tls, pki, dns]
 ---
@@ -31,17 +31,26 @@ pas la clé.
    publique, et les noms internes se retrouveraient dans les journaux publics de certificats. Écarté.
 2. **Distribuer le joker du proxy interne** : une seule clé privée copiée partout, qui fuite avec la première VM
    compromise. Écarté.
-3. **Autorité interne avec ACME** — retenu :
-   - une racine **hors ligne** (reprise de l'autorité interne existante) ;
-   - un intermédiaire dans le coffre OpenBao (moteur PKI), qui délivre des certificats courts par ACME, renouvelés
-     automatiquement.
+3. **Intermédiaire dans le coffre OpenBao** (moteur PKI avec ACME) : renouvellement automatique par ACME, mais le
+   coffre devient indispensable à tous les flux. Proposé d'abord, écarté par Maxime.
+4. **Intermédiaire sur le pare-feu** (magasin de confiance d'OPNsense) — retenu (choix de Maxime) : le pare-feu est
+   déjà le point de confiance du réseau, l'autorité s'y administre dans l'interface, avec sa liste de révocation.
+   OPNsense n'a pas de serveur ACME : les certificats sont émis et renouvelés par Ansible, par son API.
+
+L'autorité existante (« AC interne homelab », LDAPS et coffre) ne peut pas servir de racine : elle interdit toute
+autorité sous elle (`pathlen:0`). Elle est remplacée, certificat par certificat.
 
 ## Décision
 
 1. **Autorité** :
-   - racine hors ligne, gardée chiffrée hors du serveur ;
-   - intermédiaire dans OpenBao ;
-   - certificats de 30 jours, par nom de machine, émis par ACME ;
+   - racine hors ligne (10 ans), clé chiffrée dans les secrets du dépôt privé, jamais sur un serveur ;
+   - intermédiaire sur le pare-feu (5 ans) ;
+   - **contraintes de nom** sur les deux : seuls le domaine interne et le réseau du homelab peuvent être certifiés,
+     même par un pare-feu compromis ;
+   - certificats de 90 jours par nom de machine. La clé est créée **sur la machine** ; seule la demande (CSR) part
+     au pare-feu, signée par l'API avec un compte limité aux certificats (il ne peut ni créer d'autorité, ni en lire
+     la clé) ;
+   - renouvellement par Ansible (tâche Semaphore hebdomadaire, sous 30 jours de l'échéance) ;
    - les noms internes ne sortent jamais du homelab.
 2. **Chaque VM termine son TLS** :
    - un petit mandataire (Caddy, client ACME intégré) devant les conteneurs locaux, ou le TLS natif de l'application
@@ -59,8 +68,10 @@ pas la clé.
 
 ## Conséquences
 
-- La confiance repose sur le coffre : s'il est indisponible, les certificats en cours restent valables jusqu'à
-  30 jours, largement de quoi le réparer.
+- Pas d'ACME : le renouvellement dépend d'Ansible et de Semaphore. Un oubli se voit 30 jours avant l'échéance
+  (supervision de l'expiration), et les certificats en cours restent valables pendant une panne du pare-feu.
+- Pare-feu compromis : la racine (hors ligne) révoque l'intermédiaire et en signe un nouveau ; les contraintes de nom
+  empêchent tout certificat pour un nom public.
 - Mise en place par étapes, un flux à la fois, en commençant par les plus sensibles : portail et annuaire, puis
   applications, puis supervision.
 - Un certificat expiré coupe un flux : l'expiration est surveillée comme celle des certificats publics.
@@ -71,8 +82,8 @@ pas la clé.
    - LLMNR coupé sur les VM ;
    - pare-feu de l'hyperviseur par VM (OpenTofu) avec filtre IP et MAC, en mode journal d'abord, puis entrée refusée
      par défaut sauf les flux de la matrice.
-2. Autorité : moteur PKI d'OpenBao (intermédiaire signé par la racine interne existante, gardée hors ligne), ACME
-   activé, supervision de l'expiration.
+2. Autorité : racine hors ligne et intermédiaire sur le pare-feu (script de création), compte d'API limité aux
+   certificats, rôle Ansible d'émission et de renouvellement, supervision de l'expiration.
 3. TLS de bout en bout, un flux à la fois : vérification des sessions et annuaire (portail), puis WAF vers les
    applications, proxy interne vers les outils, enfin collecte des métriques et des journaux.
 4. Fermeture des ports HTTP en clair au pare-feu, flux par flux, une fois chaque client passé en TLS vérifié.
