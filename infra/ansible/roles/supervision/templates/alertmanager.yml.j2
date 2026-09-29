@@ -19,6 +19,12 @@ route:
       receiver: critique
     # Veille de sécurité et mises à jour : un message par type d'alerte (liste des services concernés), rappel
     # chaque semaine tant que rien n'est fait, puis « résolu ». Ni SMS ni NOC.
+    # Détection d'intrusion : chaque machine à part, notification prioritaire, rappel toutes les 12 h. Pas de SMS.
+    - matchers: ['severite="securite"']
+      receiver: securite
+      group_by: [alertname, instance]
+      group_wait: 30s
+      repeat_interval: 12h
     - matchers: ['severite="veille"']
       receiver: veille
       group_by: [alertname]
@@ -56,6 +62,20 @@ receivers:
           Subject: '{{ '{{' }} if eq .Status "firing" {{ '}}' }}[VEILLE]{{ '{{' }} else {{ '}}' }}[FAIT]{{ '{{' }} end {{ '}}' }} {{ '{{' }} .CommonLabels.alertname {{ '}}' }} ({{ '{{' }} len .Alerts.Firing {{ '}}' }})'
     webhook_configs:
       - url: "http://ntfy/{{ supervision_ntfy_sujet }}?template=alertmanager&priority=default"
+        send_resolved: false
+        http_config:
+          basic_auth:
+            username: alertmanager
+            password_file: /etc/alertmanager/secrets/ntfy
+
+  - name: securite
+    email_configs:
+      - to: "{{ supervision_email_alertes }}"
+        send_resolved: true
+        headers:
+          Subject: '{{ '{{' }} if eq .Status "firing" {{ '}}' }}[SÉCURITÉ]{{ '{{' }} else {{ '}}' }}[FIN]{{ '{{' }} end {{ '}}' }} {{ '{{' }} .CommonLabels.alertname {{ '}}' }} — {{ '{{' }} .CommonLabels.instance {{ '}}' }}'
+    webhook_configs:
+      - url: "http://ntfy/{{ supervision_ntfy_sujet }}?template=alertmanager&priority=high"
         send_resolved: false
         http_config:
           basic_auth:

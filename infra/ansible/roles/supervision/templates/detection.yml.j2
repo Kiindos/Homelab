@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+# Détection d'intrusion sur les journaux centralisés (ADR 0021) : vmalert interroge VictoriaLogs chaque minute.
+# Règles : supervision_detection_regles (+ _supplementaires dans l'inventaire).
+groups:
+  - name: detection
+    type: vlogs
+    interval: 1m
+    rules:
+{% for r in supervision_detection_regles + supervision_detection_regles_supplementaires %}
+      - alert: {{ r.nom }}
+        expr: {{ ('_time:' ~ r.fenetre ~ ' ' ~ r.requete ~ ' | stats ' ~ (('by (' ~ r.par ~ ') ') if r.par else '')
+                  ~ 'count() as evenements | filter evenements:>=' ~ r.seuil) | to_json }}
+        labels:
+          severite: {{ r.severite | default('securite') }}
+{% if r.par %}
+          instance: '{{ '{{' }} index $labels "{{ r.par }}" {{ '}}' }}'
+{% endif %}
+        annotations:
+          resume: {{ (r.resume ~ ((' : {{ index $labels "' ~ r.par ~ '" }}') if r.par else '')) | to_json }}
+          description: {{ (r.description ~ ' ({{ $value }} en ' ~ r.fenetre ~ ').') | to_json }}
+{% endfor %}

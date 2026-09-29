@@ -18,6 +18,7 @@
     - { chemin: noc/site, mode: "0755" }
     - { chemin: sms, mode: "0755" }
     - { chemin: journaux, mode: "0755" }
+    - { chemin: detection, mode: "0755" }
   loop_control:
     label: "{{ item.chemin or supervision_dossier }}"
 
@@ -177,6 +178,7 @@
     - { src: journaux-entree.conf.j2, dest: journaux/entree.conf }
     - { src: compose.yaml.j2, dest: compose.yaml }
     - { src: blackbox.yml.j2, dest: blackbox.yml }
+    - { src: detection.yml.j2, dest: detection/detection.yml }
   loop_control:
     label: "{{ item.dest }}"
   notify: Redémarrer la supervision

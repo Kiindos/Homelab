@@ -10,6 +10,7 @@ supervision_images:
   noc_collecte: python:3.14.7-alpine3.24
   sms: python:3.14.7-alpine3.24
   victorialogs: victoriametrics/victoria-logs:v1.52.0
+  vmalert: victoriametrics/vmalert:v1.152.0
 supervision_retention: 30d
 # Journaux centralisés (ADR 0020) : VictoriaLogs, alimenté par systemd-journal-upload (VM, hyperviseur) et syslog
 # (pare-feu). Les machines n'atteignent que l'entrée en écriture ; la lecture se fait par Grafana.
@@ -89,3 +90,56 @@ supervision_veille_services: []
 # OPNsense : version installée relevée par l'hyperviseur (agent_supervision_opnsense), comparée aux étiquettes
 # publiées : { machine, github, etiquettes: true, version_depot }. Vide = non suivi.
 supervision_veille_opnsense: {}
+
+# --- Détection d'intrusion sur les journaux (ADR 0021, étape 2) -------------------------------------------------
+# vmalert interroge VictoriaLogs chaque minute ; gravité « securite » : e-mail + notification prioritaire, jamais
+# sur le NOC. Chaque règle : { nom, requete (LogsQL, sans filtre de temps), par (champ de regroupement, ex.
+# _HOSTNAME), fenetre, seuil (nombre d'événements), severite, resume, description }.
+supervision_detection: true
+# Sources SSH attendues (expressions régulières d'adresses : VPN d'administration, orchestrateur…). Toute autre
+# connexion SSH acceptée déclenche une alerte.
+supervision_ssh_sources_attendues: ['127\.0\.0\.1']
+supervision_detection_regles:
+  - nom: ConnexionSSHInattendue
+    requete: >-
+      SYSLOG_IDENTIFIER:sshd-session "Accepted"
+      NOT _msg:~`from ({{ supervision_ssh_sources_attendues | join('|') }}) port`
+    par: _HOSTNAME
+    fenetre: 5m
+    seuil: 1
+    resume: "Connexion SSH depuis une source inattendue"
+    description: "Clé acceptée depuis une adresse hors du VPN d'administration et de l'orchestrateur"
+  - nom: EchecsSSH
+    requete: >-
+      SYSLOG_IDENTIFIER:sshd-session
+      _msg:~"Invalid user|Failed (password|publickey)|authentication failure|Disconnected from invalid user"
+    par: _HOSTNAME
+    fenetre: 10m
+    seuil: 5
+    resume: "Échecs de connexion SSH répétés"
+    description: "Tentatives de connexion SSH refusées"
+  - nom: EchecsSudo
+    requete: >-
+      SYSLOG_IDENTIFIER:sudo _msg:~"authentication failure|incorrect password|NOT in sudoers|command not allowed"
+    par: _HOSTNAME
+    fenetre: 10m
+    seuil: 1
+    resume: "Élévation de privilèges refusée (sudo)"
+    description: "sudo a refusé une commande ou un mot de passe"
+  - nom: EchecsPortail
+    requete: >-
+      CONTAINER_NAME:identite-authelia-1 _msg:~"(?i)unsuccessful .*authentication attempt|banned"
+    par: ""
+    fenetre: 10m
+    seuil: 10
+    resume: "Échecs de connexion répétés sur le portail SSO"
+    description: "Mots de passe ou seconds facteurs refusés par Authelia (attaque par dictionnaire ?)"
+  - nom: FichiersSensiblesModifies
+    requete: >-
+      SYSLOG_IDENTIFIER:~"audisp|audit" _msg:~"key=\"(comptes|sudo|cles_ssh|ssh)\""
+    par: _HOSTNAME
+    fenetre: 5m
+    seuil: 1
+    resume: "Comptes, sudo ou clés SSH modifiés"
+    description: "auditd a vu une écriture sur les comptes, sudoers, la configuration SSH ou des clés autorisées (normal pendant un déploiement Ansible)"
+supervision_detection_regles_supplementaires: []

@@ -205,9 +205,9 @@ def alertes():
     for alerte in lire_json(url):
         etiquettes = alerte.get("labels", {})
         annotations = alerte.get("annotations", {})
-        # Veille de sécurité (versions, failles à corriger) : pour l'administrateur seulement (e-mail, Grafana),
-        # jamais sur le NOC que la famille consulte.
-        if etiquettes.get("severite") == "veille":
+        # Veille et détection d'intrusion : pour l'administrateur seulement (e-mail, téléphone, Grafana), jamais
+        # sur le NOC que la famille consulte.
+        if etiquettes.get("severite") in ("veille", "securite"):
             continue
         liste.append({
             "nom": etiquettes.get("alertname", ""),

@@ -154,6 +154,26 @@ services:
     security_opt: ["no-new-privileges:true"]
 
 {% endif %}
+{% if supervision_journaux | bool and supervision_detection | bool %}
+  # Détection d'intrusion sur les journaux (ADR 0021) : règles LogsQL évaluées chaque minute, alertes vers
+  # Alertmanager. Aucun port publié.
+  vmalert:
+    image: {{ supervision_images.vmalert }}
+    restart: unless-stopped
+    command:
+      - -rule=/etc/vmalert/detection.yml
+      - -rule.defaultRuleType=vlogs
+      - -datasource.url=http://victorialogs:9428
+      - -notifier.url=http://alertmanager:9093
+      - -evaluationInterval=1m
+      - -external.url={{ supervision_grafana_url }}
+    volumes:
+      - ./detection/detection.yml:/etc/vmalert/detection.yml:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+{% endif %}
 {% if supervision_veille | bool %}
   # Veille de sécurité (files/veille) : image construite sur place (Trivy + script) ; métriques lues par Prometheus
   # sur le réseau de la pile, aucun port publié. Seul dossier modifiable : ses données (cache, rapport).
