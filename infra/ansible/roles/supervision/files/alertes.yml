@@ -54,14 +54,14 @@ groups:
           resume: "Nouveaux secteurs défectueux sur {{ $labels.device }}"
           description: "La liste des défauts du disque {{ $labels.device }} a augmenté sur 24 h : surveiller son évolution."
       - alert: EspaceDisqueFaible
-        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|virtiofs"} / node_filesystem_size_bytes) > 0.85
+        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|virtiofs|nullfs"} / node_filesystem_size_bytes) > 0.85
         for: 15m
         labels: { severite: avertissement }
         annotations:
           resume: "{{ $labels.instance }} : {{ $labels.mountpoint }} rempli à plus de 85 %"
           description: "Espace disque bientôt épuisé sur {{ $labels.instance }} ({{ $labels.mountpoint }})."
       - alert: EspaceDisqueCritique
-        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|virtiofs"} / node_filesystem_size_bytes) > 0.95
+        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|ramfs|virtiofs|nullfs"} / node_filesystem_size_bytes) > 0.95
         for: 5m
         labels: { severite: critique }
         annotations:
