@@ -24,6 +24,8 @@ services:
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
+      # Notifications gardées 10 jours : le rappel hebdomadaire des alertes « veille » s'appuie dessus.
+      - --data.retention=240h
       - --web.external-url=https://alertmanager.{{ domaine_interne }}
     ports: ["9093:9093"]   # proxy interne uniquement
     volumes:
