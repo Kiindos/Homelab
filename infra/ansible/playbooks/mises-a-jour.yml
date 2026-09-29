@@ -1,0 +1,201 @@
+# Mettre à jour le parc : paquets (Debian, Proxmox), nouvelles constructions des images Docker déjà en service, puis
+# redémarrage des VM qui l'exigent. Tout de suite, ou à l'heure d'une maintenance annoncée : dans ce cas chaque machine
+# arme sa propre minuterie systemd, ni Semaphore ni VPN ne sont nécessaires au moment voulu.
+#
+# Les machines passent l'une après l'autre par rang croissant (mise_a_jour_rang), espacées de « pas » minutes ; les
+# alertes sont mises en sourdine pendant la fenêtre. L'hyperviseur n'est inclus qu'à la demande, sans redémarrage.
+# Les changements de version d'application ne passent jamais par ici (code + déploiement).
+#
+#   … mises-a-jour.yml -e 'quand="2026-10-05 22:00"'           # programmer (heure de Paris)
+#   … mises-a-jour.yml -e quand=maintenant --limit web01        # tout de suite (machine par machine, journal visible)
+#   … mises-a-jour.yml -e quand=annuler                         # retirer la programmation et la sourdine
+#   options : -e pas=10 (minutes entre deux machines), -e hyperviseur=oui
+# Dans Semaphore : modèle « Mettre à jour le parc ». Suivi : journalctl -u mise-a-jour sur chaque machine.
+
+- name: Mettre à jour le parc
+  hosts: plateforme:hyperviseurs
+  gather_facts: false
+  become: true
+  serial: "{{ 1 if quand | default('') == 'maintenant' else '100%' }}"
+  vars:
+    quand: ""
+    pas: 5
+    hyperviseur: non
+    # Hôte de la supervision (sourdine des alertes pendant la fenêtre).
+    hote_supervision: "{{ supervision_hote | default('mon01') }}"
+    # Hôte de Semaphore lancé depuis Semaphore : pas de SSH vers lui-même, demande déposée dans le dossier partagé.
+    par_guichet: "{{ semaphore_projet is defined and depuis_semaphore | default(false) | bool }}"
+    participants: >-
+      {%- set liste = [] -%}
+      {%- for h in ansible_play_hosts_all if hyperviseur == 'oui' or h not in groups['hyperviseurs'] -%}
+      {%- set _ = liste.append({'hote': h, 'rang': hostvars[h].mise_a_jour_rang | default(50) | int}) -%}
+      {%- endfor -%}
+      {{ liste | sort(attribute='rang,hote') | map(attribute='hote') | list }}
+    attente: "{{ (participants.index(inventory_hostname) if inventory_hostname in participants else 0) * pas | int * 60 }}"
+    redemarrage: "{{ mise_a_jour_redemarrage | default('jamais' if inventory_hostname in groups['hyperviseurs'] else 'si_necessaire') }}"
+    images: "{{ mise_a_jour_images | default(inventory_hostname not in groups['hyperviseurs']) | bool }}"
+    # Durée de la fenêtre : un pas par machine, plus le temps de redémarrer et de relancer les services.
+    duree_fenetre: "{{ participants | length * pas | int + 45 }}"
+  tasks:
+    - name: Vérifier la demande
+      ansible.builtin.assert:
+        that:
+          - quand in ['maintenant', 'annuler'] or quand is match('^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$')
+          - pas | int >= 1 and pas | int <= 60
+          - hyperviseur in ['oui', 'non']
+        fail_msg: >-
+          Préciser quand="AAAA-MM-JJ HH:MM" (heure de Paris), quand=maintenant ou quand=annuler ; pas entre 1 et 60 ;
+          hyperviseur=oui|non.
+        quiet: true
+      run_once: true
+      delegate_to: localhost
+      become: false
+
+    - name: Hyperviseur exclu (hyperviseur=oui pour l'inclure)
+      ansible.builtin.meta: end_host
+      when: inventory_hostname not in participants
+
+    - name: Vérifier que l'heure demandée est à venir (heure de la machine)
+      ansible.builtin.shell: |
+        set -eu
+        cible=$(date -d "{{ quand }}" +%s)
+        test "$cible" -gt "$(date +%s)" || { echo "Heure passée : {{ quand }}"; exit 1; }
+        date -d "{{ quand }}" '+Maintenance le %d/%m/%Y à %H:%M (%Z)'
+      register: verification_heure
+      changed_when: false
+      run_once: true
+      delegate_to: "{{ hote_supervision }}"
+      when: quand not in ['maintenant', 'annuler']
+
+    - name: Mettre les alertes en sourdine pendant la fenêtre (ou lever la sourdine)
+      ansible.builtin.shell: |
+        set -eu
+        api=http://127.0.0.1:9093/api/v2
+        # Sourdines déjà posées par ce playbook et pas encore expirées : retirées (nouvelle programmation, annulation).
+        curl -fsS "$api/silences" | python3 -c '
+        import json, sys
+        for s in json.load(sys.stdin):
+            if s["createdBy"] == "mise-a-jour-du-parc" and s["status"]["state"] != "expired": print(s["id"])' |
+        while read -r id; do curl -fsS -X DELETE "$api/silence/$id"; echo "Sourdine $id retirée."; done
+        {% if quand != 'annuler' %}
+        {% set origine = 'now' if quand == 'maintenant' else quand %}
+        # Heure lue dans le fuseau de la machine (Paris), puis convertie en UTC pour Alertmanager.
+        origine=$(date -d "{{ origine }}" +%s)
+        debut=$(date -u -d "@$(( origine - 60 ))" +%FT%TZ)
+        fin=$(date -u -d "@$(( origine + {{ duree_fenetre }} * 60 ))" +%FT%TZ)
+        curl -fsS -X POST -H 'Content-Type: application/json' "$api/silences" -d "{
+          \"matchers\": [{\"name\": \"alertname\", \"value\": \".+\", \"isRegex\": true, \"isEqual\": true}],
+          \"startsAt\": \"$debut\", \"endsAt\": \"$fin\", \"createdBy\": \"mise-a-jour-du-parc\",
+          \"comment\": \"Mise à jour du parc ({{ participants | join(', ') }})\"}"
+        echo; echo "Sourdine de $debut à $fin (UTC)."
+        {% endif %}
+      register: sourdine
+      changed_when: true
+      run_once: true
+      delegate_to: "{{ hote_supervision }}"
+
+    - name: Sourdine des alertes
+      ansible.builtin.debug:
+        msg: "{{ sourdine.stdout_lines + (verification_heure.stdout_lines | default([])) }}"
+      run_once: true
+
+    # --- Hôte de Semaphore, depuis Semaphore : demande vérifiée par l'hôte (rôle mises_a_jour) ---------------------
+    - name: Hôte de Semaphore (demande déposée, exécutée par l'hôte)
+      when: par_guichet | bool
+      become: false
+      delegate_to: localhost
+      block:
+        - name: Déposer la demande
+          ansible.builtin.copy:
+            dest: /demandes/mise-a-jour.json
+            mode: "0600"
+            content: >-
+              {{ {'action': 'annuler' if quand == 'annuler' else 'programmer', 'quand': quand,
+                  'attente': 0 if quand == 'maintenant' else attente | int, 'redemarrage': redemarrage,
+                  'images': images | bool} | to_json }}
+
+        - name: Attendre que l'hôte la prenne en compte
+          ansible.builtin.wait_for:
+            path: /demandes/mise-a-jour.json
+            state: absent
+            timeout: 60
+
+        - name: Lire la réponse de l'hôte
+          ansible.builtin.slurp:
+            src: /demandes/mise-a-jour.etat
+          register: reponse_hote
+
+        - name: Réponse de l'hôte
+          ansible.builtin.assert:
+            that: (reponse_hote.content | b64decode) is match('OK ')
+            success_msg: "{{ reponse_hote.content | b64decode | trim }}"
+            fail_msg: "{{ reponse_hote.content | b64decode | trim }}"
+
+    - name: Fin pour l'hôte de Semaphore
+      ansible.builtin.meta: end_host
+      when: par_guichet | bool
+
+    # --- Autres machines (et toutes, depuis le poste d'admin) -------------------------------------------------------
+    - name: Déposer le script de mise à jour (rôle mises_a_jour)
+      ansible.builtin.copy:
+        src: ../roles/mises_a_jour/files/mise-a-jour.sh
+        dest: /usr/local/sbin/mise-a-jour
+        owner: root
+        group: root
+        mode: "0750"
+      when: quand != 'annuler'
+
+    - name: Retirer une programmation existante
+      ansible.builtin.systemd_service:
+        name: mise-a-jour.timer
+        state: stopped
+      failed_when: false
+
+    - name: Programmer la mise à jour
+      ansible.builtin.command: >-
+        systemd-run --unit=mise-a-jour --collect
+        --description="Mise à jour de la machine (maintenance du {{ quand }})"
+        --on-calendar="{{ quand }}:00" --timer-property=AccuracySec=1s
+        /usr/local/sbin/mise-a-jour --attente {{ attente }} --redemarrage {{ redemarrage }}
+        {{ '' if images | bool else '--sans-images' }}
+      when: quand not in ['maintenant', 'annuler']
+      changed_when: true
+
+    - name: Mettre à jour maintenant
+      ansible.builtin.command: >-
+        /usr/local/sbin/mise-a-jour --redemarrage jamais {{ '' if images | bool else '--sans-images' }}
+      when: quand == 'maintenant'
+      register: execution
+      changed_when: "' 0 paquet(s), 0 pile(s)' not in execution.stdout"
+
+    - name: Journal de la mise à jour
+      ansible.builtin.debug:
+        var: execution.stdout_lines
+      when: execution is not skipped
+
+    - name: Redémarrage nécessaire ?
+      ansible.builtin.shell: |
+        recent=$(find /boot -maxdepth 1 -name 'vmlinuz-*' -printf '%f\n' | sed 's/^vmlinuz-//' | sort -V | tail -n 1)
+        if [ -f /run/reboot-required ] || { [ -n "$recent" ] && [ "$recent" != "$(uname -r)" ]; }; then echo oui; fi
+      register: besoin_redemarrage
+      changed_when: false
+      when: quand == 'maintenant'
+
+    - name: Redémarrer la machine
+      ansible.builtin.reboot:
+        reboot_timeout: 900
+        msg: "Mise à jour du parc : redémarrage demandé par un paquet"
+      when: quand == 'maintenant' and besoin_redemarrage.stdout == 'oui' and redemarrage == 'si_necessaire'
+
+    - name: Redémarrage à faire pendant une maintenance dédiée
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} : redémarrage nécessaire, jamais automatique sur cette machine."
+      when: quand == 'maintenant' and besoin_redemarrage.stdout == 'oui' and redemarrage != 'si_necessaire'
+
+    - name: Bilan de la programmation
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'Programmation retirée.' if quand == 'annuler' else
+             'Début le ' ~ quand ~ ' + ' ~ (attente | int // 60) ~ ' min (rang ' ~ (participants.index(inventory_hostname) + 1)
+             ~ '/' ~ participants | length ~ '), redémarrage : ' ~ redemarrage ~ '.' }}
+      when: quand != 'maintenant'

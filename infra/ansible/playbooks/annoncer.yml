@@ -1,0 +1,51 @@
+# Annoncer aux membres une maintenance, un incident, sa résolution ou une information : e-mail à chacun et bandeau
+# sur la page d'accueil. Même traitement que la page des comptes (/annonces), exécuté dans son conteneur.
+#
+#   … annoncer.yml -e type=maintenance -e 'titre="Mise à jour du serveur"' -e 'debut="2026-10-05 22:00"' \
+#       -e 'fin="2026-10-05 23:00"' -e 'message="Photos et drive indisponibles quelques minutes."' \
+#       [-e services=photos,drive] [-e envoi=apercu]
+#
+# Dans Semaphore : modèle « Annoncer une maintenance » (questionnaire). « \n » dans le message = saut de ligne.
+# Aperçu d'abord (envoi=apercu) : rien n'est envoyé, le texte et les destinataires s'affichent.
+
+- name: Annoncer aux membres
+  hosts: "{{ annonces_hote | default('auth01') }}"
+  gather_facts: false
+  become: true
+  vars:
+    type: maintenance
+    titre: ""
+    message: ""
+    debut: ""
+    fin: ""
+    services: ""
+    envoi: publier
+    format_date: '^(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2})?$'
+  tasks:
+    - name: Vérifier l'annonce
+      ansible.builtin.assert:
+        that:
+          - type in ['maintenance', 'incident', 'resolu', 'info']
+          - titre | trim | length > 0
+          - debut is match(format_date) and fin is match(format_date)
+          - type != 'maintenance' or debut | length > 0
+          - envoi in ['publier', 'apercu']
+        fail_msg: >-
+          Type : maintenance, incident, resolu ou info ; titre obligatoire ; dates « AAAA-MM-JJ HH:MM » (heure de
+          Paris), début obligatoire pour une maintenance ; envoi : publier ou apercu.
+        quiet: true
+
+    - name: Publier l'annonce (ou aperçu si envoi=apercu)
+      community.docker.docker_container_exec:
+        container: identite-comptes-1
+        argv: >-
+          {{ ['python3', '/app/publier.py', '--auteur', 'semaphore', 'annonce', '--type', type,
+              '--titre', titre | trim, '--message', message, '--debut', debut | replace(' ', 'T'),
+              '--fin', fin | replace(' ', 'T'), '--services', services | replace(' ', '')]
+             + (['--oui'] if envoi == 'publier' else []) }}
+      register: annonce
+      changed_when: envoi == 'publier'
+
+    - name: Résultat
+      ansible.builtin.debug:
+        var: annonce.stdout_lines

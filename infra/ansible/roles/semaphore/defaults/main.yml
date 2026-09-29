@@ -40,4 +40,4 @@ semaphore_projet:
   cles_ssh: {}        # nom => clé privée
   inventaire: {}      # { nom, depot, chemin, cle }
   environnement: {}   # { nom, variables (dict), secrets_env (dict nom => valeur) }
-  modeles: []         # [{ nom, depot, playbook, description }]
+  modeles: []         # [{ nom, depot, playbook, description, limite, questions (voir tasks/projet.yml) }]

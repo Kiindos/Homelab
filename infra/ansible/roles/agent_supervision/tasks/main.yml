@@ -113,3 +113,112 @@
         state: started
         enabled: true
         daemon_reload: true
+
+# --- État des mises à jour : lu par Prometheus (collecteur textfile), les alertes et la veille de sécurité ---
+- name: Relevé de l'état des mises à jour
+  when: agent_supervision_etat_mises_a_jour | bool
+  block:
+    - name: Déposer le script de relevé
+      ansible.builtin.copy:
+        src: etat-mises-a-jour.py
+        dest: /usr/local/sbin/etat-mises-a-jour
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Déclarer le service et la minuterie du relevé
+      ansible.builtin.copy:
+        dest: "/etc/systemd/system/etat-mises-a-jour.{{ item.extension }}"
+        content: "{{ item.contenu }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - extension: service
+          contenu: |
+            # Géré par Ansible (rôle agent_supervision)
+            [Unit]
+            Description=Relevé de l'état des mises à jour (paquets, redémarrage, conteneurs)
+            After=docker.service
+            [Service]
+            Type=oneshot
+            ExecStart=/usr/local/sbin/etat-mises-a-jour
+            Nice=10
+            IOSchedulingClass=idle
+        - extension: timer
+          contenu: |
+            # Géré par Ansible (rôle agent_supervision)
+            [Unit]
+            Description=Relevé horaire de l'état des mises à jour
+            [Timer]
+            OnBootSec=3min
+            OnCalendar=hourly
+            RandomizedDelaySec=5min
+            [Install]
+            WantedBy=timers.target
+      loop_control:
+        label: "etat-mises-a-jour.{{ item.extension }}"
+      register: agent_etat_unites
+
+    - name: Activer la minuterie du relevé
+      ansible.builtin.systemd_service:
+        name: etat-mises-a-jour.timer
+        state: started
+        enabled: true
+        daemon_reload: "{{ agent_etat_unites is changed }}"
+
+    - name: Premier relevé
+      ansible.builtin.systemd_service:
+        name: etat-mises-a-jour.service
+        state: started
+      when: agent_etat_unites is changed
+
+# --- Version d'OPNsense (hyperviseur) : clé limitée au tableau de bord, certificat épinglé ---
+- name: Relevé de la version d'OPNsense
+  when: agent_supervision_opnsense.cle | default('') | length > 0
+  block:
+    - name: Créer le dossier de configuration du relevé
+      ansible.builtin.file:
+        path: /etc/homelab
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Relever le certificat de l'interface d'OPNsense
+      ansible.builtin.shell: |
+        set -o pipefail
+        hote=$(echo '{{ agent_supervision_opnsense.url }}' | sed -E 's#^https://([^/:]+).*#\1#')
+        openssl s_client -connect "$hote:443" -servername "$hote" </dev/null 2>/dev/null | openssl x509
+      args:
+        executable: /bin/bash
+      register: agent_opnsense_certificat
+      changed_when: false
+
+    - name: Vérifier l'empreinte du certificat (épingle)
+      ansible.builtin.shell: |
+        set -o pipefail
+        openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64
+      args:
+        executable: /bin/bash
+        stdin: "{{ agent_opnsense_certificat.stdout }}"
+      register: agent_opnsense_empreinte
+      changed_when: false
+      failed_when: agent_opnsense_empreinte.stdout != agent_supervision_opnsense.epingle
+
+    - name: Déposer le certificat épinglé et la configuration du relevé
+      ansible.builtin.copy:
+        dest: "{{ item.dest }}"
+        content: "{{ item.contenu }}"
+        owner: root
+        group: root
+        mode: "0600"
+      loop:
+        - { dest: /etc/homelab/opnsense.pem, contenu: "{{ agent_opnsense_certificat.stdout }}\n" }
+        - dest: /etc/homelab/opnsense-veille.json
+          contenu: >-
+            {{ {'url': agent_supervision_opnsense.url, 'cle': agent_supervision_opnsense.cle,
+                'secret': agent_supervision_opnsense.secret, 'certificat': '/etc/homelab/opnsense.pem'} | to_json }}
+      loop_control:
+        label: "{{ item.dest }}"
+      no_log: true

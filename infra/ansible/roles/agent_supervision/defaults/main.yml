@@ -6,3 +6,10 @@ agent_supervision_smart: false
 agent_supervision_smart_version: "0.14.0"
 agent_supervision_smart_base: "https://github.com/prometheus-community/smartctl_exporter/releases/download"
 agent_supervision_smart_url: "{{ agent_supervision_smart_base }}/v{{ agent_supervision_smart_version }}"
+# État des mises à jour (paquets en attente, redémarrage requis, images des conteneurs) publié pour Prometheus,
+# relevé toutes les heures : alimente les alertes et la veille de sécurité.
+agent_supervision_etat_mises_a_jour: true
+# Version d'OPNsense relevée par l'hyperviseur pour la veille de sécurité : { url, cle, secret, epingle (empreinte
+# SHA-256 en base64 de la clé publique du certificat de l'interface) }. Clé d'un compte limité aux privilèges
+# « Lobby: Dashboard » et « System: Deny config write ». Vide = non relevé.
+agent_supervision_opnsense: {}

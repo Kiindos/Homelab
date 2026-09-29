@@ -1,0 +1,65 @@
+# Mise à jour du parc : script exécuté par chaque machine, tout de suite ou à l'heure d'une maintenance
+# (playbook mises-a-jour.yml). Le script ne change jamais de version d'application : il applique les paquets et
+# les nouvelles constructions des images déjà en service.
+- name: Déposer le script de mise à jour
+  ansible.builtin.copy:
+    src: mise-a-jour.sh
+    dest: /usr/local/sbin/mise-a-jour
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Guichet des demandes de Semaphore (hôte de Semaphore seulement)
+  when: mise_a_jour_demandes | length > 0
+  block:
+    - name: Créer le dossier des demandes (écrit par le conteneur de Semaphore, lu par l'hôte)
+      ansible.builtin.file:
+        path: "{{ mise_a_jour_demandes }}"
+        state: directory
+        owner: "{{ mise_a_jour_demandes_uid }}"
+        group: root
+        mode: "0700"
+
+    - name: Déposer le vérificateur des demandes
+      ansible.builtin.copy:
+        src: demande-mise-a-jour.py
+        dest: /usr/local/sbin/demande-mise-a-jour
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Déclarer la surveillance du dossier et son service
+      ansible.builtin.copy:
+        dest: "/etc/systemd/system/demande-mise-a-jour.{{ item.extension }}"
+        content: "{{ item.contenu }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - extension: path
+          contenu: |
+            # Géré par Ansible (rôle mises_a_jour)
+            [Unit]
+            Description=Demande de mise à jour déposée par Semaphore
+            [Path]
+            PathExists={{ mise_a_jour_demandes }}/mise-a-jour.json
+            [Install]
+            WantedBy=paths.target
+        - extension: service
+          contenu: |
+            # Géré par Ansible (rôle mises_a_jour)
+            [Unit]
+            Description=Vérifier et programmer une demande de mise à jour de Semaphore
+            [Service]
+            Type=oneshot
+            ExecStart=/usr/local/sbin/demande-mise-a-jour {{ mise_a_jour_demandes }}
+      loop_control:
+        label: "demande-mise-a-jour.{{ item.extension }}"
+      register: mise_a_jour_unites
+
+    - name: Surveiller le dossier des demandes
+      ansible.builtin.systemd_service:
+        name: demande-mise-a-jour.path
+        state: started
+        enabled: true
+        daemon_reload: "{{ mise_a_jour_unites is changed }}"

@@ -281,10 +281,46 @@
     headers: "{{ semaphore_entetes }}"
   register: semaphore_inventaires
 
+# La liste ne renvoie pas les questionnaires : chaque modèle existant est relu en détail pour les comparer.
+- name: Lire les modèles existants en détail
+  ansible.builtin.uri:
+    url: "{{ semaphore_api }}/project/{{ semaphore_pid }}/templates/{{ item.id }}"
+    headers: "{{ semaphore_entetes }}"
+  loop: "{{ semaphore_modeles.json }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: semaphore_modeles_detail
+
+# Questionnaire (« survey ») : les réponses arrivent au playbook comme variables (-e). Dans l'inventaire :
+#   questions: [{ nom, titre, description, type: texte|int|enum, valeurs: [..] (enum), defaut, obligatoire }]
 - name: Créer ou corriger les modèles de tâches
   vars:
     semaphore_id_depots: "{{ semaphore_depots.json | items2dict(key_name='name', value_name='id') }}"
-    existant: "{{ semaphore_modeles.json | selectattr('name', 'equalto', item.nom) | first | default({}) }}"
+    existant: >-
+      {{ semaphore_modeles_detail.results | map(attribute='json') | selectattr('name', 'equalto', item.nom)
+         | first | default({}) }}
+    questions_voulues: >-
+      {%- set liste = [] -%}
+      {%- for q in item.questions | default([]) -%}
+      {%- set valeurs = [] -%}
+      {%- for v in q.valeurs | default([]) -%}{%- set _ = valeurs.append({'name': v, 'value': v}) -%}{%- endfor -%}
+      {%- set _ = liste.append({'name': q.nom, 'title': q.titre, 'description': q.description | default(''),
+            'type': '' if q.type | default('texte') == 'texte' else q.type, 'required': q.obligatoire | default(false),
+            'values': valeurs, 'default_value': q.defaut | default('') | string}) -%}
+      {%- endfor -%}
+      {{ liste }}
+    questions_actuelles: >-
+      {%- set liste = [] -%}
+      {%- for q in existant.survey_vars | default([], true) -%}
+      {%- set valeurs = [] -%}
+      {%- for v in q['values'] | default([], true) -%}
+      {%- set _ = valeurs.append({'name': v.name, 'value': v.value}) -%}
+      {%- endfor -%}
+      {%- set _ = liste.append({'name': q.name, 'title': q.title, 'description': q.description | default(''),
+            'type': q.type | default(''), 'required': q.required | default(false), 'values': valeurs,
+            'default_value': q.default_value | default('') | string}) -%}
+      {%- endfor -%}
+      {{ liste }}
     voulu:
       name: "{{ item.nom }}"
       project_id: "{{ semaphore_pid | int }}"
@@ -297,6 +333,7 @@
       environment_id: >-
         {{ (semaphore_environnements.json | selectattr('name', 'equalto', semaphore_projet.environnement.nom) | first).id }}
       arguments: "[]"
+      survey_vars: "{{ questions_voulues }}"
       task_params:
         allow_debug: true
         allow_override_limit: true
@@ -320,4 +357,5 @@
     or existant.repository_id | int != voulu.repository_id | int
     or existant.description | default('', true) != voulu.description
     or existant.task_params.limit | default([], true) != voulu.task_params.limit
+    or questions_actuelles != questions_voulues
   changed_when: true

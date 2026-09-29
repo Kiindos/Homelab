@@ -8,7 +8,7 @@
   roles:
     - secrets
 
-- name: Socle commun (durcissement, mises à jour, Docker, agent de supervision)
+- name: Socle commun (durcissement, mises à jour, Docker, agent de supervision, mise à jour du parc)
   hosts: plateforme
   become: true
   roles:
@@ -16,6 +16,7 @@
     - role: docker
       when: docker_active | default(true)
     - agent_supervision
+    - mises_a_jour
 
 - name: Identité (LLDAP, Authelia)
   hosts: auth01

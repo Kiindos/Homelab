@@ -5,6 +5,8 @@ name: semaphore
 services:
   semaphore:
     image: {{ semaphore_image }}
+    # Image construite sur place (templates/Dockerfile.j2) : jamais cherchée sur un registre (mise à jour du parc).
+    pull_policy: never
     container_name: semaphore
     restart: unless-stopped
     user: "1001:0"
@@ -15,6 +17,10 @@ services:
       - ./ssh_config:/etc/ssh/ssh_config.d/semaphore.conf:ro
       - donnees:/var/lib/semaphore
       - taches:/tmp/semaphore
+{% if mise_a_jour_demandes | default('') | length > 0 %}
+      # Demandes de mise à jour de cet hôte (Semaphore ne s'y connecte pas) : vérifiées puis exécutées par l'hôte.
+      - {{ mise_a_jour_demandes }}:/demandes
+{% endif %}
     networks: [proxy]
     security_opt: ["no-new-privileges:true"]
 

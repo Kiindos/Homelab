@@ -1,0 +1,15 @@
+# Mise à jour du parc (playbook mises-a-jour.yml, modèle Semaphore « Mettre à jour le parc »).
+#
+# Redémarrage après la mise à jour quand un paquet l'exige (noyau, bibliothèque système) : si_necessaire, ou jamais
+# (hyperviseur : toutes les VM s'arrêteraient ; redémarrage à faire à la main pendant une maintenance dédiée).
+mise_a_jour_redemarrage: si_necessaire
+# Ordre de passage pendant une maintenance programmée : les machines passent l'une après l'autre, par rang croissant,
+# espacées du « pas » choisi au lancement (5 minutes par défaut).
+mise_a_jour_rang: 50
+# Images des piles Docker retéléchargées pour la même version (correctifs de l'image de base). Un changement de
+# version passe toujours par le code (rôles, inventaire) et un déploiement, jamais par ce script.
+mise_a_jour_images: true
+# Hôte de Semaphore : Semaphore ne s'y connecte pas en SSH (il ne s'administre pas lui-même). Il dépose une demande
+# datée dans ce dossier (monté dans son conteneur) ; l'hôte la vérifie et programme lui-même sa mise à jour.
+mise_a_jour_demandes: ""
+mise_a_jour_demandes_uid: 1001
