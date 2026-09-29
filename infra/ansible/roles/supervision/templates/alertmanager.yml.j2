@@ -41,13 +41,10 @@ receivers:
         headers:
           Subject: '{{ '{{' }} if eq .Status "firing" {{ '}}' }}[ALERTE]{{ '{{' }} else {{ '}}' }}[RÉSOLU]{{ '{{' }} end {{ '}}' }} {{ '{{' }} .CommonLabels.alertname {{ '}}' }} — {{ '{{' }} .CommonLabels.instance {{ '}}' }}'
     webhook_configs:
-      # Modèle « alertmanager » intégré à ntfy : titre et message lisibles sur le téléphone.
-      - url: "http://ntfy/{{ supervision_ntfy_sujet }}?template=alertmanager&priority=high"
+      # Relais « ntfy-relais » : message mis en forme en français, plusieurs essais (le modèle intégré à ntfy a un
+      # délai de 100 ms, parfois dépassé ici : notifications perdues le 29/09).
+      - url: "http://ntfy-relais:8080/alertmanager?priorite=high&prefixe=ALERTE"
         send_resolved: true
-        http_config:
-          basic_auth:
-            username: alertmanager
-            password_file: /etc/alertmanager/secrets/ntfy
 {% if supervision_sms_free.cle is defined %}
       # SMS au titulaire de la ligne Free Mobile (relais « sms » de la pile).
       - url: "http://sms:8080/alertmanager"
@@ -61,12 +58,10 @@ receivers:
         headers:
           Subject: '{{ '{{' }} if eq .Status "firing" {{ '}}' }}[VEILLE]{{ '{{' }} else {{ '}}' }}[FAIT]{{ '{{' }} end {{ '}}' }} {{ '{{' }} .CommonLabels.alertname {{ '}}' }} ({{ '{{' }} len .Alerts.Firing {{ '}}' }})'
     webhook_configs:
-      - url: "http://ntfy/{{ supervision_ntfy_sujet }}?template=alertmanager&priority=default"
+      # Relais « ntfy-relais » : message mis en forme en français, plusieurs essais (le modèle intégré à ntfy a un
+      # délai de 100 ms, parfois dépassé ici : notifications perdues le 29/09).
+      - url: "http://ntfy-relais:8080/alertmanager?priorite=default&prefixe=VEILLE"
         send_resolved: false
-        http_config:
-          basic_auth:
-            username: alertmanager
-            password_file: /etc/alertmanager/secrets/ntfy
 
   - name: securite
     email_configs:
@@ -75,12 +70,10 @@ receivers:
         headers:
           Subject: '{{ '{{' }} if eq .Status "firing" {{ '}}' }}[SÉCURITÉ]{{ '{{' }} else {{ '}}' }}[FIN]{{ '{{' }} end {{ '}}' }} {{ '{{' }} .CommonLabels.alertname {{ '}}' }} — {{ '{{' }} .CommonLabels.instance {{ '}}' }}'
     webhook_configs:
-      - url: "http://ntfy/{{ supervision_ntfy_sujet }}?template=alertmanager&priority=high"
+      # Relais « ntfy-relais » : message mis en forme en français, plusieurs essais (le modèle intégré à ntfy a un
+      # délai de 100 ms, parfois dépassé ici : notifications perdues le 29/09).
+      - url: "http://ntfy-relais:8080/alertmanager?priorite=high&prefixe=SECURITE"
         send_resolved: false
-        http_config:
-          basic_auth:
-            username: alertmanager
-            password_file: /etc/alertmanager/secrets/ntfy
 
 # Une alerte critique masque l'avertissement équivalent sur la même machine.
 inhibit_rules:

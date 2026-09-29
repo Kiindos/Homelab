@@ -17,6 +17,7 @@
     - { chemin: noc, mode: "0755" }
     - { chemin: noc/site, mode: "0755" }
     - { chemin: sms, mode: "0755" }
+    - { chemin: ntfy-relais, mode: "0755" }
     - { chemin: journaux, mode: "0755" }
     - { chemin: detection, mode: "0755" }
   loop_control:
@@ -196,6 +197,15 @@
     - { src: veille.json, dest: grafana/tableaux/veille.json }
   loop_control:
     label: "{{ item.dest }}"
+  notify: Redémarrer la supervision
+
+- name: Déposer le relais des notifications sur téléphone (ntfy)
+  ansible.builtin.copy:
+    src: ntfy/relais.py
+    dest: "{{ supervision_dossier }}/ntfy-relais/relais.py"
+    owner: root
+    group: root
+    mode: "0644"
   notify: Redémarrer la supervision
 
 - name: Déposer le relais SMS des alertes critiques (Free Mobile)

@@ -134,6 +134,26 @@ services:
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
 
+  # Relais des notifications sur téléphone (files/ntfy/relais.py) : mise en forme ici plutôt que par le modèle de
+  # ntfy (délai de 100 ms parfois dépassé), plusieurs essais. Joint par Alertmanager seulement, port non publié.
+  ntfy-relais:
+    image: {{ supervision_images.sms }}
+    restart: unless-stopped
+    command: ["python3", "-u", "/app/relais.py"]
+    user: "65534:65534"
+    environment:
+      NTFY_URL: http://ntfy
+      SUJET: "{{ supervision_ntfy_sujet }}"
+      LIEN: "{{ supervision_noc_url }}"
+      FICHIER_MOT_DE_PASSE: /run/secrets/ntfy
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ./ntfy-relais/relais.py:/app/relais.py:ro
+      - ./alertmanager/secrets/ntfy:/run/secrets/ntfy:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
 {% if supervision_sms_free.cle is defined %}
   # Relais SMS des alertes critiques (Free Mobile) : joint par Alertmanager seulement, port non publié.
   sms:
