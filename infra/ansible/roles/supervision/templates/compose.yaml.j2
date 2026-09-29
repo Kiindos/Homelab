@@ -152,6 +152,32 @@ services:
     security_opt: ["no-new-privileges:true"]
 
 {% endif %}
+{% if supervision_veille | bool %}
+  # Veille de sécurité (files/veille) : image construite sur place (Trivy + script) ; métriques lues par Prometheus
+  # sur le réseau de la pile, aucun port publié. Seul dossier modifiable : ses données (cache, rapport).
+  veille:
+    image: {{ supervision_veille_image }}
+    pull_policy: never
+    restart: unless-stopped
+    user: "65534:65534"
+    environment:
+      TZ: Europe/Paris
+      VEILLE_HEURE: "{{ supervision_veille_heure }}"
+      VEILLE_CA: /etc/veille/autorites.pem
+      TMPDIR: /donnees/tmp
+    volumes:
+      - ./veille/veille.json:/etc/veille/veille.json:ro
+      - ./autorites.pem:/etc/veille/autorites.pem:ro
+      - ./veille/donnees:/donnees
+{% if supervision_veille_jeton_github | length > 0 %}
+      - ./secrets/github_veille:/run/secrets/github:ro
+{% endif %}
+    read_only: true
+    mem_limit: {{ supervision_veille_memoire }}
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+{% endif %}
 {% if supervision_journaux | bool %}
   # Journaux centralisés (ADR 0020). Port HTTP non publié : lecture par Grafana seulement (réseau de la pile).
   victorialogs:

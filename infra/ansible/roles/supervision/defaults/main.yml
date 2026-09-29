@@ -46,3 +46,46 @@ supervision_ntfy_url: "https://ntfy.{{ domaine_public }}"
 supervision_issuer: "https://auth.{{ domaine_public }}"
 # Autorité interne (certificats des outils qui ne passent pas par Let's Encrypt, ex. le coffre OpenBao).
 supervision_ca_interne: "{{ ca_interne.certificat | default('') }}"
+
+# --- Veille de sécurité (files/veille/veille.py) --------------------------------------------------------------
+# Chaque nuit : failles des images en service (Trivy), nouvelles constructions, dernières versions et avis de
+# sécurité des projets (GitHub). Alertes « veille » (e-mail + téléphone) et tableau Grafana « Veille de sécurité ».
+supervision_veille: true
+supervision_veille_heure: "04:40"
+# Trivy figé par empreinte (chaîne de publication compromise en mars 2026 : GHSA-69fq-xp46-6x23).
+supervision_veille_trivy: aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
+supervision_veille_memoire: 1536m
+# Jeton GitHub facultatif (à grain fin, sans accès à aucun dépôt : lecture publique seulement) : 5 000 requêtes
+# par heure au lieu de 60. Sans lui, les réponses sont mises en cache et redemandées de façon conditionnelle.
+supervision_veille_jeton_github: ""
+# Image (sans étiquette) → projet : { nom, github (propriétaire/dépôt), avis (dépôt des avis, si différent ; "" =
+#   aucun), paquet_avis (motif du paquet dans les avis), version_image / version_depot (motifs), etiquettes (le
+#   projet ne publie pas de « releases »), expose (publié sur Internet), url_version (version lue sur le service,
+#   voir supervision_veille_services), image_locale (construite sur place : pas d'analyse) }. Les images sans
+#   projet (bases : nginx, postgres…) sont seulement analysées.
+supervision_veille_sources:
+  authelia/authelia: { nom: Authelia, github: authelia/authelia, expose: true }
+  lldap/lldap: { nom: LLDAP, github: lldap/lldap }
+  bunkerity/bunkerweb-all-in-one: { nom: BunkerWeb, github: bunkerity/bunkerweb, expose: true }
+  nextcloud: { nom: Nextcloud, github: nextcloud/server, avis: nextcloud/security-advisories, paquet_avis: "^Server$", expose: true }
+  ghcr.io/immich-app/immich-server: { nom: Immich, github: immich-app/immich, expose: true }
+  # Même projet qu'Immich : avis déjà signalés sur le serveur.
+  ghcr.io/immich-app/immich-machine-learning: { nom: Immich (apprentissage), github: immich-app/immich, avis: "" }
+  traefik: { nom: Traefik, github: traefik/traefik }
+  netboxcommunity/netbox: { nom: NetBox, github: netbox-community/netbox }
+  homelab/semaphore: { nom: Semaphore, github: semaphoreui/semaphore, image_locale: true }
+  grafana/grafana: { nom: Grafana, github: grafana/grafana }
+  prom/prometheus: { nom: Prometheus, github: prometheus/prometheus }
+  prom/alertmanager: { nom: Alertmanager, github: prometheus/alertmanager }
+  prom/blackbox-exporter: { nom: Sondes (blackbox), github: prometheus/blackbox_exporter }
+  prompve/prometheus-pve-exporter: { nom: Exporteur Proxmox, github: prometheus-pve/prometheus-pve-exporter }
+  binwiederhier/ntfy: { nom: ntfy, github: binwiederhier/ntfy, expose: true }
+  victoriametrics/victoria-logs: { nom: VictoriaLogs, github: VictoriaMetrics/VictoriaLogs }
+  cloudflare/cloudflared: { nom: cloudflared, github: cloudflare/cloudflared, expose: true }
+supervision_veille_sources_supplementaires: {}
+# Services dont la version se lit sur le service lui-même : [{ nom, machine, url_version, champ, github, avis,
+#   paquet_avis, expose }] (ex. coffre OpenBao : /v1/sys/health, champ « version »).
+supervision_veille_services: []
+# OPNsense : version installée relevée par l'hyperviseur (agent_supervision_opnsense), comparée aux étiquettes
+# publiées : { machine, github, etiquettes: true, version_depot }. Vide = non suivi.
+supervision_veille_opnsense: {}

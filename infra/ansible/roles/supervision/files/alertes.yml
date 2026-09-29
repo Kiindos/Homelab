@@ -137,7 +137,7 @@ groups:
   - name: supervision
     rules:
       - alert: CibleDeCollecteInjoignable
-        expr: up{job=~"disques|proxmox|supervision"} == 0
+        expr: up{job=~"disques|proxmox|supervision|veille"} == 0
         for: 10m
         labels: { severite: avertissement }
         annotations:
@@ -150,3 +150,62 @@ groups:
         annotations:
           resume: "Aucun journal reçu depuis 30 minutes"
           description: "VictoriaLogs ne reçoit plus rien : envoi des machines (systemd-journal-upload) ou entrée en panne."
+
+  # Mises à jour et veille de sécurité. Gravité « veille » : e-mail + téléphone (rappel chaque semaine tant que ce
+  # n'est pas fait, puis « résolu »), jamais de SMS ni d'affichage sur le NOC (visible par la famille).
+  # Marche à suivre : docs/runbooks/mises-a-jour.md (annoncer, puis « Mettre à jour le parc » dans Semaphore).
+  - name: mises_a_jour
+    rules:
+      - alert: VeilleActionSecurite
+        expr: homelab_veille_action == 1
+        labels: { severite: veille }
+        annotations:
+          resume: "{{ $labels.service }} ({{ $labels.machine }}) : {{ $labels.action }}"
+          description: "{{ $labels.detail }}"
+      - alert: PaquetsSecuriteEnAttente
+        expr: homelab_apt_mises_a_jour{origine="securite"} > 0
+        for: 30h
+        labels: { severite: veille }
+        annotations:
+          resume: "{{ $labels.instance }} : {{ $value }} mise(s) à jour de sécurité en attente"
+          description: "Les mises à jour automatiques ne les ont pas installées depuis plus d'un jour : lancer « Mettre à jour le parc »."
+      - alert: PaquetsProxmoxEnAttente
+        expr: homelab_apt_mises_a_jour{origine="proxmox"} > 0
+        for: 3d
+        labels: { severite: veille }
+        annotations:
+          resume: "{{ $labels.instance }} : {{ $value }} paquet(s) Proxmox en attente"
+          description: "Paquets Proxmox jamais installés automatiquement : « Mettre à jour le parc » avec hyperviseur=oui."
+      - alert: RedemarrageEnAttente
+        expr: (homelab_redemarrage_requis == 1) or (homelab_noyau_a_jour == 0)
+        for: 3d
+        labels: { severite: veille }
+        annotations:
+          resume: "{{ $labels.instance }} attend un redémarrage depuis plus de 3 jours"
+          description: "Un noyau ou une bibliothèque système mis à jour n'est pas encore en service : planifier une maintenance."
+      - alert: MiseAJourEchouee
+        expr: homelab_mise_a_jour_statut == 0
+        labels: { severite: critique }
+        annotations:
+          resume: "{{ $labels.instance }} : la dernière mise à jour a échoué"
+          description: "journalctl -u mise-a-jour sur la machine ; les services peuvent être dans un état intermédiaire."
+      - alert: EtatMisesAJourPerime
+        expr: time() - homelab_etat_mises_a_jour_timestamp > 3 * 3600
+        labels: { severite: avertissement }
+        annotations:
+          resume: "{{ $labels.instance }} : état des mises à jour non relevé depuis 3 heures"
+          description: "Minuterie etat-mises-a-jour arrêtée ou en échec : systemctl status etat-mises-a-jour."
+      - alert: VeilleEnPanne
+        expr: (time() - homelab_veille_derniere_reussite_timestamp > 36 * 3600) or absent(homelab_veille_derniere_reussite_timestamp)
+        for: 3h
+        labels: { severite: avertissement }
+        annotations:
+          resume: "Veille de sécurité sans résultat depuis plus de 36 heures"
+          description: "docker logs supervision-veille-1 sur la VM de supervision (base de failles, registres, GitHub injoignables ?)."
+      - alert: VeilleAnalyseImpossible
+        expr: homelab_veille_analyse_ok == 0
+        for: 2d
+        labels: { severite: avertissement }
+        annotations:
+          resume: "{{ $labels.service }} : image non analysée depuis 2 jours"
+          description: "Trivy n'arrive pas à lister les paquets de {{ $labels.image }}:{{ $labels.version }} (registre injoignable ?)."

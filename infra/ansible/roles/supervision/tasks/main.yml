@@ -93,6 +93,74 @@
     mode: "0644"
   notify: Redémarrer la supervision
 
+# --- Veille de sécurité : image locale (Trivy figé + script), configuration -------------------------------
+- name: Veille de sécurité
+  when: supervision_veille | bool
+  block:
+    - name: Créer les dossiers de la veille
+      ansible.builtin.file:
+        path: "{{ supervision_dossier }}/{{ item.chemin }}"
+        state: directory
+        owner: "{{ item.proprietaire | default('root') }}"
+        group: "{{ item.proprietaire | default('root') }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { chemin: veille, mode: "0755" }
+        - { chemin: veille/image, mode: "0755" }
+        # Cache de Trivy, listes de paquets des images, rapport : seul dossier modifiable par le conteneur.
+        - { chemin: veille/donnees, mode: "0750", proprietaire: "65534" }
+      loop_control:
+        label: "{{ item.chemin }}"
+
+    - name: Déposer les sources de l'image de la veille
+      ansible.builtin.copy:
+        dest: "{{ supervision_dossier }}/veille/image/{{ item.dest }}"
+        content: "{{ item.contenu }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - { dest: Dockerfile, contenu: "{{ lookup('ansible.builtin.template', 'veille/Dockerfile.j2') }}" }
+        - { dest: veille.py, contenu: "{{ lookup('ansible.builtin.file', 'veille/veille.py') }}\n" }
+      loop_control:
+        label: "{{ item.dest }}"
+
+    # L'étiquette contient l'empreinte des sources : toute modification produit une nouvelle image.
+    - name: Nommer l'image de la veille d'après ses sources
+      ansible.builtin.set_fact:
+        supervision_veille_image: >-
+          homelab/veille:{{ (lookup('ansible.builtin.template', 'veille/Dockerfile.j2')
+          ~ lookup('ansible.builtin.file', 'veille/veille.py')) | hash('sha256') | truncate(12, true, '') }}
+
+    - name: Construire l'image de la veille
+      community.docker.docker_image_build:
+        name: "{{ supervision_veille_image.split(':')[0] }}"
+        tag: "{{ supervision_veille_image.split(':')[1] }}"
+        path: "{{ supervision_dossier }}/veille/image"
+        rebuild: never
+
+    - name: Déposer la configuration de la veille
+      ansible.builtin.copy:
+        dest: "{{ supervision_dossier }}/veille/veille.json"
+        content: >-
+          {{ {'prometheus': 'http://prometheus:9090',
+              'sources': supervision_veille_sources | combine(supervision_veille_sources_supplementaires),
+              'services': supervision_veille_services,
+              'opnsense': supervision_veille_opnsense} | to_nice_json }}
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Déposer le jeton GitHub de la veille (lecture publique seulement)
+      ansible.builtin.copy:
+        dest: "{{ supervision_dossier }}/secrets/github_veille"
+        content: "{{ supervision_veille_jeton_github }}"
+        owner: root
+        group: root
+        mode: "0444"
+      when: supervision_veille_jeton_github | length > 0
+      no_log: true
+
 - name: Déposer les configurations
   ansible.builtin.template:
     src: "{{ item.src }}"
@@ -123,6 +191,7 @@
   loop:
     - { src: alertes.yml, dest: prometheus/alertes.yml }
     - { src: noc.json, dest: grafana/tableaux/noc.json }
+    - { src: veille.json, dest: grafana/tableaux/veille.json }
   loop_control:
     label: "{{ item.dest }}"
   notify: Redémarrer la supervision

@@ -1,0 +1,8 @@
+# {{ ansible_managed }}
+# Veille de sécurité : Trivy (image officielle, empreinte figée) + le script de veille (Python, bibliothèque
+# standard seulement).
+FROM {{ supervision_veille_trivy }}
+RUN apk add --no-cache python3 tzdata
+COPY veille.py /app/veille.py
+USER 65534:65534
+ENTRYPOINT ["python3", "-u", "/app/veille.py"]

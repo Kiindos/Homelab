@@ -86,3 +86,11 @@ scrape_configs:
   - job_name: supervision
     static_configs:
       - targets: ["localhost:9090", "alertmanager:9093"{% if supervision_journaux | bool %}, "victorialogs:9428"{% endif %}]
+{% if supervision_veille | bool %}
+
+  # Veille de sécurité : résultats de la dernière analyse (une par nuit), servis par le conteneur « veille ».
+  - job_name: veille
+    scrape_interval: 5m
+    static_configs:
+      - targets: ["veille:9800"]
+{% endif %}

@@ -1,0 +1,1124 @@
+{
+ "uid": "veille",
+ "title": "Veille de sécurité",
+ "tags": [
+  "sécurité",
+  "mises à jour"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 41,
+ "version": 1,
+ "editable": false,
+ "refresh": "5m",
+ "time": {
+  "from": "now-24h",
+  "to": "now"
+ },
+ "description": "Résultats de la veille de sécurité (chaque nuit) et état des mises à jour des machines. Marche à suivre : runbook « Mises à jour ».",
+ "panels": [
+  {
+   "id": 1,
+   "type": "stat",
+   "title": "Actions de sécurité",
+   "description": "Avis de sécurité, failles corrigeables par une nouvelle construction, OPNsense en retard : alerte VeilleActionSecurite.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count(homelab_veille_action == 1)",
+     "instant": true
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Nouvelles versions",
+   "description": "Projets qui ont publié une version plus récente que celle en service (changement dans le code).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 4,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count(homelab_veille_service_info{statut=\"version_disponible\"})",
+     "instant": true
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Failles critiques et hautes corrigeables",
+   "description": "Dans les images en service (Trivy), avec une version corrigée disponible.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(homelab_veille_failles{gravite=~\"CRITICAL|HIGH\",corrigeable=\"oui\"})",
+     "instant": true
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "Paquets de sécurité en attente",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum(homelab_apt_mises_a_jour{origine=\"securite\"})",
+     "instant": true
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 5,
+   "type": "stat",
+   "title": "Machines à redémarrer",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "count((homelab_redemarrage_requis == 1) or (homelab_noyau_a_jour == 0))",
+     "instant": true
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 6,
+   "type": "stat",
+   "title": "Dernière veille",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 20,
+    "y": 0,
+    "w": 4,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "homelab_veille_derniere_reussite_timestamp * 1000",
+     "instant": true
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "dateTimeFromNow",
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 7,
+   "type": "table",
+   "title": "Actions de sécurité à mener",
+   "description": "avis : la version en service est visée par un avis du projet ; reconstruction : « Mettre à jour le parc » suffit ; version : passer à la version publiée (code) ; systeme : mise à jour du système (OPNsense).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 4,
+    "w": 24,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "homelab_veille_action == 1",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "job": true,
+       "Value": true,
+       "instance": true,
+       "machines": true,
+       "image": true,
+       "version": true,
+       "derniere": true,
+       "statut": true,
+       "expose": true,
+       "id": true,
+       "gravite": true,
+       "corrige": true,
+       "resume": true,
+       "paquet": true,
+       "installe": true,
+       "titre": true,
+       "origine": true,
+       "actuelle": true,
+       "disponible": true,
+       "reconstruction": true
+      },
+      "indexByName": {
+       "machine": 0,
+       "service": 1,
+       "action": 2,
+       "detail": 3
+      },
+      "renameByName": {
+       "machine": "Machine",
+       "service": "Service",
+       "action": "Action",
+       "detail": "Détail"
+      }
+     }
+    }
+   ],
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "sortBy": []
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "filterable": true
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 8,
+   "type": "table",
+   "title": "Versions en service et dernières publiées",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 10,
+    "w": 24,
+    "h": 10
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "homelab_veille_service_info",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "job": true,
+       "Value": true,
+       "instance": true,
+       "machines": true,
+       "image": true,
+       "action": true,
+       "detail": true,
+       "id": true,
+       "gravite": true,
+       "corrige": true,
+       "resume": true,
+       "paquet": true,
+       "installe": true,
+       "titre": true,
+       "origine": true,
+       "actuelle": true,
+       "disponible": true,
+       "reconstruction": true
+      },
+      "indexByName": {
+       "machine": 0,
+       "service": 1,
+       "version": 2,
+       "derniere": 3,
+       "statut": 4,
+       "expose": 5
+      },
+      "renameByName": {
+       "machine": "Machine",
+       "service": "Service",
+       "version": "En service",
+       "derniere": "Dernière publiée",
+       "statut": "État",
+       "expose": "Exposé"
+      }
+     }
+    }
+   ],
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "sortBy": [
+     {
+      "displayName": "État",
+      "desc": true
+     }
+    ]
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "filterable": true
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "État"
+      },
+      "properties": [
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-text"
+        }
+       },
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "value",
+          "options": {
+           "a_jour": {
+            "text": "à jour",
+            "color": "green"
+           },
+           "version_disponible": {
+            "text": "version disponible",
+            "color": "orange"
+           },
+           "inconnu": {
+            "text": "inconnu",
+            "color": "text"
+           }
+          }
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": 9,
+   "type": "table",
+   "title": "Avis de sécurité visant une version en service",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 20,
+    "w": 24,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "homelab_veille_avis_info",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "job": true,
+       "Value": true,
+       "instance": true,
+       "machines": true,
+       "image": true,
+       "derniere": true,
+       "statut": true,
+       "expose": true,
+       "action": true,
+       "detail": true,
+       "paquet": true,
+       "installe": true,
+       "titre": true,
+       "origine": true,
+       "actuelle": true,
+       "disponible": true,
+       "reconstruction": true
+      },
+      "indexByName": {
+       "machine": 0,
+       "service": 1,
+       "version": 2,
+       "id": 3,
+       "gravite": 4,
+       "corrige": 5,
+       "resume": 6
+      },
+      "renameByName": {
+       "machine": "Machine",
+       "service": "Service",
+       "version": "En service",
+       "id": "Avis",
+       "gravite": "Gravité",
+       "corrige": "Corrigé en",
+       "resume": "Résumé"
+      }
+     }
+    }
+   ],
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "sortBy": []
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "filterable": true
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 10,
+   "type": "table",
+   "title": "Failles critiques et hautes corrigeables des images",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 26,
+    "w": 24,
+    "h": 10
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "homelab_veille_faille_info",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "job": true,
+       "Value": true,
+       "instance": true,
+       "machine": true,
+       "machines": true,
+       "image": true,
+       "derniere": true,
+       "statut": true,
+       "expose": true,
+       "action": true,
+       "detail": true,
+       "resume": true,
+       "origine": true,
+       "actuelle": true,
+       "disponible": true,
+       "reconstruction": true
+      },
+      "indexByName": {
+       "service": 0,
+       "version": 1,
+       "gravite": 2,
+       "id": 3,
+       "paquet": 4,
+       "installe": 5,
+       "corrige": 6,
+       "titre": 7
+      },
+      "renameByName": {
+       "service": "Service",
+       "version": "Version",
+       "gravite": "Gravité",
+       "id": "Faille",
+       "paquet": "Paquet",
+       "installe": "Installé",
+       "corrige": "Corrigé en",
+       "titre": "Titre"
+      }
+     }
+    }
+   ],
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "sortBy": [
+     {
+      "displayName": "Gravité",
+      "desc": false
+     }
+    ]
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "filterable": true
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 11,
+   "type": "table",
+   "title": "Images : failles corrigeables et nouvelles constructions",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 36,
+    "w": 24,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "sum by (service, image, version, machines) (homelab_veille_failles{corrigeable=\"oui\",gravite=~\"CRITICAL|HIGH\"}) > 0",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "job": true,
+       "instance": true,
+       "machine": true,
+       "derniere": true,
+       "statut": true,
+       "expose": true,
+       "action": true,
+       "detail": true,
+       "id": true,
+       "gravite": true,
+       "corrige": true,
+       "resume": true,
+       "paquet": true,
+       "installe": true,
+       "titre": true,
+       "origine": true,
+       "actuelle": true,
+       "disponible": true,
+       "reconstruction": true
+      },
+      "indexByName": {
+       "service": 0,
+       "image": 1,
+       "version": 2,
+       "machines": 3,
+       "Value": 4
+      },
+      "renameByName": {
+       "service": "Service",
+       "image": "Image",
+       "version": "Version",
+       "machines": "Machines",
+       "Value": "Critiques + hautes corrigeables"
+      }
+     }
+    }
+   ],
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "sortBy": [
+     {
+      "displayName": "Critiques + hautes corrigeables",
+      "desc": true
+     }
+    ]
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "filterable": true
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 12,
+   "type": "table",
+   "title": "Nouvelle construction disponible pour la même version (« Mettre à jour le parc »)",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 44,
+    "w": 24,
+    "h": 5
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "homelab_veille_reconstruction == 1",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "job": true,
+       "Value": true,
+       "instance": true,
+       "machine": true,
+       "derniere": true,
+       "statut": true,
+       "expose": true,
+       "action": true,
+       "detail": true,
+       "id": true,
+       "gravite": true,
+       "corrige": true,
+       "resume": true,
+       "paquet": true,
+       "installe": true,
+       "titre": true,
+       "origine": true,
+       "actuelle": true,
+       "disponible": true,
+       "reconstruction": true
+      },
+      "indexByName": {
+       "service": 0,
+       "image": 1,
+       "version": 2,
+       "machines": 3
+      },
+      "renameByName": {
+       "service": "Service",
+       "image": "Image",
+       "version": "Version",
+       "machines": "Machines"
+      }
+     }
+    }
+   ],
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "sortBy": []
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "filterable": true
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 13,
+   "type": "table",
+   "title": "Paquets en attente par machine",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 49,
+    "w": 24,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "homelab_apt_paquet_info",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "job": true,
+       "Value": true,
+       "machine": true,
+       "machines": true,
+       "service": true,
+       "image": true,
+       "version": true,
+       "derniere": true,
+       "statut": true,
+       "expose": true,
+       "action": true,
+       "detail": true,
+       "id": true,
+       "gravite": true,
+       "corrige": true,
+       "resume": true,
+       "installe": true,
+       "titre": true,
+       "reconstruction": true
+      },
+      "indexByName": {
+       "instance": 0,
+       "paquet": 1,
+       "actuelle": 2,
+       "disponible": 3,
+       "origine": 4
+      },
+      "renameByName": {
+       "instance": "Machine",
+       "paquet": "Paquet",
+       "actuelle": "Installé",
+       "disponible": "Disponible",
+       "origine": "Origine"
+      }
+     }
+    }
+   ],
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "sortBy": []
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "filterable": true
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "id": 14,
+   "type": "table",
+   "title": "Dernières mises à jour du parc",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 57,
+    "w": 24,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     },
+     "expr": "homelab_mise_a_jour_derniere_reussite_timestamp * 1000",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "job": true,
+       "machine": true,
+       "machines": true,
+       "service": true,
+       "image": true,
+       "version": true,
+       "derniere": true,
+       "statut": true,
+       "expose": true,
+       "action": true,
+       "detail": true,
+       "id": true,
+       "gravite": true,
+       "corrige": true,
+       "resume": true,
+       "paquet": true,
+       "installe": true,
+       "titre": true,
+       "origine": true,
+       "actuelle": true,
+       "disponible": true,
+       "reconstruction": true
+      },
+      "indexByName": {
+       "instance": 0,
+       "Value": 1
+      },
+      "renameByName": {
+       "instance": "Machine",
+       "Value": "Dernière réussite"
+      }
+     }
+    }
+   ],
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "sortBy": []
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "filterable": true
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Dernière réussite"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "dateTimeFromNow"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}
