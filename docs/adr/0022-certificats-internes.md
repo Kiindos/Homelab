@@ -20,8 +20,9 @@ Tout ce qui arrive d'Internet est chiffré jusqu'au WAF, et les outils internes 
 
 Ces flux désignent leurs cibles par des **noms** résolus par le DNS interne. Quelqu'un qui usurperait une réponse DNS
 ou une adresse (ARP) dans une zone pourrait se placer au milieu et lire sessions et mots de passe. Le risque est
-contenu (une VM par zone, pare-feu entre les zones), mais une seule VM compromise suffirait dans sa zone. Un
-certificat vérifié à chaque saut rend l'usurpation inutile : le faux serveur n'a pas la clé.
+contenu (pare-feu entre les zones), mais l'audit du 29/09 a montré que rien ne filtre **à l'intérieur** d'une zone
+(deux zones hébergent deux VM). Un certificat vérifié à chaque saut rend l'usurpation inutile : le faux serveur n'a
+pas la clé.
 
 ## Options envisagées
 
@@ -48,8 +49,12 @@ certificat vérifié à chaque saut rend l'usurpation inutile : le faux serveur 
 3. **Chaque client vérifie** : WAF, proxy interne, portail, sondes, collecte des journaux et des métriques font
    confiance à la seule racine interne et vérifient le nom. Plus tard, **TLS mutuel** sur les flux les plus
    sensibles (vérification des sessions, annuaire).
-4. **DNS durci en parallèle** : validation DNSSEC, résolution publique chiffrée (DNS sur TLS) et protection contre le
-   « rebinding » sur le résolveur du pare-feu.
+4. **Usurpation d'adresse bloquée en parallèle** :
+   - le résolveur du pare-feu valide déjà DNSSEC et refuse les réponses privées pour les noms publics (audit du
+     29/09) ; il résout lui-même depuis les serveurs racine, sans intermédiaire à chiffrer ;
+   - reste à couper LLMNR sur les VM (résolution de noms par diffusion, facile à empoisonner) ;
+   - et à activer le pare-feu de l'hyperviseur par VM avec filtre IP et MAC : une VM ne peut plus se faire passer
+     pour une voisine, ni pour la passerelle.
 
 ## Conséquences
 
