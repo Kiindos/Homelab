@@ -207,7 +207,7 @@ def alertes():
         annotations = alerte.get("annotations", {})
         # Veille et détection d'intrusion : pour l'administrateur seulement (e-mail, téléphone, Grafana), jamais
         # sur le NOC que la famille consulte.
-        if etiquettes.get("severite") in ("veille", "securite"):
+        if etiquettes.get("severite") in ("veille", "securite", "info"):
             continue
         liste.append({
             "nom": etiquettes.get("alertname", ""),

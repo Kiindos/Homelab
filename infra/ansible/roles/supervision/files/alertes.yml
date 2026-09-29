@@ -209,3 +209,27 @@ groups:
         annotations:
           resume: "{{ $labels.service }} : image non analysée depuis 2 jours"
           description: "Trivy n'arrive pas à lister les paquets de {{ $labels.image }}:{{ $labels.version }} (registre injoignable ?)."
+
+  # Travaux d'import (rapatriement de données d'un nuage vers le homelab) : état et avancement publiés par la machine
+  # qui les exécute (métriques homelab_import_*).
+  - name: imports
+    rules:
+      - alert: ImportEchoue
+        expr: homelab_import_etat == 3
+        labels: { severite: veille }
+        annotations:
+          resume: "Import « {{ $labels.travail }} » en échec"
+          description: "Le travail s'est arrêté sur une erreur ({{ with query (printf \"homelab_import_erreurs{travail='%s'}\" $labels.travail) }}{{ . | first | value }}{{ end }} erreur(s) au total) : journalctl -u import-nuage-{{ $labels.travail }}, puis le relancer (il reprend où il s'était arrêté)."
+      - alert: ImportBloque
+        expr: homelab_import_etat == 1 and delta(homelab_import_octets[2h]) == 0
+        for: 30m
+        labels: { severite: veille }
+        annotations:
+          resume: "Import « {{ $labels.travail }} » bloqué depuis 2 heures"
+          description: "Aucun octet copié depuis 2 heures alors que le travail tourne : jeton expiré, limite de l'API du fournisseur ? journalctl -u import-nuage-{{ $labels.travail }}."
+      - alert: ImportTermine
+        expr: homelab_import_etat == 2 and (time() - homelab_import_fin_timestamp) < 3600
+        labels: { severite: info }
+        annotations:
+          resume: "Import « {{ $labels.travail }} » terminé"
+          description: "{{ with query (printf \"homelab_import_octets{travail='%s'}\" $labels.travail) }}{{ . | first | value | humanize1024 }}o copiés{{ end }}."

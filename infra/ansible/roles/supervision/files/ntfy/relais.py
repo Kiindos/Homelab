@@ -6,7 +6,7 @@ souvent en attente du disque, il est parfois dépassé : ntfy répond 400 et Ale
 (notifications perdues, constaté le 29/09). Ici, pas de modèle côté ntfy : titre, priorité et texte sont envoyés tels
 quels, avec plusieurs essais. Écoute sur le réseau Docker de la supervision (port non publié).
 
-  POST /alertmanager?priorite=high&prefixe=ALERTE    (priorite : min à urgent ; prefixe : ALERTE, SECURITE, VEILLE)
+  POST /alertmanager?priorite=high&prefixe=ALERTE    (priorite : min à urgent ; prefixe : ALERTE, SECURITE, VEILLE, INFO)
 """
 
 import base64
@@ -25,7 +25,7 @@ LIEN = os.environ.get("LIEN", "")
 with open(os.environ["FICHIER_MOT_DE_PASSE"], encoding="utf-8") as fichier:
     IDENTIFIANTS = base64.b64encode(f"alertmanager:{fichier.read().strip()}".encode()).decode()
 PRIORITES = {"min", "low", "default", "high", "urgent"}
-PREFIXES = {"ALERTE": "ALERTE", "SECURITE": "SÉCURITÉ", "VEILLE": "VEILLE"}
+PREFIXES = {"ALERTE": "ALERTE", "SECURITE": "SÉCURITÉ", "VEILLE": "VEILLE", "INFO": "INFO"}
 ESSAIS = 4
 
 

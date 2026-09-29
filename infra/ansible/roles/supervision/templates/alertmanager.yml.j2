@@ -25,6 +25,12 @@ route:
       group_by: [alertname, instance]
       group_wait: 30s
       repeat_interval: 12h
+    # Information (ex. un long travail terminé) : notification discrète sur le téléphone seulement.
+    - matchers: ['severite="info"']
+      receiver: info
+      group_by: [alertname, travail]
+      group_wait: 30s
+      repeat_interval: 24h
     - matchers: ['severite="veille"']
       receiver: veille
       group_by: [alertname]
@@ -73,6 +79,11 @@ receivers:
       # Relais « ntfy-relais » : message mis en forme en français, plusieurs essais (le modèle intégré à ntfy a un
       # délai de 100 ms, parfois dépassé ici : notifications perdues le 29/09).
       - url: "http://ntfy-relais:8080/alertmanager?priorite=high&prefixe=SECURITE"
+        send_resolved: false
+
+  - name: info
+    webhook_configs:
+      - url: "http://ntfy-relais:8080/alertmanager?priorite=low&prefixe=INFO"
         send_resolved: false
 
 # Une alerte critique masque l'avertissement équivalent sur la même machine.
