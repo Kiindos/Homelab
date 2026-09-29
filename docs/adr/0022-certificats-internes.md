@@ -2,7 +2,8 @@
 title: "ADR 0022 : Autorité de certification interne et TLS vérifié sur les flux internes"
 description: Une autorité interne (racine hors ligne, intermédiaire dans le coffre, ACME) pour chiffrer et authentifier chaque flux entre machines, et rendre inopérante une usurpation DNS ou ARP.
 date: 2026-09-29
-status: proposé
+# Validé par Maxime le 29/09/2026.
+status: accepté
 tags: [securite, tls, pki, dns]
 ---
 
@@ -35,7 +36,7 @@ pas la clé.
    - un intermédiaire dans le coffre OpenBao (moteur PKI), qui délivre des certificats courts par ACME, renouvelés
      automatiquement.
 
-## Décision (proposée)
+## Décision
 
 1. **Autorité** :
    - racine hors ligne, gardée chiffrée hors du serveur ;
@@ -63,3 +64,15 @@ pas la clé.
 - Mise en place par étapes, un flux à la fois, en commençant par les plus sensibles : portail et annuaire, puis
   applications, puis supervision.
 - Un certificat expiré coupe un flux : l'expiration est surveillée comme celle des certificats publics.
+
+## Mise en œuvre
+
+1. Blocage de l'usurpation dans une zone :
+   - LLMNR coupé sur les VM ;
+   - pare-feu de l'hyperviseur par VM (OpenTofu) avec filtre IP et MAC, en mode journal d'abord, puis entrée refusée
+     par défaut sauf les flux de la matrice.
+2. Autorité : moteur PKI d'OpenBao (intermédiaire signé par la racine interne existante, gardée hors ligne), ACME
+   activé, supervision de l'expiration.
+3. TLS de bout en bout, un flux à la fois : vérification des sessions et annuaire (portail), puis WAF vers les
+   applications, proxy interne vers les outils, enfin collecte des métriques et des journaux.
+4. Fermeture des ports HTTP en clair au pare-feu, flux par flux, une fois chaque client passé en TLS vérifié.

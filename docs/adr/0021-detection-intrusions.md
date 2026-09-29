@@ -2,7 +2,8 @@
 title: "ADR 0021 : Détection et prévention des intrusions en couches légères"
 description: Suricata sur le pare-feu, CrowdSec partagé par toutes les machines avec blocage au pare-feu, règles de détection sur les journaux centralisés ; pas de SIEM lourd.
 date: 2026-09-29
-status: proposé
+# Validé par Maxime le 29/09/2026.
+status: accepté
 tags: [securite, detection, ids, crowdsec, suricata]
 ---
 
@@ -25,7 +26,7 @@ HTTP, invisible pour le WAF. La mémoire reste le facteur limitant : 32 Go pour 
    - réputation et blocage : CrowdSec étendu à toutes les machines, décisions appliquées par le pare-feu ;
    - hôtes et applications : règles de détection sur les journaux déjà centralisés ([ADR 0020](0020-journaux-centralises.md)).
 
-## Décision (proposée)
+## Décision
 
 1. **Suricata sur OPNsense** (fonction intégrée, règles ET Open et listes abuse.ch) :
    - d'abord en **détection** sur le WAN et sur les interfaces internes (mouvements latéraux, trafic vers des serveurs
@@ -57,3 +58,17 @@ HTTP, invisible pour le WAF. La mémoire reste le facteur limitant : 32 Go pour 
   concernée ; le runbook décrit comment lever une décision.
 - Ce qui reste hors de portée : l'analyse comportementale poussée et la corrélation longue (un SIEM complet) ; à
   reconsidérer avec plus de matériel.
+
+## Mise en œuvre
+
+Par étapes, la moins coûteuse d'abord ; chaque règle est observée en « avertissement » avant de devenir une alerte.
+
+1. **Fait le 29/09** : l'adresse de la maison n'est plus jamais bannie par CrowdSec (liste « postoverflow » du WAF,
+   remise en place automatiquement après chaque recréation du conteneur).
+2. Règles de détection sur les journaux centralisés (vmalert sur VictoriaLogs) : connexions SSH, sudo, clés
+   ajoutées, rafales d'échecs de connexion (portail, applications mobiles).
+3. auditd sur toutes les machines (rôle commun), vers le journal systemd.
+4. CrowdSec partagé : API locale sur la VM de supervision, agents sur les machines, greffon d'OPNsense (après sa
+   mise à jour).
+5. Suricata sur OPNsense, en détection puis en prévention sur le WAN (après sa mise à jour ; mémoire du pare-feu
+   portée à 3 Go).
