@@ -33,6 +33,7 @@
   loop:
     - /etc/systemd/timesyncd.conf.d
     - /etc/systemd/journald.conf.d
+    - /etc/systemd/resolved.conf.d
 
 - name: Synchroniser l'heure sur le pare-feu de la zone
   ansible.builtin.copy:
@@ -72,6 +73,54 @@
     mode: "0644"
     validate: "sshd -t -f %s"
   notify: Recharger SSH
+
+- name: Savoir si systemd-resolved est en service
+  ansible.builtin.stat:
+    path: /run/systemd/resolve/stub-resolv.conf
+  register: common_resolved
+
+- name: Couper la résolution de noms par diffusion (LLMNR, mDNS)
+  ansible.builtin.copy:
+    dest: /etc/systemd/resolved.conf.d/homelab.conf
+    content: |
+      # Géré par Ansible (rôle common) : noms résolus par le DNS du pare-feu seulement ; LLMNR et mDNS se laissent
+      # usurper par n'importe quelle machine du même réseau.
+      [Resolve]
+      LLMNR={{ 'yes' if common_resolution_diffusion else 'no' }}
+      MulticastDNS={{ 'yes' if common_resolution_diffusion else 'no' }}
+    mode: "0644"
+  when: common_resolved.stat.exists
+  notify: Redémarrer resolved
+
+- name: Journal d'audit des fichiers sensibles (ADR 0021)
+  when: common_audit | bool
+  block:
+    - name: Installer auditd et son greffon syslog
+      ansible.builtin.apt:
+        name: [auditd, audispd-plugins]
+        state: present
+
+    - name: Déposer les règles d'audit
+      ansible.builtin.template:
+        src: audit-homelab.rules.j2
+        dest: /etc/audit/rules.d/homelab.rules
+        owner: root
+        group: root
+        mode: "0640"
+      notify: Charger les règles d'audit
+
+    - name: Envoyer les événements d'audit au journal système (greffon syslog)
+      ansible.builtin.lineinfile:
+        path: /etc/audit/plugins.d/syslog.conf
+        regexp: '^active\s*='
+        line: "active = yes"
+      notify: Redémarrer auditd
+
+    - name: Démarrer auditd
+      ansible.builtin.service:
+        name: auditd
+        state: started
+        enabled: true
 
 - name: Associer le nom de la machine à son adresse réelle (modèle de /etc/hosts de cloud-init)
   ansible.builtin.template:

@@ -1,5 +1,13 @@
 # Connexion root par SSH : « no » sur les VM, « prohibit-password » sur l'hyperviseur (clé uniquement).
 common_ssh_root: "no"
+# Redirections de ports par SSH (rebond vers d'autres machines) : refusées.
+common_ssh_redirections: "no"
+# Résolution de noms par diffusion (LLMNR, mDNS) : coupée, facile à usurper dans une zone (audit du 29/09, C17).
+common_resolution_diffusion: false
+# Journal d'audit (auditd) des fichiers sensibles et des commandes root (ADR 0021), vers le journal système.
+common_audit: true
+common_audit_dossiers_cles: >-
+  {{ ['/root'] + ([] if ansible_user | default('root') == 'root' else ['/home/' ~ ansible_user]) }}
 common_fuseau: Europe/Paris
 # Serveur NTP : la passerelle de la zone (le pare-feu).
 common_ntp: "{{ ansible_default_ipv4.gateway | default('') }}"

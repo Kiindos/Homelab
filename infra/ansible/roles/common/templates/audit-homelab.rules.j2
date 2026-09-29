@@ -1,0 +1,19 @@
+## Géré par Ansible (rôle common) — traçabilité des fichiers et actions sensibles (ADR 0021). Les événements partent
+## dans le journal système (greffon syslog d'auditd), donc dans les journaux centralisés : recherche par clé
+## (« comptes », « sudo », « ssh », « cles_ssh », « systemd », « cron », « commande_root »).
+-b 8192
+-w /etc/passwd -p wa -k comptes
+-w /etc/shadow -p wa -k comptes
+-w /etc/group -p wa -k comptes
+-w /etc/sudoers -p wa -k sudo
+-w /etc/sudoers.d/ -p wa -k sudo
+-w /etc/ssh/sshd_config -p wa -k ssh
+-w /etc/ssh/sshd_config.d/ -p wa -k ssh
+{% for dossier in common_audit_dossiers_cles %}
+-w {{ dossier }}/.ssh/ -p wa -k cles_ssh
+{% endfor %}
+-w /etc/systemd/system/ -p wa -k systemd
+-w /etc/cron.d/ -p wa -k cron
+-w /etc/crontab -p wa -k cron
+## Commandes lancées en root par une personne connectée (sudo, su), avec son identité d'origine.
+-a always,exit -F arch=b64 -S execve -F euid=0 -F auid>=1000 -F auid!=unset -k commande_root
