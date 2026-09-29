@@ -33,14 +33,14 @@
     group: root
     mode: "u=rwX,go=rX"
 
-- name: Déposer la liste blanche CrowdSec (faux positifs des applications)
+- name: Déposer les listes blanches CrowdSec (faux positifs des applications, adresse de la maison)
   ansible.builtin.template:
-    src: crowdsec-liste-blanche.yaml.j2
-    dest: "{{ waf_dossier }}/crowdsec-liste-blanche.yaml"
+    src: "{{ item }}.j2"
+    dest: "{{ waf_dossier }}/{{ item }}"
     owner: root
     group: root
     mode: "0644"
-  register: waf_liste_blanche
+  loop: [crowdsec-liste-blanche.yaml, crowdsec-maison.yaml]
 
 - name: Déposer le fichier Compose de BunkerWeb
   ansible.builtin.template:
@@ -58,37 +58,71 @@
     pull: missing
     recreate: "{{ 'always' if waf_compose.changed else 'auto' }}"
 
-# --- Liste blanche CrowdSec ------------------------------------------------------------------------
+# --- Listes blanches CrowdSec ---------------------------------------------------------------------
 # Pas de montage : Docker créerait /etc/crowdsec/parsers en root, et CrowdSec (non privilégié) ne pourrait plus y
-# installer ses composants au démarrage (constaté le 27/09 : CrowdSec arrêté, WebSocket refusés). Le fichier est
-# copié une fois CrowdSec prêt, puis CrowdSec relit sa configuration.
+# installer ses composants au démarrage (constaté le 27/09 : CrowdSec arrêté, WebSocket refusés). Les fichiers sont
+# copiés une fois CrowdSec prêt, et recopiés par une minuterie après chaque recréation du conteneur (constaté le
+# 29/09 : listes perdues à chaque recréation).
+
+- name: Déposer le script de mise en place des listes blanches
+  ansible.builtin.template:
+    src: crowdsec-listes-blanches.sh.j2
+    dest: /usr/local/sbin/crowdsec-listes-blanches
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Déclarer le service et la minuterie des listes blanches
+  ansible.builtin.copy:
+    dest: "/etc/systemd/system/crowdsec-listes-blanches.{{ item.extension }}"
+    content: "{{ item.contenu }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - extension: service
+      contenu: |
+        # Géré par Ansible (rôle waf)
+        [Unit]
+        Description=Listes blanches CrowdSec du homelab dans le conteneur du WAF
+        After=docker.service
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/local/sbin/crowdsec-listes-blanches
+    - extension: timer
+      contenu: |
+        # Géré par Ansible (rôle waf)
+        [Unit]
+        Description=Remettre les listes blanches CrowdSec après une recréation du WAF
+        [Timer]
+        OnBootSec=2min
+        OnUnitActiveSec=2min
+        AccuracySec=10s
+        [Install]
+        WantedBy=timers.target
+  loop_control:
+    label: "crowdsec-listes-blanches.{{ item.extension }}"
+  register: waf_listes_unites
+
+- name: Activer la minuterie des listes blanches
+  ansible.builtin.systemd_service:
+    name: crowdsec-listes-blanches.timer
+    state: started
+    enabled: true
+    daemon_reload: "{{ waf_listes_unites is changed }}"
 
 - name: Attendre que CrowdSec ait installé ses composants
-  ansible.builtin.command: docker exec waf-bunkerweb-1 test -d /etc/crowdsec/parsers/s02-enrich
+  ansible.builtin.command: docker exec waf-bunkerweb-1 test -d /etc/crowdsec/postoverflows/s01-whitelist
   register: waf_crowdsec_pret
   until: waf_crowdsec_pret.rc == 0
   retries: 30
   delay: 5
   changed_when: false
 
-- name: Lire la liste blanche en place dans CrowdSec
-  ansible.builtin.command: docker exec waf-bunkerweb-1 cat /etc/crowdsec/parsers/s02-enrich/homelab-liste-blanche.yaml
-  register: waf_liste_blanche_actuelle
-  changed_when: false
-  failed_when: false
-
-- name: Lire la liste blanche voulue
-  ansible.builtin.slurp:
-    src: "{{ waf_dossier }}/crowdsec-liste-blanche.yaml"
-  register: waf_liste_blanche_voulue
-
-- name: Installer la liste blanche dans CrowdSec
-  ansible.builtin.command: >-
-    docker cp {{ waf_dossier }}/crowdsec-liste-blanche.yaml
-    waf-bunkerweb-1:/etc/crowdsec/parsers/s02-enrich/homelab-liste-blanche.yaml
-  when: waf_liste_blanche_actuelle.stdout | trim != waf_liste_blanche_voulue.content | b64decode | trim
-  changed_when: true
-  notify: Recharger CrowdSec
+- name: Installer les listes blanches dans CrowdSec
+  ansible.builtin.command: /usr/local/sbin/crowdsec-listes-blanches
+  register: waf_listes_installees
+  changed_when: "'installée' in waf_listes_installees.stdout"
 
 - name: Appliquer le rechargement de CrowdSec avant la vérification
   ansible.builtin.meta: flush_handlers

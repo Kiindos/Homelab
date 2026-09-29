@@ -1,0 +1,21 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# Installe les listes blanches CrowdSec du homelab dans le conteneur du WAF et les y remet après chaque recréation
+# (le conteneur ne conserve pas /etc/crowdsec : maintenance, mise à jour du parc) ; CrowdSec relit alors sa
+# configuration. Lancé toutes les 2 minutes (crowdsec-listes-blanches.timer) et par Ansible.
+set -uo pipefail
+conteneur=waf-bunkerweb-1
+# CrowdSec pas encore prêt (conteneur en cours de création) : prochain passage.
+docker exec "$conteneur" test -d /etc/crowdsec/postoverflows/s01-whitelist 2>/dev/null || exit 0
+change=0
+while read -r source cible; do
+  if ! docker exec "$conteneur" cat "$cible" 2>/dev/null | cmp -s - "{{ waf_dossier }}/$source"; then
+    docker cp "{{ waf_dossier }}/$source" "$conteneur:$cible" && change=1 && echo "Liste blanche installée : $cible"
+  fi
+done <<'LISTES'
+crowdsec-liste-blanche.yaml /etc/crowdsec/parsers/s02-enrich/homelab-liste-blanche.yaml
+crowdsec-maison.yaml /etc/crowdsec/postoverflows/s01-whitelist/homelab-maison.yaml
+LISTES
+if (( change )); then
+  docker exec "$conteneur" sh -c 'kill -HUP "$(pidof crowdsec)"' && echo "CrowdSec a relu sa configuration."
+fi

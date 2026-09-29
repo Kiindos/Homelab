@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+# Adresses jamais bannies par CrowdSec (ADR 0021) : tout le foyer sort par la même adresse, un bannissement
+# couperait toute la maison (27, 28 et 29/09). Les requêtes restent filtrées une à une (ModSecurity, AppSec :
+# réponse 403) ; seul le bannissement de l'adresse entière est évité. Liste « postoverflow » : appliquée juste avant
+# la décision, pour tous les scénarios, AppSec compris.
+name: homelab/maison
+description: "Adresse de la maison : jamais bannie"
+whitelist:
+  reason: "adresse de la maison (partagée par tout le foyer)"
+  expression:
+    - "evt.Overflow.Alert.Source.IP in {{ waf_crowdsec_adresses_maison | to_json | replace('"', "'") }}"

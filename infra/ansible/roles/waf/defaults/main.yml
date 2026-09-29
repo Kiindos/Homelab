@@ -12,6 +12,9 @@ waf_duree_bannissement: 3600
 # la limite de débit et l'authentification ; seule l'analyse comportementale de CrowdSec les ignore.
 #   - { site: photos, chemins: ["/api/assets/"] }
 waf_crowdsec_liste_blanche: []
+# Adresses jamais bannies par CrowdSec (ADR 0021) : adresse par laquelle sort toute la maison. Ses requêtes restent
+# filtrées une à une par ModSecurity et AppSec.
+waf_crowdsec_adresses_maison: []
 # Sites publiés : nom (sous-domaine public) => cible et réglages propres.
 waf_sites: {}
 #  photos:
