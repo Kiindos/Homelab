@@ -1,8 +1,6 @@
 {{ define "main" }}
-<div class="enveloppe">
-  <header class="entete-page"><p class="fil"><a href="{{ "/tags/" | relURL }}">Étiquettes</a></p><h1>#{{ .Title }}</h1></header>
-  <ul class="liste-pages">
-    {{ range .Pages }}<li><a href="{{ .RelPermalink }}">{{ .Title }}</a>{{ with .Description }}<p>{{ . }}</p>{{ end }}</li>{{ end }}
-  </ul>
-</div>
+<section class="entete-page"><div class="enveloppe"><p class="surtitre"><a href="{{ "/tags/" | relURL }}">Étiquettes</a></p><h1>#{{ .Title }}</h1></div></section>
+<section class="bloc bloc--serre"><div class="enveloppe grille grille--2">
+  {{ range .Pages }}<a class="carte carte--lien" href="{{ .RelPermalink }}"><h2>{{ .Title }}</h2><p>{{ .Description }}</p></a>{{ end }}
+</div></section>
 {{ end }}

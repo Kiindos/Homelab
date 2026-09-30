@@ -1,0 +1,8 @@
+{{- $i := . -}}
+<svg viewBox="0 0 24 24" aria-hidden="true" class="icone">
+{{- if eq $i "code" }}<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/>
+{{- else if eq $i "bouclier" }}<path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4"/>
+{{- else if eq $i "zones" }}<rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/>
+{{- else if eq $i "restauration" }}<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>
+{{- end -}}
+</svg>

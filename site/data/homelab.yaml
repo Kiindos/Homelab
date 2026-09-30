@@ -1,0 +1,60 @@
+# Contenu de la page d'accueil. Règle du dépôt public : ni adresse IP, ni VLAN, ni version, ni procédure d'accès.
+# Ton : faits vérifiables, pas de slogan ; les sorties de la console sont celles des vrais outils.
+
+accroche:
+  surtitre: Homelab · infrastructure as code
+  titre: Mon homelab, tenu comme une infrastructure de production.
+  texte: >-
+    Un Dell PowerEdge T330 héberge les photos et les fichiers de ma famille, derrière un pare-feu, un WAF et un
+    portail à double authentification. Tout est décrit en code, chaque choix structurant est écrit dans une
+    décision, et le journal garde la trace des pannes.
+
+# Barre de titre et commandes de la console (sorties réelles des outils, raccourcies).
+terminal_titre: maxime@poste-admin:~/homelab
+terminal:
+  - { commande: "tofu plan", sortie: "No changes. Your infrastructure matches the configuration.", etat: ok }
+  - { commande: "ansible-playbook plateforme.yml --limit mon01", sortie: "mon01 : ok=61  changed=0  unreachable=0  failed=0", etat: ok }
+  - { commande: "curl -sI https://noc.maximebertrand.net", sortie: "HTTP/2 302\nlocation: https://auth.maximebertrand.net/?rd=…", etat: neutre }
+  - { commande: "restic check --read-data-subset=3/7", sortie: "no errors were found", etat: ok }
+
+# « @decisions » : remplacé par le nombre de décisions publiées.
+chiffres:
+  - { valeur: "1", libelle: "serveur", detail: "hyperviseur, stockage et pare-feu à la fois" }
+  - { valeur: "9", libelle: "machines virtuelles", detail: "chacune dans sa zone réseau" }
+  - { valeur: "2", libelle: "ports ouverts", detail: "HTTPS vers le WAF, WireGuard pour l'administration" }
+  - { valeur: "@decisions", libelle: "décisions écrites", detail: "contexte, options, choix, conséquences" }
+
+parcours:
+  - { etape: "Internet", detail: "Seul HTTPS mène aux services publiés." }
+  - { etape: "Pare-feu", detail: "OPNsense ne transmet qu'au WAF et isole chaque zone." }
+  - { etape: "WAF", detail: "BunkerWeb et CrowdSec : règles OWASP, pays, débit, bannissements." }
+  - { etape: "Portail", detail: "Authelia vérifie la session et le second facteur." }
+  - { etape: "Application", detail: "Dans sa zone, sans accès au reste du réseau." }
+
+principes:
+  - titre: Tout en code
+    texte: Aucune machine, règle de pare-feu ou entrée DNS n'est créée à la main. Relancer OpenTofu ou Ansible sur un système à jour ne change rien.
+    icone: code
+  - titre: Exposer le moins possible
+    texte: Photos et fichiers passent par le WAF et le portail à double authentification. L'administration n'est joignable que par le VPN.
+    icone: bouclier
+  - titre: Cloisonner
+    texte: Tout est interdit entre les zones par défaut. Chaque flux ouvert est écrit, avec sa raison, dans la matrice des flux.
+    icone: zones
+  - titre: Pouvoir tout reconstruire
+    texte: Sauvegarde chiffrée hors site chaque nuit, relue et vérifiée ; secrets versionnés ; procédures écrites.
+    icone: restauration
+
+pile:
+  - categorie: Hyperviseur et stockage
+    outils: [Proxmox VE, ZFS RAIDZ2, sanoid, restic]
+  - categorie: Réseau et sécurité
+    outils: [OPNsense, WireGuard, BunkerWeb, CrowdSec]
+  - categorie: Identité
+    outils: [LLDAP, Authelia, OpenID Connect, WebAuthn]
+  - categorie: Code et secrets
+    outils: [OpenTofu, Ansible, Semaphore, SOPS, OpenBao]
+  - categorie: Supervision
+    outils: [Prometheus, Alertmanager, Grafana, VictoriaLogs]
+  - categorie: Publication
+    outils: [Docker Compose, Traefik, Hugo, Cloudflare Tunnel]

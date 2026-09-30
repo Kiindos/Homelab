@@ -1,53 +1,138 @@
 {{ define "main" }}
+{{ $d := hugo.Data.homelab }}
 {{ $adr := where site.RegularPages "Section" "adr" }}
 {{ $journal := where site.RegularPages "Section" "journal" }}
 
-<div class="enveloppe enveloppe--large">
-  <section class="une">
-    <div class="une__texte">
-      <h1>{{ .Title }}</h1>
-      {{ .Content }}
-      <ul class="faits">
-        <li><strong>1</strong> serveur</li>
-        <li><strong>9</strong> machines virtuelles</li>
-        <li><strong>{{ len $adr }}</strong> décisions écrites</li>
-        <li><a href="{{ site.Params.depot }}" rel="noopener">code source</a></li>
-      </ul>
+<section class="accroche">
+  <div class="enveloppe accroche__contenu">
+    <div class="accroche__texte">
+      <p class="surtitre">{{ $d.accroche.surtitre }}</p>
+      <h1>{{ $d.accroche.titre }}</h1>
+      <p class="accroche__lead">{{ $d.accroche.texte }}</p>
+      <div class="actions">
+        <a class="bouton bouton--plein" href="{{ "/architecture/" | relURL }}">Voir l'architecture</a>
+        <a class="bouton" href="{{ "/adr/" | relURL }}">Lire les {{ len $adr }} décisions</a>
+      </div>
     </div>
 
-    <figure class="planche">
-      {{ partial "schema-infra.html" . }}
-      <figcaption>Fig. 1 — Le serveur, ses zones et le chemin d'une requête. Détails dans <a href="{{ "/architecture/" | relURL }}">l'architecture</a>.</figcaption>
-    </figure>
-  </section>
+    <div class="terminal" role="img" aria-label="Console : l'infrastructure correspond au code, le NOC exige une connexion, la sauvegarde est intègre">
+      <div class="terminal__barre"><em>{{ $d.terminal_titre }}</em></div>
+      <div class="terminal__corps">
+        {{ range $i, $l := $d.terminal }}
+        <p class="terminal__ligne" style="--delai: {{ mul $i 0.6 }}s">
+          <span class="terminal__invite">$</span> <span class="terminal__commande">{{ $l.commande }}</span>
+          <span class="terminal__sortie terminal__sortie--{{ $l.etat }}">{{ $l.sortie }}</span>
+        </p>
+        {{ end }}
+        <p class="terminal__ligne" style="--delai: {{ mul (len $d.terminal) 0.6 }}s"><span class="terminal__invite">$</span> <span class="curseur" aria-hidden="true"></span></p>
+      </div>
+    </div>
+  </div>
+</section>
 
-  <div class="colonnes">
-    <section aria-labelledby="t-decisions">
-      <h2 id="t-decisions">Dernières décisions</h2>
+<section class="chiffres" aria-label="En chiffres">
+  <div class="enveloppe chiffres__grille">
+    {{ range $d.chiffres }}
+    <div class="chiffre">
+      <p class="chiffre__valeur">{{ if eq .valeur "@decisions" }}{{ len $adr }}{{ else }}{{ .valeur }}{{ end }}</p>
+      <p class="chiffre__libelle">{{ .libelle }}</p>
+      <p class="chiffre__detail">{{ .detail }}</p>
+    </div>
+    {{ end }}
+  </div>
+</section>
+
+<section class="bloc">
+  <div class="enveloppe">
+    <header class="bloc__entete">
+      <p class="surtitre">Sécurité</p>
+      <h2>Le chemin d'une requête</h2>
+      <p>Ce que traverse une requête venue d'Internet avant d'atteindre les photos ou les fichiers.</p>
+    </header>
+    <ol class="parcours">
+      {{ range $i, $e := $d.parcours }}
+      <li class="parcours__etape">
+        <span class="parcours__num">{{ add $i 1 }}</span>
+        <strong>{{ $e.etape }}</strong>
+        <span>{{ $e.detail }}</span>
+      </li>
+      {{ end }}
+    </ol>
+  </div>
+</section>
+
+<section class="bloc bloc--teinte">
+  <div class="enveloppe">
+    <header class="bloc__entete">
+      <p class="surtitre">Méthode</p>
+      <h2>Quatre règles de base</h2>
+    </header>
+    <div class="grille grille--4">
+      {{ range $d.principes }}
+      <article class="carte carte--principe">
+        <div class="carte__icone">{{ partial "icone.html" .icone }}</div>
+        <h3>{{ .titre }}</h3>
+        <p>{{ .texte }}</p>
+      </article>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<section class="bloc">
+  <div class="enveloppe">
+    <header class="bloc__entete">
+      <p class="surtitre">Outils</p>
+      <h2>La pile technique</h2>
+      <p>Des logiciels libres ; chaque choix est expliqué dans une décision d'architecture.</p>
+    </header>
+    <div class="pile">
+      {{ range $d.pile }}
+      <div class="pile__groupe">
+        <h3>{{ .categorie }}</h3>
+        <ul>{{ range .outils }}<li>{{ . }}</li>{{ end }}</ul>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+<section class="bloc bloc--teinte">
+  <div class="enveloppe deux-colonnes">
+    <div>
+      <header class="bloc__entete bloc__entete--gauche">
+        <p class="surtitre">Décisions</p>
+        <h2>Les derniers choix</h2>
+      </header>
       <ul class="liste-adr">
-        {{ range first 5 ($adr.ByTitle.Reverse) }}
+        {{ range first 6 ($adr.ByTitle.Reverse) }}
         <li>
-          <span class="liste-adr__num">{{ index (split .File.BaseFileName "-") 0 }}</span>
-          <a href="{{ .RelPermalink }}">{{ replaceRE `^ADR \d+ : ` "" .Title }}</a>
-          {{ partial "badge-statut.html" . }}
+          <a href="{{ .RelPermalink }}">
+            <span class="liste-adr__num">{{ index (split .File.BaseFileName "-") 0 }}</span>
+            <span class="liste-adr__titre">{{ replaceRE `^ADR \d+ : ` "" .Title }}</span>
+            {{ partial "badge-statut.html" . }}
+          </a>
         </li>
         {{ end }}
       </ul>
-      <a class="suite-lien" href="{{ "/adr/" | relURL }}">Toutes les décisions</a>
-    </section>
-
-    <section aria-labelledby="t-journal">
-      <h2 id="t-journal">Journal</h2>
-      <ol class="liste-journal">
+      <a class="lien-fleche" href="{{ "/adr/" | relURL }}">Toutes les décisions</a>
+    </div>
+    <div>
+      <header class="bloc__entete bloc__entete--gauche">
+        <p class="surtitre">Journal</p>
+        <h2>Au fil du projet</h2>
+      </header>
+      <ol class="frise">
         {{ range first 4 $journal.ByDate.Reverse }}
         <li>
           <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date | time.Format ":date_long" }}</time>
           <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+          <p>{{ .Description }}</p>
         </li>
         {{ end }}
       </ol>
-      <a class="suite-lien" href="{{ "/journal/" | relURL }}">Tout le journal</a>
-    </section>
+      <a class="lien-fleche" href="{{ "/journal/" | relURL }}">Tout le journal</a>
+    </div>
   </div>
-</div>
+</section>
 {{ end }}
