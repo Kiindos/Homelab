@@ -1,4 +1,7 @@
+# L'application seulement : Compose recrée déjà les conteneurs dont la définition change, et redémarrer PostgreSQL
+# sous forte charge disque l'avait fait arrêter brutalement (30/09, longue reprise au redémarrage).
 - name: Redémarrer NetBox
   community.docker.docker_compose_v2:
     project_src: "{{ netbox_dossier }}"
+    services: [netbox, netbox-worker]
     state: restarted

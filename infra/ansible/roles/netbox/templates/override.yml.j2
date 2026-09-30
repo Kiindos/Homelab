@@ -24,7 +24,10 @@ services:
   netbox:
     image: {{ netbox_image }}
     restart: unless-stopped
-    environment: *netbox-env
+    environment:
+      <<: *netbox-env
+      # 4 processus web par défaut (≈ 320 Mo chacun) : un seul suffit pour un inventaire consulté par une personne.
+      GRANIAN_WORKERS: "{{ netbox_processus_web }}"
     networks: [default, proxy]
   netbox-worker:
     image: {{ netbox_image }}
@@ -32,6 +35,9 @@ services:
     environment: *netbox-env
   postgres:
     restart: unless-stopped
+    # 10 s par défaut : sous forte charge disque, le point de contrôle d'arrêt dure plus longtemps ; tué avant la fin,
+    # PostgreSQL doit tout resynchroniser au démarrage suivant (30/09 : plusieurs minutes).
+    stop_grace_period: 2m
     environment:
       POSTGRES_PASSWORD: "{{ netbox.db_password }}"
   redis:

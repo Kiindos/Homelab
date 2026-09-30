@@ -313,7 +313,8 @@
       {%- set liste = [] -%}
       {%- for q in existant.survey_vars | default([], true) -%}
       {%- set valeurs = [] -%}
-      {%- for v in q['values'] | default([], true) -%}
+      {#- q.get : sans clé « values » (questions texte), q['values'] retombe sur la méthode dict.values. -#}
+      {%- for v in q.get('values') or [] -%}
       {%- set _ = valeurs.append({'name': v.name, 'value': v.value}) -%}
       {%- endfor -%}
       {%- set _ = liste.append({'name': q.name, 'title': q.title, 'description': q.description | default(''),

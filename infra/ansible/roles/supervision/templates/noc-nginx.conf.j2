@@ -26,6 +26,9 @@ server {
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy same-origin always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+    # Toujours revalider (réponse 304 si inchangé) : sans cela, le navigateur gardait l'ancien noc.js après une mise à
+    # jour de la page, et les nouveaux blocs restaient invisibles (30/09).
+    add_header Cache-Control "no-cache" always;
 
     # Sonde de disponibilité : seule adresse ouverte sans SSO (règle « bypass » dans Authelia).
     location = /sante {

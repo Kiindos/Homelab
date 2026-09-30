@@ -111,6 +111,13 @@ groups:
         annotations:
           resume: "{{ $labels.instance }} : mémoire saturée"
           description: "Plus de 92 % de la mémoire utilisée depuis 10 minutes."
+      # Pics trop brefs pour MemoireSaturee : le noyau tue un processus puis la mémoire redescend (WAF, 28-30/09).
+      - alert: ProcessusTuesFauteDeMemoire
+        expr: increase(node_vmstat_oom_kill[15m]) > 0
+        labels: { severite: avertissement }
+        annotations:
+          resume: "{{ $labels.instance }} : processus tué faute de mémoire"
+          description: "{{ $value | humanize }} processus tué(s) par le noyau (OOM) en 15 minutes : voir journalctl -k."
       - alert: ProcesseurSature
         expr: 1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) > 0.9
         for: 15m
