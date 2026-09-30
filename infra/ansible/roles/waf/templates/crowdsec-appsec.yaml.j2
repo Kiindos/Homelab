@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+# Acquisition AppSec de CrowdSec, reprise du fichier de BunkerWeb 1.6.15, avec la configuration du homelab en plus
+# (taille des requêtes inspectées : crowdsec-appsec-corps.yaml).
+appsec_configs:
+  - crowdsecurity/appsec-default
+  - homelab/appsec-corps
+labels:
+  type: appsec
+listen_addr: 127.0.0.1:7422
+source: appsec

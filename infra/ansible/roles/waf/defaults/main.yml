@@ -15,6 +15,9 @@ waf_crowdsec_liste_blanche: []
 # Adresses jamais bannies par CrowdSec (ADR 0021) : adresse par laquelle sort toute la maison. Ses requêtes restent
 # filtrées une à une par ModSecurity et AppSec.
 waf_crowdsec_adresses_maison: []
+# Requêtes de plus de 10 Mo vues par CrowdSec AppSec : drop (rejet sans inspection, défaut de CrowdSec), partial
+# (10 premiers Mo inspectés, le reste passe) ou allow (corps non inspecté).
+waf_crowdsec_appsec_corps: partial
 # Sites publiés : nom (sous-domaine public) => cible et réglages propres.
 waf_sites: {}
 #  photos:

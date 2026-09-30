@@ -33,14 +33,14 @@
     group: root
     mode: "u=rwX,go=rX"
 
-- name: Déposer les listes blanches CrowdSec (faux positifs des applications, adresse de la maison)
+- name: Déposer les réglages CrowdSec (listes blanches, adresse de la maison, envois de plus de 10 Mo)
   ansible.builtin.template:
     src: "{{ item }}.j2"
     dest: "{{ waf_dossier }}/{{ item }}"
     owner: root
     group: root
     mode: "0644"
-  loop: [crowdsec-liste-blanche.yaml, crowdsec-maison.yaml]
+  loop: [crowdsec-liste-blanche.yaml, crowdsec-maison.yaml, crowdsec-appsec-corps.yaml, crowdsec-appsec.yaml]
 
 - name: Déposer le fichier Compose de BunkerWeb
   ansible.builtin.template:

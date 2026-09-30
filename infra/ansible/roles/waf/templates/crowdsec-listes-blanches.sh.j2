@@ -1,6 +1,6 @@
 #!/bin/bash
 # {{ ansible_managed }}
-# Installe les listes blanches CrowdSec du homelab dans le conteneur du WAF et les y remet après chaque recréation
+# Installe les réglages CrowdSec du homelab (listes blanches, AppSec) dans le conteneur du WAF et les y remet après chaque recréation
 # (le conteneur ne conserve pas /etc/crowdsec : maintenance, mise à jour du parc) ; CrowdSec relit alors sa
 # configuration. Lancé toutes les 2 minutes (crowdsec-listes-blanches.timer) et par Ansible.
 set -uo pipefail
@@ -8,14 +8,28 @@ conteneur=waf-bunkerweb-1
 # CrowdSec pas encore prêt (conteneur en cours de création) : prochain passage.
 docker exec "$conteneur" test -d /etc/crowdsec/postoverflows/s01-whitelist 2>/dev/null || exit 0
 change=0
+remis=()
 while read -r source cible; do
   if ! docker exec "$conteneur" cat "$cible" 2>/dev/null | cmp -s - "{{ waf_dossier }}/$source"; then
-    docker cp "{{ waf_dossier }}/$source" "$conteneur:$cible" && change=1 && echo "Liste blanche installée : $cible"
+    # Copie de sauvegarde de la version en place (vide si absente), pour revenir en arrière si le test échoue.
+    docker exec "$conteneur" sh -c "cp '$cible' '$cible.avant' 2>/dev/null || : > '$cible.avant'"
+    docker cp "{{ waf_dossier }}/$source" "$conteneur:$cible" && change=1 && remis+=("$cible")       && echo "Liste blanche installée : $cible"
   fi
 done <<'LISTES'
 crowdsec-liste-blanche.yaml /etc/crowdsec/parsers/s02-enrich/homelab-liste-blanche.yaml
 crowdsec-maison.yaml /etc/crowdsec/postoverflows/s01-whitelist/homelab-maison.yaml
+crowdsec-appsec-corps.yaml /etc/crowdsec/appsec-configs/homelab-appsec-corps.yaml
+crowdsec-appsec.yaml /etc/crowdsec/acquis.d/appsec.yaml
 LISTES
 if (( change )); then
+  # Configuration testée AVANT de la faire relire : une option refusée arrête CrowdSec, et sans lui le WAF bloque
+  # toutes les requêtes (incident du 30/09, 1 h de coupure). En cas d'échec : retour aux versions précédentes.
+  if ! docker exec "$conteneur" crowdsec -c /etc/crowdsec/config.yaml -t >/dev/null 2>&1; then
+    for cible in "${remis[@]}"; do
+      docker exec "$conteneur" sh -c "if [ -s '$cible.avant' ]; then mv '$cible.avant' '$cible'; else rm -f '$cible' '$cible.avant'; fi"
+    done
+    echo "ÉCHEC du test de la configuration CrowdSec : versions précédentes remises, rien n'est relu." >&2
+    exit 1
+  fi
   docker exec "$conteneur" sh -c 'kill -HUP "$(pidof crowdsec)"' && echo "CrowdSec a relu sa configuration."
 fi

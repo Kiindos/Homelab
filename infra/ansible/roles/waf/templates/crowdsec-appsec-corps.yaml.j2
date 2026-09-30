@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+# Requêtes de plus de 10 Mo (vidéos envoyées au drive ou aux photos) : par défaut, CrowdSec AppSec les rejette sans
+# les inspecter (« drop »), ce qui bloquait tout envoi de plus de 10 Mo puis finissait en bannissement « bad
+# behavior » (29/09). « partial » : les 10 premiers Mo sont inspectés, le reste passe. Réglage par « hook »
+# (documentation CrowdSec, AppSec > Hooks), jamais dans le fichier d'acquisition (incident du 30/09).
+name: homelab/appsec-corps
+on_load:
+  - apply:
+      - SetBodySizeExceededAction("{{ waf_crowdsec_appsec_corps }}")
