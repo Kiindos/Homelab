@@ -1,37 +1,53 @@
 {{ define "main" }}
 {{ $adr := where site.RegularPages "Section" "adr" }}
-{{ $recents := where site.RegularPages "Section" "in" (slice "adr" "journal") }}
+{{ $journal := where site.RegularPages "Section" "journal" }}
 
-<div class="enveloppe">
-  <header class="entete-page">
-    <h1>{{ .Title }}</h1>
-  </header>
-  <div class="prose presentation">{{ .Content }}</div>
+<div class="enveloppe enveloppe--large">
+  <section class="une">
+    <div class="une__texte">
+      <h1>{{ .Title }}</h1>
+      {{ .Content }}
+      <ul class="faits">
+        <li><strong>1</strong> serveur</li>
+        <li><strong>9</strong> machines virtuelles</li>
+        <li><strong>{{ len $adr }}</strong> décisions écrites</li>
+        <li><a href="{{ site.Params.depot }}" rel="noopener">code source</a></li>
+      </ul>
+    </div>
 
-  <section class="partie" aria-labelledby="t-site">
-    <h2 id="t-site">Sur ce site</h2>
-    <ul class="liste-pages">
-      {{ range slice "architecture" "adr" "journal" }}
-        {{ with site.GetPage (printf "/%s" .) }}
+    <figure class="planche">
+      {{ partial "schema-infra.html" . }}
+      <figcaption>Fig. 1 — Le serveur, ses zones et le chemin d'une requête. Détails dans <a href="{{ "/architecture/" | relURL }}">l'architecture</a>.</figcaption>
+    </figure>
+  </section>
+
+  <div class="colonnes">
+    <section aria-labelledby="t-decisions">
+      <h2 id="t-decisions">Dernières décisions</h2>
+      <ul class="liste-adr">
+        {{ range first 5 ($adr.ByTitle.Reverse) }}
         <li>
-          <a href="{{ .RelPermalink }}">{{ if eq .Section "adr" }}Décisions ({{ len $adr }}){{ else }}{{ .Title }}{{ end }}</a>
-          {{ with .Description }}<p>{{ . }}</p>{{ end }}
+          <span class="liste-adr__num">{{ index (split .File.BaseFileName "-") 0 }}</span>
+          <a href="{{ .RelPermalink }}">{{ replaceRE `^ADR \d+ : ` "" .Title }}</a>
+          {{ partial "badge-statut.html" . }}
         </li>
         {{ end }}
-      {{ end }}
-    </ul>
-  </section>
+      </ul>
+      <a class="suite-lien" href="{{ "/adr/" | relURL }}">Toutes les décisions</a>
+    </section>
 
-  <section class="partie" aria-labelledby="t-recents">
-    <h2 id="t-recents">Derniers ajouts</h2>
-    <ol class="liste-journal">
-      {{ range first 8 $recents.ByDate.Reverse }}
-      <li>
-        <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date | time.Format ":date_long" }} · {{ if eq .Section "adr" }}décision {{ index (split .File.BaseFileName "-") 0 }}{{ else }}journal{{ end }}</time>
-        <a href="{{ .RelPermalink }}">{{ replaceRE `^ADR \d+ : ` "" .Title }}</a>
-      </li>
-      {{ end }}
-    </ol>
-  </section>
+    <section aria-labelledby="t-journal">
+      <h2 id="t-journal">Journal</h2>
+      <ol class="liste-journal">
+        {{ range first 4 $journal.ByDate.Reverse }}
+        <li>
+          <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date | time.Format ":date_long" }}</time>
+          <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+        </li>
+        {{ end }}
+      </ol>
+      <a class="suite-lien" href="{{ "/journal/" | relURL }}">Tout le journal</a>
+    </section>
+  </div>
 </div>
 {{ end }}
