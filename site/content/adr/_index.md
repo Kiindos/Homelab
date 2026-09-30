@@ -1,4 +1,4 @@
 ---
 title: Décisions d'architecture
-description: Chaque choix structurant est expliqué dans un ADR (Architecture Decision Record) — contexte, options, décision, conséquences. Une décision remplacée n'est jamais effacée.
+description: Un document par choix d'architecture (ADR) — contexte, options, décision, conséquences. Une décision dépassée reste en ligne, marquée « remplacé ».
 ---

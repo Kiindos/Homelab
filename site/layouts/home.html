@@ -1,78 +1,37 @@
 {{ define "main" }}
-{{ $d := hugo.Data.homelab }}
 {{ $adr := where site.RegularPages "Section" "adr" }}
-{{ $journal := where site.RegularPages "Section" "journal" }}
+{{ $recents := where site.RegularPages "Section" "in" (slice "adr" "journal") }}
 
 <div class="enveloppe">
-  <header class="presentation">
-    <h1>{{ $d.presentation.titre }}</h1>
-    {{ range $d.presentation.paragraphes }}<p>{{ . }}</p>{{ end }}
-    <p class="sommaire-accueil">
-      <a href="{{ "/architecture/" | relURL }}">L'architecture</a>
-      <a href="{{ "/adr/" | relURL }}">Les {{ len $adr }} décisions</a>
-      <a href="{{ "/journal/" | relURL }}">Le journal</a>
-      <a href="{{ site.Params.depot }}" rel="noopener">Le code</a>
-    </p>
+  <header class="entete-page">
+    <h1>{{ .Title }}</h1>
   </header>
+  <div class="prose presentation">{{ .Content }}</div>
 
-  <section class="partie" aria-labelledby="t-bref">
-    <h2 id="t-bref">En bref</h2>
-    <dl class="fiche">
-      {{ range $d.en_bref }}<dt>{{ .terme }}</dt><dd>{{ .detail }}</dd>{{ end }}
-    </dl>
-  </section>
-
-  <section class="partie" aria-labelledby="t-requete">
-    <h2 id="t-requete">Le chemin d'une requête</h2>
-    <p>{{ $d.requete.intro }}</p>
-    <ol class="chemin">
-      {{ range $d.requete.etapes }}<li><strong>{{ .nom }}</strong> {{ .detail }}</li>{{ end }}
-    </ol>
-  </section>
-
-  <section class="partie" aria-labelledby="t-principes">
-    <h2 id="t-principes">Principes</h2>
-    <ol class="principes">
-      {{ range $d.principes }}<li><strong>{{ .titre }}</strong> {{ .texte }}</li>{{ end }}
-    </ol>
-  </section>
-
-  <section class="partie" aria-labelledby="t-outils">
-    <h2 id="t-outils">Outils</h2>
-    <table class="outils">
-      <tbody>
-        {{ range $d.outils }}<tr><th scope="row">{{ .domaine }}</th><td>{{ .liste }}</td></tr>{{ end }}
-      </tbody>
-    </table>
-    <p class="note">Chaque choix est expliqué dans une <a href="{{ "/adr/" | relURL }}">décision d'architecture</a>.</p>
-  </section>
-
-  <section class="partie" aria-labelledby="t-decisions">
-    <h2 id="t-decisions">Dernières décisions</h2>
-    <ul class="liste-adr">
-      {{ range first 6 ($adr.ByTitle.Reverse) }}
-      <li>
-        <span class="liste-adr__num">{{ index (split .File.BaseFileName "-") 0 }}</span>
-        <a href="{{ .RelPermalink }}">{{ replaceRE `^ADR \d+ : ` "" .Title }}</a>
-        {{ partial "badge-statut.html" . }}
-      </li>
+  <section class="partie" aria-labelledby="t-site">
+    <h2 id="t-site">Sur ce site</h2>
+    <ul class="liste-pages">
+      {{ range slice "architecture" "adr" "journal" }}
+        {{ with site.GetPage (printf "/%s" .) }}
+        <li>
+          <a href="{{ .RelPermalink }}">{{ if eq .Section "adr" }}Décisions ({{ len $adr }}){{ else }}{{ .Title }}{{ end }}</a>
+          {{ with .Description }}<p>{{ . }}</p>{{ end }}
+        </li>
+        {{ end }}
       {{ end }}
     </ul>
-    <p class="note"><a href="{{ "/adr/" | relURL }}">Toutes les décisions</a></p>
   </section>
 
-  <section class="partie" aria-labelledby="t-journal">
-    <h2 id="t-journal">Journal</h2>
+  <section class="partie" aria-labelledby="t-recents">
+    <h2 id="t-recents">Derniers ajouts</h2>
     <ol class="liste-journal">
-      {{ range first 4 $journal.ByDate.Reverse }}
+      {{ range first 8 $recents.ByDate.Reverse }}
       <li>
-        <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date | time.Format ":date_long" }}</time>
-        <a href="{{ .RelPermalink }}">{{ .Title }}</a>
-        {{ with .Description }}<p>{{ . }}</p>{{ end }}
+        <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date | time.Format ":date_long" }} · {{ if eq .Section "adr" }}décision {{ index (split .File.BaseFileName "-") 0 }}{{ else }}journal{{ end }}</time>
+        <a href="{{ .RelPermalink }}">{{ replaceRE `^ADR \d+ : ` "" .Title }}</a>
       </li>
       {{ end }}
     </ol>
-    <p class="note"><a href="{{ "/journal/" | relURL }}">Tout le journal</a></p>
   </section>
 </div>
 {{ end }}

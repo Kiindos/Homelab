@@ -98,34 +98,9 @@ p { margin: 0 0 1em; }
 main { padding-bottom: 3rem; }
 
 /* --- Accueil ------------------------------------------------------------------------------------- */
-.presentation { padding: 3.5rem 0 1rem; }
-.presentation h1 { margin-bottom: .8em; }
-.presentation p { font-size: 1.12rem; }
-.sommaire-accueil { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; margin-top: 1.6rem; font-family: var(--sans); font-size: .95rem; }
-
-.partie { padding-top: 2.2rem; margin-top: 2.2rem; border-top: 1px solid var(--trait); }
-.partie > h2 { margin-bottom: .8rem; }
-.note { font-family: var(--sans); font-size: .92rem; color: var(--faible); margin-top: .8rem; }
-
-.fiche { display: grid; grid-template-columns: 8.5rem 1fr; margin: 0; }
-.fiche dt, .fiche dd { padding: .55rem 0; border-top: 1px solid var(--trait); margin: 0; }
-.fiche dt:first-of-type, .fiche dt:first-of-type + dd { border-top: 0; }
-.fiche dt { font-family: var(--sans); font-size: .9rem; font-weight: 600; color: var(--doux); padding-top: .72rem; }
-
-.chemin { list-style: none; counter-reset: etape; margin: 1.2rem 0 0; padding: 0; }
-.chemin li { counter-increment: etape; position: relative; padding: 0 0 1rem 2.6rem; }
-.chemin li::before { content: counter(etape); position: absolute; left: 0; top: .15rem; width: 1.6rem; height: 1.6rem; display: grid; place-items: center; font: 600 .8rem/1 var(--mono); border: 1px solid var(--trait-fort); border-radius: 50%; color: var(--doux); background: var(--fond); }
-.chemin li:not(:last-child)::after { content: ""; position: absolute; left: .8rem; top: 1.9rem; bottom: .15rem; border-left: 1px solid var(--trait-fort); }
-.chemin strong { display: block; }
-
-.principes { margin: 0; padding-left: 1.4rem; }
-.principes li { margin-bottom: .9rem; padding-left: .3rem; }
-.principes li::marker { font-family: var(--mono); font-size: .9rem; color: var(--faible); }
-
-.outils { width: 100%; border-collapse: collapse; font-size: 1rem; }
-.outils th, .outils td { text-align: left; vertical-align: top; padding: .5rem 0; border-top: 1px solid var(--trait); }
-.outils tr:first-child th, .outils tr:first-child td { border-top: 0; }
-.outils th { width: 13rem; padding-right: 1rem; font: 600 .9rem/1.6 var(--sans); color: var(--doux); }
+.presentation { font-size: 1.08rem; }
+.partie { padding-top: 1.8rem; margin-top: 2rem; border-top: 1px solid var(--trait); }
+.partie > h2 { margin-bottom: .6rem; }
 
 /* --- Listes : décisions, journal, pages ---------------------------------------------------------- */
 /* Dans les listes, les titres restent couleur du texte : une colonne de liens soulignés en couleur ferait chargé. */
@@ -221,12 +196,6 @@ main { padding-bottom: 3rem; }
 }
 @media (max-width: 600px) {
   body { font-size: 17px; }
-  .presentation { padding-top: 2.2rem; }
-  .fiche { grid-template-columns: 1fr; }
-  .fiche dt { padding-bottom: 0; }
-  .fiche dd { border-top: 0; padding-top: .1rem; }
-  .outils th { width: auto; display: block; padding-bottom: 0; }
-  .outils td { display: block; border-top: 0; padding-top: .1rem; }
   .liste-adr li { grid-template-columns: 2.6rem 1fr; }
   .liste-adr .statut { grid-column: 2; }
   .suite { flex-direction: column; }
