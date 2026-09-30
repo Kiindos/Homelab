@@ -60,6 +60,9 @@ services:
       REVERSE_PROXY_KEEPALIVE: "yes"
       # Les applications renvoient des erreurs en JSON (API, applis mobiles) : ne pas les remplacer par des pages HTML.
       REVERSE_PROXY_INTERCEPT_ERRORS: "no"
+      # $no_appsec n'est posé que dans les chemins d'envoi (site.envois) : ailleurs, sa lecture par le module CrowdSec
+      # écrivait un avertissement « uninitialized variable » à chaque requête.
+      CUSTOM_CONF_HTTP_homelab: "uninitialized_variable_warn off;"
 
       # Réglages propres à chaque site
 {% for nom, site in waf_sites.items() %}
@@ -73,13 +76,13 @@ services:
 {% set n = nb_sans_sso + loop.index %}
       # {{ chemin }} : envois de fichiers. ModSecurity et AppSec (CrowdSec) chargent tout le corps d'une requête en
       # mémoire pour l'inspecter, quelle que soit leur limite : une vidéo de 1 Go faisait tuer nginx et saturait le WAF
-      # (30/09). Sur ce seul chemin, le corps passe au fil de l'eau sans inspection ; bannissements, filtrage par pays,
-      # limite de débit et authentification de l'application restent appliqués.
+      # (30/09). Sur ce seul chemin, le corps n'est pas inspecté ; bannissements, filtrage par pays, limite de débit et
+      # authentification de l'application restent appliqués. nginx garde la mise en tampon (sur disque, pas en
+      # mémoire) : transmis au fil de l'eau, un envoi interrompu arrivait tronqué chez Immich (400, 30/09).
       {{ fqdn }}_REVERSE_PROXY_URL_{{ n }}: "{{ chemin }}"
       {{ fqdn }}_REVERSE_PROXY_HOST_{{ n }}: "{{ site.cible }}"
       {{ fqdn }}_REVERSE_PROXY_MODSECURITY_{{ n }}: "no"
       {{ fqdn }}_REVERSE_PROXY_INCLUDES_{{ n }}: "{{ waf_conf_sans_appsec }}"
-      {{ fqdn }}_REVERSE_PROXY_REQUEST_BUFFERING_{{ n }}: "no"
       {{ fqdn }}_REVERSE_PROXY_MAX_CLIENT_SIZE_{{ n }}: "{{ site.taille_max | default('10m') }}"
       {{ fqdn }}_REVERSE_PROXY_KEEPALIVE_{{ n }}: "yes"
       {{ fqdn }}_REVERSE_PROXY_INTERCEPT_ERRORS_{{ n }}: "no"
