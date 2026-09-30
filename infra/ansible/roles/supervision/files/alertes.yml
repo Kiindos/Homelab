@@ -211,7 +211,8 @@ groups:
           description: "Trivy n'arrive pas à lister les paquets de {{ $labels.image }}:{{ $labels.version }} (registre injoignable ?)."
 
   # Travaux d'import (rapatriement de données d'un nuage vers le homelab) : état et avancement publiés par la machine
-  # qui les exécute (métriques homelab_import_*).
+  # qui les exécute (métriques homelab_import_* ; état 0 jamais lancé, 1 en cours, 2 terminé, 3 échec, 4 programmé,
+  # 5 interrompu).
   - name: imports
     rules:
       - alert: ImportEchoue
@@ -220,6 +221,13 @@ groups:
         annotations:
           resume: "Import « {{ $labels.travail }} » en échec"
           description: "Le travail s'est arrêté sur une erreur ({{ with query (printf \"homelab_import_erreurs{travail='%s'}\" $labels.travail) }}{{ . | first | value }}{{ end }} erreur(s) au total) : journalctl -u import-nuage-{{ $labels.travail }}, puis le relancer (il reprend où il s'était arrêté)."
+      - alert: ImportInterrompu
+        expr: homelab_import_etat == 5
+        for: 10m
+        labels: { severite: veille }
+        annotations:
+          resume: "Import « {{ $labels.travail }} » interrompu avant la fin"
+          description: "Arrêté sans reprise prévue (arrêt manuel ?) : le relancer avec import-nuage lancer {{ $labels.travail }} (il reprend où il s'était arrêté)."
       - alert: ImportBloque
         expr: homelab_import_etat == 1 and delta(homelab_import_octets[2h]) == 0
         for: 30m

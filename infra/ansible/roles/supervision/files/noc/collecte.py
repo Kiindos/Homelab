@@ -8,7 +8,7 @@ Variables d'environnement :
   PROMETHEUS    URL de Prometheus (défaut http://prometheus:9090)
   ALERTMANAGER  URL d'Alertmanager (défaut http://alertmanager:9093)
   CONFIG        fichier JSON des libellés (défaut /etc/noc/noc.json)
-  SORTIE        fichier produit (défaut /sortie/etat.json)
+  SORTIE        fichier produit (défaut /sortie/etat.json) ; admin.json à côté, servi aux seuls administrateurs
   INTERVALLE    secondes entre deux collectes (défaut 30)
 """
 
@@ -221,6 +221,30 @@ def alertes():
     return sorted(liste, key=lambda a: (ordre.get(a["severite"], 2), a["depuis"]))
 
 
+def transferts(libelles):
+    """Travaux d'import (métriques homelab_import_*) : en cours, programmés, ou finis depuis moins d'une semaine."""
+    series = {}
+    for m, v in requete('{__name__=~"homelab_import_.*"}'):
+        series.setdefault(m.get("travail", ""), {})[m["__name__"].removeprefix("homelab_import_")] = v
+    maintenant, liste = time.time(), []
+    for travail, s in series.items():
+        etat = int(s.get("etat", 0))
+        fin = s.get("fin_timestamp")
+        if etat == 0 or (etat in (2, 3, 5) and fin and maintenant - fin > 7 * 86400):
+            continue
+        mesure = s.get("derniere_mesure_timestamp")
+        liste.append({
+            "nom": libelles.get(travail, travail), "etat": etat,
+            "octets": int(s.get("octets", 0)), "total": int(s.get("total_octets", 0)),
+            "pourcentage": s.get("pourcentage"), "debit": int(s.get("debit_octets", 0)),
+            "eta_s": int(s["eta_secondes"]) if s.get("eta_secondes", -1) >= 0 else None,
+            "erreurs": int(s.get("erreurs", 0)),
+            "depuis_mesure_s": int(maintenant - mesure) if mesure else None,
+            "depuis_fin_s": int(maintenant - fin) if fin else None,
+        })
+    return sorted(liste, key=lambda t: ({1: 0, 5: 1, 3: 2, 4: 3, 2: 4}.get(t["etat"], 5), t["nom"]))
+
+
 def historique():
     fin = int(time.time())
     debut = fin - HISTORIQUE_DUREE
@@ -251,11 +275,11 @@ def etat_global(bloc_services, bloc_alertes, bloc_stockage, bloc_sauvegarde):
 # --- Boucle --------------------------------------------------------------------------------------------
 
 
-def ecrire(donnees):
-    temporaire = SORTIE + ".tmp"
+def ecrire(donnees, chemin=SORTIE):
+    temporaire = chemin + ".tmp"
     with open(temporaire, "w", encoding="utf-8") as fichier:
         json.dump(donnees, fichier, ensure_ascii=False, separators=(",", ":"))
-    os.replace(temporaire, SORTIE)
+    os.replace(temporaire, chemin)
 
 
 def main():
@@ -285,6 +309,10 @@ def main():
                 "alertes": bloc_alertes,
                 "historique": historique_cache,
             })
+            # Réservé aux administrateurs (nginx refuse /admin.json aux autres comptes).
+            ecrire({"genere": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    "transferts": transferts(libelles.get("transferts", {}))},
+                   os.path.join(os.path.dirname(SORTIE), "admin.json"))
         except Exception as erreur:  # la page doit savoir que la collecte a échoué, pas afficher un état figé
             journal(f"collecte en échec : {erreur!r}")
             try:

@@ -186,6 +186,10 @@
            "4": {
             "text": "programmé (nuit)",
             "color": "purple"
+           },
+           "5": {
+            "text": "interrompu",
+            "color": "orange"
            }
           }
          }

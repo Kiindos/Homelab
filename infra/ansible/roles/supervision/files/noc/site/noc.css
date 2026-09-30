@@ -216,6 +216,11 @@ main { padding-block: 2.2rem 3rem; }
 .jauge[data-niveau="haut"] .jauge__barre span { background: var(--alerte); }
 .jauge[data-niveau="critique"] .jauge__barre span { background: var(--danger); }
 .jauge__valeur { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+/* Avancement d'un transfert : couleur d'accent (100 % = terminé, pas un seuil d'alerte). */
+.progression { display: flex; align-items: center; gap: .6rem; min-width: 9rem; }
+.progression__barre { flex: 1; height: 7px; border-radius: 999px; background: var(--surface-creuse); border: 1px solid var(--bordure); overflow: hidden; }
+.progression__barre span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width .6s ease; }
+.progression__valeur { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 3.2rem; text-align: right; }
 .carte__pied { display: flex; flex-wrap: wrap; gap: .4rem 1rem; margin-top: .9rem; padding-top: .8rem; border-top: 1px solid var(--bordure); font: .74rem var(--mono); color: var(--texte-faible); }
 
 /* Barre de disponibilité */

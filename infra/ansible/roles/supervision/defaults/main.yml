@@ -43,6 +43,9 @@ supervision_noc_sources: []
 # Libellés affichés par le NOC : { services: { <nom d'hôte>: { nom, description, ordre } },
 #   machines: { <machine>: { role, ordre } }, outils: { <nom d'hôte>: { nom } } }
 supervision_noc_libelles: {}
+# Groupe dont les membres voient les blocs réservés du NOC (transferts) ; libellés des travaux dans
+# supervision_noc_libelles.transferts ({ <travail>: <nom affiché> }).
+supervision_noc_groupe_admin: admins
 supervision_ntfy_url: "https://ntfy.{{ domaine_public }}"
 supervision_issuer: "https://auth.{{ domaine_public }}"
 # Autorité interne (certificats des outils qui ne passent pas par Let's Encrypt, ex. le coffre OpenBao).

@@ -7,6 +7,12 @@ map $http_remote_user $noc_utilisateur {
     default "";
 }
 
+# Groupes transmis par le WAF (valeur du navigateur toujours écrasée) : blocs réservés aux administrateurs.
+map $http_remote_groups $noc_admin {
+    "~(^|,)\s*{{ supervision_noc_groupe_admin }}\s*(,|$)" "true";
+    default "false";
+}
+
 server {
     listen 8080;
     server_name _;
@@ -43,7 +49,16 @@ server {
     location = /moi.json {
         default_type application/json;
         expires -1;
-        return 200 '{"utilisateur":"$noc_utilisateur"}';
+        return 200 '{"utilisateur":"$noc_utilisateur","admin":$noc_admin}';
+    }
+
+    # Données réservées aux administrateurs (transferts en cours…) : refusées à tout autre compte.
+    location = /admin.json {
+        if ($noc_admin != "true") {
+            return 403;
+        }
+        alias /donnees/admin.json;
+        expires -1;
     }
 
     location / {

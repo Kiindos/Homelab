@@ -265,6 +265,53 @@ function rendreVms(vms) {
       el("tbody", {}, lignes))));
 }
 
+const ETATS_TRANSFERT = { 1: [true, "en cours"], 2: [true, "terminé"], 3: [false, "en échec"], 4: ["avert", "programmé (nuit)"],
+  5: ["avert", "interrompu"] };
+
+function rendreTransferts(liste) {
+  if (!liste.length) {
+    remplacer("transferts", el("div", { classe: "panneau" }, el("p", { classe: "discret", texte: "Aucun transfert en cours ni récent." })));
+    return;
+  }
+  const lignes = liste.map((t) => {
+    const [ok, libelle] = ETATS_TRANSFERT[t.etat] ?? ["avert", "inconnu"];
+    const part = t.total > 0 ? t.octets / t.total : 0;
+    const barre = el("span");
+    barre.style.width = `${Math.min(part, 1) * 100}%`;
+    const fin = t.etat === 1 ? (t.eta_s === null ? "–" : `dans ${duree(t.eta_s)}`)
+      : t.depuis_fin_s !== null ? `il y a ${duree(t.depuis_fin_s)}` : "–";
+    return el("tr", {},
+      el("td", {}, el("strong", { texte: t.nom })),
+      el("td", {}, statut(ok, libelle, libelle)),
+      el("td", {}, el("div", { classe: "progression" },
+        el("span", { classe: "progression__barre", role: "progressbar", "aria-valuemin": 0, "aria-valuemax": 100,
+          "aria-valuenow": Math.round(part * 100), "aria-label": t.nom }, barre),
+        el("span", { classe: "progression__valeur", texte: pourcent(part) }))),
+      el("td", { classe: "nombre", texte: t.total > 0 ? `${octets(t.octets)} / ${octets(t.total)}` : "–" }),
+      el("td", { classe: "nombre", texte: t.etat === 1 ? `${octets(t.debit)}/s` : "–" }),
+      el("td", { classe: "nombre", texte: fin }),
+      el("td", { classe: "nombre", texte: String(t.erreurs) }));
+  });
+  remplacer("transferts", el("div", { classe: "panneau" },
+    el("table", {},
+      el("thead", {}, el("tr", {},
+        el("th", { texte: "Travail" }), el("th", { texte: "État" }), el("th", { texte: "Avancement" }),
+        el("th", { classe: "nombre", texte: "Copié" }), el("th", { classe: "nombre", texte: "Débit" }),
+        el("th", { classe: "nombre", texte: "Fin" }), el("th", { classe: "nombre", texte: "Erreurs" }))),
+      el("tbody", {}, lignes))));
+}
+
+let prochainChargementAdmin;
+
+async function chargerAdmin() {
+  clearTimeout(prochainChargementAdmin);
+  try {
+    const reponse = await fetch("/admin.json", { cache: "no-store", credentials: "same-origin", redirect: "manual" });
+    if (reponse.ok) rendreTransferts((await reponse.json()).transferts ?? []);
+  } catch { /* bloc facultatif : l'état général reste affiché */ }
+  prochainChargementAdmin = setTimeout(chargerAdmin, 60 * 1000);
+}
+
 function rendreOutils(outils) {
   remplacer("outils", outils.map((o) => el("span", { classe: "puce" }, pastille(o.ok), o.nom)));
 }
@@ -332,6 +379,11 @@ async function afficherUtilisateur() {
       const noeud = document.getElementById("utilisateur");
       noeud.textContent = moi.utilisateur;
       noeud.hidden = false;
+    }
+    // Blocs réservés : le serveur refuse de toute façon /admin.json aux autres comptes.
+    if (moi.admin === true) {
+      document.getElementById("bloc-transferts").hidden = false;
+      chargerAdmin();
     }
   } catch { /* information de confort uniquement */ }
 }
