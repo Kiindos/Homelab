@@ -1,55 +1,63 @@
 # Contenu de la page d'accueil. Règle du dépôt public : ni adresse IP, ni VLAN, ni version, ni procédure d'accès.
+# Ton : première personne, faits vérifiables, pas de slogan.
 
-accroche:
-  surtitre: Homelab · Infrastructure as Code
-  titre: Une infrastructure personnelle, gérée comme en production.
-  texte: >-
-    Un serveur, un pare-feu, des zones réseau étanches et des services utilisés tous les jours par ma famille.
-    Tout est décrit en code, relu avant d'être appliqué, et documenté — y compris les erreurs.
+presentation:
+  titre: Le homelab de Maxime Bertrand
+  paragraphes:
+    - >-
+      Je suis administrateur systèmes et réseaux. À la maison, un Dell PowerEdge T330 héberge les photos et les
+      fichiers de ma famille, avec ce qu'il faut autour : pare-feu, annuaire, supervision et sauvegardes.
+    - >-
+      Je le tiens comme un système en production. Les machines, le pare-feu et le DNS sont décrits en code, chaque
+      choix structurant fait l'objet d'une décision écrite, et le journal garde la trace de ce qui a cassé. Ce site
+      est généré à partir de cette documentation, et servi par le homelab lui-même.
 
-terminal:
-  - { invite: "$", commande: "tofu plan", sortie: "No changes. Your infrastructure matches the configuration.", etat: ok }
-  - { invite: "$", commande: "ansible-playbook plateforme.yml", sortie: "changed=0  failed=0", etat: ok }
-  - { invite: "$", commande: "curl -I https://photos.…", sortie: "WAF → SSO → application · TLS vérifié", etat: ok }
-  - { invite: "$", commande: "netbox-synchro --simulation", sortie: "0 créé(s), 0 modifié(s)", etat: ok }
+en_bref:
+  - terme: Matériel
+    detail: Un seul serveur, Dell PowerEdge T330. Stockage ZFS en RAIDZ2 (deux disques peuvent lâcher sans perte).
+  - terme: Réseau
+    detail: OPNsense virtualisé. Sept zones, tout est interdit entre elles par défaut. Administration par VPN uniquement.
+  - terme: Services
+    detail: Photos (Immich), fichiers (Nextcloud), connexion unique avec double authentification (Authelia, LLDAP).
+  - terme: Code
+    detail: OpenTofu pour les machines, le pare-feu et le DNS ; Ansible pour la configuration ; secrets chiffrés (SOPS, OpenBao).
+  - terme: Sauvegardes
+    detail: Instantanés ZFS sur place, copie chiffrée hors site, dont une partie est relue et vérifiée chaque jour.
+  - terme: Supervision
+    detail: Prometheus et Alertmanager, journaux centralisés, alertes sur téléphone et veille des failles de sécurité.
 
-chiffres:
-  - { valeur: "1", libelle: "serveur", detail: "hyperviseur, stockage et pare-feu" }
-  - { valeur: "7", libelle: "zones réseau", detail: "tout est interdit entre elles par défaut" }
-  - { valeur: "100 %", libelle: "en code", detail: "machines, pare-feu, DNS, services" }
-  - { valeur: "2FA", libelle: "partout où c'est possible", detail: "portail d'authentification unique" }
-
-parcours:
-  - { etape: "Internet", detail: "Un seul port entrant, aucune autre porte ouverte." }
-  - { etape: "Pare-feu", detail: "Redirige uniquement vers le WAF, isole chaque zone." }
-  - { etape: "WAF", detail: "Règles OWASP, filtrage par pays, limitation de débit." }
-  - { etape: "SSO", detail: "Annuaire unique, double authentification." }
-  - { etape: "Application", detail: "Dans sa propre zone, sans accès au reste." }
+requete:
+  intro: Ce que traverse une requête venue d'Internet vers les photos ou les fichiers.
+  etapes:
+    - { nom: Internet, detail: "Un seul port entrant, rien d'autre n'est ouvert." }
+    - { nom: Pare-feu, detail: "OPNsense ne transmet qu'au WAF, et isole chaque zone de ses voisines." }
+    - { nom: WAF, detail: "BunkerWeb et CrowdSec : règles OWASP, filtrage par pays, limite de débit, bannissements." }
+    - { nom: Portail, detail: "Authelia vérifie la session et le second facteur ; l'annuaire décide des droits." }
+    - { nom: Application, detail: "Dans sa propre zone, sans accès au reste du réseau." }
 
 principes:
-  - titre: Tout en code
-    texte: Aucune machine ni règle créée à la main. OpenTofu décrit l'infrastructure, Ansible la configure ; un second passage ne doit rien changer.
-    icone: code
-  - titre: Exposition minimale
-    texte: Ce qui est public passe par un pare-feu, un WAF et un portail d'authentification. L'administration n'est joignable que par VPN.
-    icone: bouclier
-  - titre: Zones étanches
-    texte: Chaque service vit dans sa zone. Une compromission reste confinée ; chaque flux autorisé est justifié dans une matrice.
-    icone: zones
-  - titre: Tout se restaure
-    texte: Instantanés automatiques, secrets chiffrés et versionnés, procédures écrites — pour ne dépendre ni de la mémoire, ni d'une seule personne.
-    icone: restauration
+  - titre: Tout en code.
+    texte: >-
+      Aucune machine, règle de pare-feu ou entrée DNS n'est créée à la main. Relancer OpenTofu ou Ansible sur un
+      système à jour ne doit rien changer.
+  - titre: Exposer le moins possible.
+    texte: >-
+      Seuls les services de la famille sont publiés, derrière le WAF et le portail. Les outils d'administration ne
+      sont joignables que par le VPN.
+  - titre: Cloisonner.
+    texte: >-
+      Chaque service vit dans sa zone. Un flux entre deux zones n'existe que s'il est écrit, avec sa raison, dans
+      la matrice des flux.
+  - titre: Pouvoir tout reconstruire.
+    texte: >-
+      Sauvegardes hors site, secrets versionnés, procédures écrites : la remise en route ne dépend ni de ma
+      mémoire, ni de ma présence.
 
-pile:
-  - categorie: Hyperviseur & stockage
-    outils: [Proxmox VE, ZFS RAIDZ2, virtiofs, sanoid]
-  - categorie: Réseau & sécurité
-    outils: [OPNsense, WireGuard, BunkerWeb, CrowdSec, DNSSEC]
-  - categorie: Identité
-    outils: [LLDAP, Authelia, OpenID Connect, WebAuthn]
-  - categorie: Infrastructure as Code
-    outils: [OpenTofu, Ansible, SOPS + age, GitHub Actions]
-  - categorie: Services
-    outils: [Docker Compose, Traefik, Let's Encrypt, NetBox]
-  - categorie: Publication
-    outils: [Cloudflare DNS, Cloudflare Tunnel, Hugo]
+outils:
+  - { domaine: Hyperviseur et stockage, liste: "Proxmox VE, ZFS, sanoid, virtiofs" }
+  - { domaine: Réseau et sécurité, liste: "OPNsense, WireGuard, BunkerWeb, CrowdSec" }
+  - { domaine: Identité, liste: "LLDAP, Authelia, OpenID Connect, WebAuthn" }
+  - { domaine: Code et secrets, liste: "OpenTofu, Ansible, Semaphore, SOPS, OpenBao" }
+  - { domaine: Services, liste: "Docker Compose, Traefik, Let's Encrypt, NetBox" }
+  - { domaine: Supervision, liste: "Prometheus, Alertmanager, Grafana, VictoriaLogs" }
+  - { domaine: Publication, liste: "Hugo, GitHub Actions, Cloudflare Tunnel" }

@@ -1,13 +1,6 @@
 <footer class="pied">
-  <div class="enveloppe pied__grille">
-    <div>
-      <p class="pied__nom">{{ site.Params.auteur }}</p>
-      <p class="pied__metier">{{ site.Params.metier }}</p>
-    </div>
-    <p class="pied__note">
-      Site généré par Hugo à partir de la documentation du dépôt, servi par le homelab lui-même via un tunnel sortant.
-      Aucun cookie, aucun traceur.
-    </p>
-    <p class="pied__liens"><a href="{{ site.Params.depot }}" rel="noopener">Code source</a> · <a href="{{ "/adr/" | relURL }}">Décisions</a> · <a href="{{ "/journal/" | relURL }}">Journal</a> · <a href="{{ "/mentions-legales/" | relURL }}">Mentions légales</a> · <a href="{{ "/confidentialite/" | relURL }}">Confidentialité</a></p>
+  <div class="enveloppe enveloppe--large">
+    <p>{{ site.Params.auteur }} · {{ site.Params.metier }}. Site généré par Hugo à partir de la documentation du dépôt, servi par le homelab via un tunnel sortant. Aucun cookie, aucun traceur.</p>
+    <p><a href="{{ site.Params.depot }}" rel="noopener">Code source</a> · <a href="{{ "/mentions-legales/" | relURL }}">Mentions légales</a> · <a href="{{ "/confidentialite/" | relURL }}">Confidentialité</a></p>
   </div>
 </footer>
