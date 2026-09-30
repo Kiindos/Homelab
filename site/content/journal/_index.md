@@ -1,4 +1,4 @@
 ---
 title: Journal
-description: L'avancement du projet, une entrée par étape.
+description: Le carnet de bord du projet, étape par étape, avec les erreurs et ce qu'elles ont appris.
 ---

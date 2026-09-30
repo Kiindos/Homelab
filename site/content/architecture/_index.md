@@ -1,4 +1,4 @@
 ---
 title: Architecture
-description: Les machines, le découpage réseau et ce qui est exposé sur Internet.
+description: Comment le homelab est construit, et pourquoi il est découpé ainsi.
 ---

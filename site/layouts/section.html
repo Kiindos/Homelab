@@ -11,7 +11,7 @@
     {{ if eq .Section "journal" }}
       <ol class="frise frise--large">
         {{ range .RegularPages.ByDate.Reverse }}
-        <li >
+        <li class="revele">
           <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date | time.Format ":date_long" }}</time>
           <a href="{{ .RelPermalink }}">{{ .Title }}</a>
           <p>{{ .Description }}</p>
@@ -28,7 +28,7 @@
       </div>
       <div class="grille grille--2 cartes-adr">
         {{ range $pages }}
-        <a class="carte carte--adr" href="{{ .RelPermalink }}" data-statut="{{ .Params.status | lower | replaceRE "[éèê]" "e" }}">
+        <a class="carte carte--adr revele" href="{{ .RelPermalink }}" data-statut="{{ .Params.status | lower | replaceRE "[éèê]" "e" }}">
           <div class="carte--adr__haut">
             <span class="liste-adr__num">ADR {{ index (split .File.BaseFileName "-") 0 }}</span>
             {{ partial "badge-statut.html" . }}
@@ -40,15 +40,9 @@
         {{ end }}
       </div>
     {{ else }}
-      {{ if eq .Section "architecture" }}
-      <figure class="planche">
-        {{ partial "schema-infra.html" . }}
-        <figcaption>Fig. 1 — Le serveur, ses zones et le chemin d'une requête (simplifié).</figcaption>
-      </figure>
-      {{ end }}
       <div class="grille grille--2">
         {{ range .RegularPages }}
-        <a class="carte carte--lien" href="{{ .RelPermalink }}">
+        <a class="carte carte--lien revele" href="{{ .RelPermalink }}">
           <h2>{{ .Title }}</h2>
           <p>{{ .Description }}</p>
           <span class="lien-fleche">Lire</span>

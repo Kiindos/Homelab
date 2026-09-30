@@ -1,4 +1,4 @@
-// Homelab — comportements du site : thème (sombre par défaut), filtres des ADR, sommaire actif,
+// Homelab — comportements du site : thème, animations d'apparition, filtres des ADR, sommaire actif,
 // copie des blocs de code, schémas Mermaid. Aucun traceur, aucune dépendance (hors Mermaid, chargé à la demande).
 (() => {
   const racine = document.documentElement;
@@ -10,8 +10,10 @@
   const memorise = lire();
   if (memorise === "clair" || memorise === "sombre") racine.dataset.theme = memorise;
 
-  // Sombre par défaut, quel que soit le réglage du système : le clair ne vient que du bouton.
-  const themeEffectif = () => (racine.dataset.theme === "clair" ? "clair" : "sombre");
+  const themeEffectif = () => {
+    if (racine.dataset.theme === "clair" || racine.dataset.theme === "sombre") return racine.dataset.theme;
+    return matchMedia("(prefers-color-scheme: light)").matches ? "clair" : "sombre";
+  };
 
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelector(".bascule-theme")?.addEventListener("click", () => {
@@ -20,6 +22,17 @@
       ecrire(suivant);
       if (window.mermaid) location.reload(); // les schémas sont dessinés pour un thème donné
     });
+
+    // Apparition au défilement
+    const elements = document.querySelectorAll(".revele");
+    if ("IntersectionObserver" in window) {
+      const obs = new IntersectionObserver((entrees) => {
+        entrees.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("visible"); obs.unobserve(e.target); } });
+      }, { rootMargin: "0px 0px -8% 0px" });
+      elements.forEach((el) => obs.observe(el));
+    } else {
+      elements.forEach((el) => el.classList.add("visible"));
+    }
 
     // Filtres des décisions par statut
     const filtres = document.querySelectorAll(".filtre");
