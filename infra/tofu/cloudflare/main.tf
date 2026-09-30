@@ -89,3 +89,18 @@ output "tunnel_token" {
   value       = data.cloudflare_zero_trust_tunnel_cloudflared_token.vitrine.token
   sensitive   = true
 }
+
+# --- Envoi des e-mails du homelab (relais transactionnel, sous-domaine dédié) ---------------------
+
+resource "cloudflare_dns_record" "messagerie" {
+  for_each = var.enregistrements_messagerie
+
+  zone_id  = var.vitrine_zone_id
+  name     = each.value.nom
+  type     = each.value.type
+  content  = each.value.contenu
+  priority = each.value.type == "MX" ? each.value.priorite : null
+  proxied  = false
+  ttl      = 3600
+  comment  = "Envoi des e-mails du homelab (${each.key}) - géré par OpenTofu"
+}

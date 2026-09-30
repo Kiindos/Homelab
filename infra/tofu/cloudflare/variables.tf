@@ -61,3 +61,22 @@ variable "services_publics" {
   type        = list(string)
   default     = []
 }
+
+variable "enregistrements_messagerie" {
+  description = <<-EOT
+    Enregistrements d'envoi des e-mails du homelab (relais transactionnel) : SPF, DKIM, DMARC, MX de retour, tels que
+    le relais les indique. Clé = libellé libre ; nom = nom complet ; priorite pour les MX seulement.
+  EOT
+  type = map(object({
+    type     = string
+    nom      = string
+    contenu  = string
+    priorite = optional(number)
+  }))
+  default = {}
+
+  validation {
+    condition     = alltrue([for e in values(var.enregistrements_messagerie) : contains(["TXT", "MX", "CNAME"], e.type)])
+    error_message = "Types acceptés pour la messagerie : TXT, MX, CNAME."
+  }
+}
