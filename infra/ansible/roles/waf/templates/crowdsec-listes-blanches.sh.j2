@@ -6,7 +6,8 @@
 set -uo pipefail
 conteneur=waf-bunkerweb-1
 # CrowdSec pas encore prêt (conteneur en cours de création) : prochain passage.
-docker exec "$conteneur" test -d /etc/crowdsec/postoverflows/s01-whitelist 2>/dev/null || exit 0
+docker exec "$conteneur" sh -c 'test -d /etc/crowdsec/postoverflows/s01-whitelist && test -d /etc/crowdsec/appsec-configs' \
+  2>/dev/null || exit 0
 change=0
 remis=()
 while read -r source cible; do

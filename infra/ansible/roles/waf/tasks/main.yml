@@ -42,6 +42,35 @@
     mode: "0644"
   loop: [crowdsec-liste-blanche.yaml, crowdsec-maison.yaml, crowdsec-appsec-corps.yaml, crowdsec-appsec.yaml]
 
+- name: Vérifier que les chemins d'envoi ne concernent que des sites sans SSO
+  ansible.builtin.assert:
+    that: item.value.envois is not defined or item.value.sso is not defined
+    fail_msg: "{{ item.key }} : les chemins d'envoi (envois) contourneraient la barrière SSO"
+    quiet: true
+  loop: "{{ waf_sites | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Créer le dossier des inclusions nginx
+  ansible.builtin.file:
+    path: "{{ waf_dossier }}/nginx"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Déposer l'inclusion des emplacements d'envoi (pas d'AppSec)
+  ansible.builtin.copy:
+    dest: "{{ waf_dossier }}/nginx/{{ waf_conf_sans_appsec | basename }}"
+    content: |
+      # Géré par Ansible (rôle waf).
+      # Inclus dans les emplacements d'envoi de fichiers : le module CrowdSec de BunkerWeb (bouncer.lua) n'appelle pas
+      # AppSec quand $no_appsec vaut 1 ; sinon il chargerait tout le corps de la requête en mémoire pour le transmettre.
+      set $no_appsec 1;
+    owner: root
+    group: root
+    mode: "0644"
+
 - name: Déposer le fichier Compose de BunkerWeb
   ansible.builtin.template:
     src: compose.yaml.j2
@@ -112,7 +141,9 @@
     daemon_reload: "{{ waf_listes_unites is changed }}"
 
 - name: Attendre que CrowdSec ait installé ses composants
-  ansible.builtin.command: docker exec waf-bunkerweb-1 test -d /etc/crowdsec/postoverflows/s01-whitelist
+  ansible.builtin.command: >-
+    docker exec waf-bunkerweb-1 sh -c
+    'test -d /etc/crowdsec/postoverflows/s01-whitelist && test -d /etc/crowdsec/appsec-configs'
   register: waf_crowdsec_pret
   until: waf_crowdsec_pret.rc == 0
   retries: 30

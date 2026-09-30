@@ -18,11 +18,15 @@ waf_crowdsec_adresses_maison: []
 # Requêtes de plus de 10 Mo vues par CrowdSec AppSec : drop (rejet sans inspection, défaut de CrowdSec), partial
 # (10 premiers Mo inspectés, le reste passe) ou allow (corps non inspecté).
 waf_crowdsec_appsec_corps: partial
+# Fichier inclus dans les emplacements d'envoi (site.envois) : le module CrowdSec de BunkerWeb n'y appelle pas AppSec.
+waf_conf_sans_appsec: /etc/homelab-waf/sans-appsec.conf
 # Sites publiés : nom (sous-domaine public) => cible et réglages propres.
 waf_sites: {}
 #  photos:
 #    cible: http://apps01.example:2283
 #    taille_max: 50G
+#    envois: ["= /api/assets"]            # chemins réservés aux envois de fichiers : corps transmis sans ModSecurity
+#                                         # ni AppSec (qui le chargeraient en mémoire) ; sites sans SSO uniquement
 #    websocket: true
 #    greffons_crs: ""
 #    methodes: "GET|POST|HEAD"            # méthodes HTTP autorisées (BunkerWeb : GET|POST|HEAD par défaut)
