@@ -2,16 +2,29 @@
 # {{ ansible_managed }}
 # Sauvegarde hors site : exports des VM, instantanés ZFS des données, configuration de l'hyperviseur -> restic.
 # Journal : journalctl -u sauvegarde-homelab ; état : {{ sauvegarde_textfile }}/sauvegarde.prom
+#
+#   sauvegarde-homelab                   sauvegarde de la nuit (minuterie), vérification d'un septième du dépôt
+#   sauvegarde-homelab controle-rapide   contrôle à la demande : structure du dépôt + 5 % des données relues
+#   sauvegarde-homelab controle-complet  contrôle à la demande : tout le dépôt relu, exports de VM comparés
+#                                        (après un incident ou une maintenance chez l'hébergeur ; Semaphore)
 set -euo pipefail
 
+MODE="${1:-sauvegarder}"
+case "$MODE" in sauvegarder|controle-rapide|controle-complet) ;; *) echo "Mode inconnu : $MODE" >&2; exit 2 ;; esac
+
+# Une seule opération à la fois sur le dépôt ; la suivante attend son tour (6 h au plus) au lieu d'être sautée.
 exec 9>/run/sauvegarde-homelab.lock
-flock -n 9 || { echo "Une sauvegarde est déjà en cours."; exit 0; }
+flock -w 21600 9 || { echo "Le dépôt est occupé depuis plus de 6 h : abandon."; exit 1; }
 
 export RESTIC_REPOSITORY='{{ sauvegarde_depot }}'
 export RESTIC_PASSWORD_FILE=/root/.config/restic/homelab
 export RESTIC_CACHE_DIR=/var/cache/restic
 # Mémoire limitée sur l'hyperviseur : ramasse-miettes de Go plus fréquent.
 export GOGC=40
+# Verrous laissés par un passage interrompu (coupure chez l'hébergeur, 01/10) : sans eux, le contrôle et la rétention
+# échouent. « unlock » ne retire que les verrous de processus disparus ; le verrou ci-dessus garantit qu'aucune autre
+# opération du homelab n'est en cours.
+restic unlock 2>&1 | grep -v '^$' || true
 
 LOCAL='/{{ sauvegarde_dataset_local }}'
 METRIQUES='{{ sauvegarde_textfile }}/sauvegarde.prom'
@@ -23,6 +36,55 @@ VERIF=-1
 VERIF_FICHIERS=0
 VERIF_OCTETS=0
 VERIF_ECARTS=0
+
+# --- Contrôle à la demande (sans nouvelle sauvegarde) ---------------------------------------------------------
+# Métriques à part (homelab_sauvegarde_controle_*) : celles de la sauvegarde de la nuit restent intactes.
+if [ "$MODE" != sauvegarder ]; then
+    CONTROLE_METRIQUES='{{ sauvegarde_textfile }}/sauvegarde-controle.prom'
+    CONTROLE=0
+    fin_controle() {
+        local statut=$? reussite
+        reussite=$(sed -n 's/^homelab_sauvegarde_controle_derniere_reussite_timestamp \([0-9]*\)$/\1/p' \
+            "$CONTROLE_METRIQUES" 2>/dev/null || true)
+        if [ "$CONTROLE" -eq 1 ]; then reussite=$(date +%s); fi
+        {
+            echo "# HELP homelab_sauvegarde_controle_statut 1 : dernier contrôle à la demande conforme ; 0 : écart ou échec."
+            echo "homelab_sauvegarde_controle_statut $CONTROLE"
+            echo "homelab_sauvegarde_controle_complet $([ "$MODE" = controle-complet ] && echo 1 || echo 0)"
+            echo "homelab_sauvegarde_controle_derniere_execution_timestamp $(date +%s)"
+            echo "homelab_sauvegarde_controle_duree_secondes $(( $(date +%s) - DEBUT ))"
+            if [ -n "$reussite" ]; then echo "homelab_sauvegarde_controle_derniere_reussite_timestamp $reussite"; fi
+        } > "${CONTROLE_METRIQUES}.tmp"
+        mv "${CONTROLE_METRIQUES}.tmp" "$CONTROLE_METRIQUES"
+        exit "$statut"
+    }
+    trap fin_controle EXIT
+    ECARTS=0
+    if [ "$MODE" = controle-complet ]; then
+        # Exports de VM : gardés sur place depuis la dernière sauvegarde, comparés entièrement à leur copie dans le
+        # dernier instantané (un export plus récent que l'instantané, sauvegarde ratée, est signalé à part).
+        INSTANTANE=$(restic snapshots --tag homelab --json | python3 -c \
+            'import json,sys; s=json.load(sys.stdin); print(max(s, key=lambda x: x["time"])["id"] if s else "")')
+        [ -n "$INSTANTANE" ] || { echo "Aucun instantané dans le dépôt."; exit 1; }
+        echo "== Exports de VM comparés au dernier instantané (${INSTANTANE:0:8})"
+{% if sauvegarde_vm %}
+        while IFS= read -r -d '' export_vm; do
+            source=$(sha256sum "$export_vm" | cut -d' ' -f1)
+            relu=$(restic dump --quiet "$INSTANTANE" "$export_vm" | sha256sum | cut -d' ' -f1) || relu="relecture-impossible"
+            if [ "$source" = "$relu" ]; then echo "conforme : $(basename "$export_vm")"
+            else echo "ÉCART : $(basename "$export_vm") (source ${source:0:16}…, relu ${relu:0:16}…)"; ECARTS=$((ECARTS + 1)); fi
+        done < <(find "$LOCAL/vzdump" -maxdepth 1 -type f -name 'vzdump-qemu-*' ! -name '*.log' ! -name '*.notes' -print0)
+{% endif %}
+        echo "== Relecture de tout le dépôt (restic check --read-data)"
+        restic check --read-data || ECARTS=$((ECARTS + 1))
+    else
+        echo "== Structure du dépôt et relecture de 5 % des données (restic check --read-data-subset=5%)"
+        restic check --read-data-subset=5% || ECARTS=$((ECARTS + 1))
+    fi
+    if [ "$ECARTS" -eq 0 ]; then CONTROLE=1; echo "Contrôle « $MODE » conforme."; exit 0; fi
+    echo "Contrôle « $MODE » en échec ($ECARTS problème(s)) : voir ci-dessus."
+    exit 1
+fi
 
 # Instantanés créés par ce script seulement (nom fixe « sauvegarde »), supprimés à la fin de chaque passage.
 nettoyer() {

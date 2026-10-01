@@ -1,0 +1,42 @@
+# Contrôle à la demande de la sauvegarde hors site (sans nouvelle sauvegarde), par exemple après une maintenance ou
+# un incident chez l'hébergeur. Lancé depuis Semaphore (modèle « Vérifier la sauvegarde ») ou :
+#   scripts/ansible.sh verifier-sauvegarde.yml -e mode=complet
+#   mode=rapide  : structure du dépôt + 5 % des données relues (quelques minutes)
+#   mode=complet : tout le dépôt relu et chaque export de VM comparé à sa copie (une à deux heures)
+# Résultat : tâche verte ou rouge ici, métriques homelab_sauvegarde_controle_* (Grafana), journal de l'hyperviseur
+# (journalctl -t sauvegarde-controle).
+- name: Contrôler la sauvegarde hors site
+  hosts: hyperviseurs
+  gather_facts: false
+  vars:
+    mode: rapide
+  tasks:
+    - name: Vérifier le mode demandé
+      ansible.builtin.assert:
+        that: mode in ['rapide', 'complet']
+        fail_msg: "mode : rapide ou complet (reçu : {{ mode }})"
+        quiet: true
+
+    # En tâche de fond surveillée : un contrôle complet dure trop longtemps pour une seule connexion SSH. Il attend
+    # son tour si la sauvegarde de la nuit tourne (verrou commun).
+    - name: Lancer le contrôle {{ mode }}
+      ansible.builtin.shell: |
+        set -o pipefail
+        /usr/local/sbin/sauvegarde-homelab controle-{{ mode }} 2>&1 | tee >(systemd-cat -t sauvegarde-controle)
+      args:
+        executable: /bin/bash
+      async: 21600
+      poll: 60
+      register: sauvegarde_controle
+      changed_when: false
+      failed_when: false
+
+    - name: Afficher le compte rendu
+      ansible.builtin.debug:
+        msg: "{{ (sauvegarde_controle.stdout_lines | default([]))[-25:] }}"
+
+    - name: Résultat
+      ansible.builtin.assert:
+        that: sauvegarde_controle.rc | default(1) == 0
+        success_msg: "Contrôle {{ mode }} conforme."
+        fail_msg: "Contrôle {{ mode }} en échec : voir le compte rendu ci-dessus (journal complet sur l'hyperviseur)."
