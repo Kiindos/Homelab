@@ -45,7 +45,7 @@ Créer les comptes demandait en outre l'interface de LLDAP ou un script sur le p
 - Aucun mot de passe n'est jamais connu de l'administrateur ni transmis.
 - La page détient le secret d'administration de l'annuaire (déjà présent sur la machine d'identité) : sa surface est
   réduite au strict nécessaire (création, groupes non administrateurs, envoi de lien) ; suppression et droits
-  d'administration restent dans l'interface de LLDAP. Choix validés le 28/09/2026.
+  d'administration restent dans l'interface de LLDAP.
 - Chaque action est journalisée avec l'identifiant de l'administrateur.
 - La sécurité du parcours repose sur la boîte e-mail de la personne : un lien court, à usage unique et révocable
   depuis le message limite le risque.

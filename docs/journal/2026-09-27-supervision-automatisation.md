@@ -65,8 +65,8 @@ La supervision vit dans le homelab : si le courant, la box ou l'hyperviseur tomb
 **sonde externe** (UptimeRobot, offre gratuite) vérifie désormais toutes les 5 minutes la vitrine (via Cloudflare)
 et l'accès direct au pare-feu applicatif. Le WAF n'acceptant que la France, la seconde sonde reste au niveau TCP
 plutôt que d'assouplir le filtrage. Les moniteurs sont décrits dans un fichier et appliqués par un script
-idempotent, comme le reste. Les alertes critiques internes peuvent aussi partir par **SMS**, via l'option gratuite
-de l'opérateur mobile qui n'écrit qu'au titulaire de la ligne : aucun numéro à stocker.
+idempotent, comme le reste. Un relais **SMS** pour les alertes critiques est écrit (option gratuite de l'opérateur
+mobile, qui n'écrit qu'au titulaire de la ligne : aucun numéro à stocker), mais pas encore activé.
 
 Le site a enfin ses pages **mentions légales** et **confidentialité**, écrites à partir de ce que les services
 journalisent réellement (durées de rotation, partage communautaire des adresses d'attaquants, sous-traitants).

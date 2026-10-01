@@ -2,7 +2,6 @@
 title: "ADR 0022 : Autorité de certification interne et TLS vérifié sur les flux internes"
 description: Une autorité interne (racine hors ligne, intermédiaire sur le pare-feu) pour chiffrer et authentifier chaque flux entre machines, et rendre inopérante une usurpation DNS ou ARP.
 date: 2026-09-29
-# Validé par Maxime le 29/09/2026 ; autorité sur le pare-feu (choix de Maxime, même jour).
 status: accepté
 tags: [securite, tls, pki, dns]
 ---
@@ -32,8 +31,9 @@ pas la clé.
 2. **Distribuer le joker du proxy interne** : une seule clé privée copiée partout, qui fuite avec la première VM
    compromise. Écarté.
 3. **Intermédiaire dans le coffre OpenBao** (moteur PKI avec ACME) : renouvellement automatique par ACME, mais le
-   coffre devient indispensable à tous les flux. Proposé d'abord, écarté par Maxime.
-4. **Intermédiaire sur le pare-feu** (magasin de confiance d'OPNsense) — retenu (choix de Maxime) : le pare-feu est
+   coffre devient indispensable à tous les flux : une panne du coffre couperait toutes les connexions internes à
+   l'expiration des certificats. Première piste étudiée, écartée pour cette raison.
+4. **Intermédiaire sur le pare-feu** (magasin de confiance d'OPNsense) — retenu : le pare-feu est
    déjà le point de confiance du réseau, l'autorité s'y administre dans l'interface, avec sa liste de révocation.
    OPNsense n'a pas de serveur ACME : les certificats sont émis et renouvelés par Ansible, par son API.
 

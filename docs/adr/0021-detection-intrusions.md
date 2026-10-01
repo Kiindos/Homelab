@@ -2,7 +2,6 @@
 title: "ADR 0021 : Détection et prévention des intrusions en couches légères"
 description: Suricata sur le pare-feu, CrowdSec partagé par toutes les machines avec blocage au pare-feu, règles de détection sur les journaux centralisés ; pas de SIEM lourd.
 date: 2026-09-29
-# Validé par Maxime le 29/09/2026.
 status: accepté
 tags: [securite, detection, ids, crowdsec, suricata]
 ---
