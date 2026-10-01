@@ -76,15 +76,17 @@
     dest: /etc/modprobe.d/zfs.conf
     content: |
       # Géré par Ansible (rôle hyperviseur)
-      options zfs zfs_arc_max={{ hyperviseur_zfs_arc_max }}{% if hyperviseur_zfs_arc_min | string | length > 0 %} zfs_arc_min={{ hyperviseur_zfs_arc_min }}{% endif %}
+      options zfs zfs_arc_max={{ hyperviseur_zfs_arc_max }}
+      {%- if hyperviseur_zfs_arc_min | string | length > 0 %} zfs_arc_min={{ hyperviseur_zfs_arc_min }}{% endif %}
     owner: root
     group: root
     mode: "0644"
   when: hyperviseur_zfs_arc_max | string | length > 0
   register: hyperviseur_arc
 
-# Le plafond d'abord : un plancher au-dessus de l'ancien plafond serait refusé.
-- name: Appliquer le réglage du cache ZFS sans redémarrage
+# Le plafond d'abord : un plancher au-dessus de l'ancien plafond serait refusé. Ces deux tâches s'exécutent tout de
+# suite, pas en gestionnaires : un gestionnaire sauté (échec plus loin) ne serait jamais rejoué.
+- name: Appliquer le réglage du cache ZFS sans redémarrage  # noqa: no-handler
   ansible.builtin.shell: |
     echo {{ hyperviseur_zfs_arc_max }} > /sys/module/zfs/parameters/zfs_arc_max
     {% if hyperviseur_zfs_arc_min | string | length > 0 %}
@@ -93,7 +95,7 @@
   when: hyperviseur_arc is changed
   changed_when: true
 
-- name: Régénérer l'initramfs (le module ZFS y lit ses options au démarrage)
+- name: Régénérer l'initramfs (le module ZFS y lit ses options au démarrage)  # noqa: no-handler
   ansible.builtin.command: update-initramfs -u -k all
   when: hyperviseur_arc is changed
   changed_when: true

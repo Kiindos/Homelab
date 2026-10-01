@@ -158,20 +158,21 @@
             WantedBy=timers.target
       loop_control:
         label: "etat-mises-a-jour.{{ item.extension }}"
-      register: agent_etat_unites
+      register: agent_supervision_etat_unites
 
     - name: Activer la minuterie du relevé
       ansible.builtin.systemd_service:
         name: etat-mises-a-jour.timer
         state: started
         enabled: true
-        daemon_reload: "{{ agent_etat_unites is changed }}"
+        daemon_reload: "{{ agent_supervision_etat_unites is changed }}"
 
-    - name: Premier relevé
+    # Tout de suite, pas en gestionnaire : un gestionnaire sauté (échec plus loin) ne serait jamais rejoué.
+    - name: Premier relevé  # noqa: no-handler
       ansible.builtin.systemd_service:
         name: etat-mises-a-jour.service
         state: started
-      when: agent_etat_unites is changed
+      when: agent_supervision_etat_unites is changed
 
 # --- Version d'OPNsense (hyperviseur) : clé limitée au tableau de bord, certificat épinglé ---
 - name: Relevé de la version d'OPNsense
@@ -192,7 +193,7 @@
         openssl s_client -connect "$hote:443" -servername "$hote" </dev/null 2>/dev/null | openssl x509
       args:
         executable: /bin/bash
-      register: agent_opnsense_certificat
+      register: agent_supervision_opnsense_certificat
       changed_when: false
 
     - name: Vérifier l'empreinte du certificat (épingle)
@@ -201,10 +202,10 @@
         openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64
       args:
         executable: /bin/bash
-        stdin: "{{ agent_opnsense_certificat.stdout }}"
-      register: agent_opnsense_empreinte
+        stdin: "{{ agent_supervision_opnsense_certificat.stdout }}"
+      register: agent_supervision_opnsense_empreinte
       changed_when: false
-      failed_when: agent_opnsense_empreinte.stdout != agent_supervision_opnsense.epingle
+      failed_when: agent_supervision_opnsense_empreinte.stdout != agent_supervision_opnsense.epingle
 
     - name: Déposer le certificat épinglé et la configuration du relevé
       ansible.builtin.copy:
@@ -214,7 +215,7 @@
         group: root
         mode: "0600"
       loop:
-        - { dest: /etc/homelab/opnsense.pem, contenu: "{{ agent_opnsense_certificat.stdout }}\n" }
+        - { dest: /etc/homelab/opnsense.pem, contenu: "{{ agent_supervision_opnsense_certificat.stdout }}\n" }
         - dest: /etc/homelab/opnsense-veille.json
           contenu: >-
             {{ {'url': agent_supervision_opnsense.url, 'cle': agent_supervision_opnsense.cle,

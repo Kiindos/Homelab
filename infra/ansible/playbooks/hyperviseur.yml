@@ -18,7 +18,7 @@
       vars:
         agent_supervision_smart: true
     # Mise à jour du parc : paquets Proxmox et Debian ; jamais de redémarrage automatique (toutes les VM s'arrêteraient).
-    - role: mises_a_jour
+    - role: mise_a_jour
       vars:
         mise_a_jour_redemarrage: jamais
         mise_a_jour_images: false

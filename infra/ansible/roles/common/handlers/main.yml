@@ -19,7 +19,7 @@
     state: restarted
 
 # auditd refuse « systemctl restart » (RefuseManualStop) : rechargement par le script de service.
-- name: Redémarrer auditd
+- name: Redémarrer auditd  # noqa: command-instead-of-module
   ansible.builtin.command: service auditd restart
   changed_when: true
 

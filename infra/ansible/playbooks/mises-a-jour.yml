@@ -69,7 +69,7 @@
 
     - name: Mettre les alertes en sourdine pendant la fenêtre (ou lever la sourdine)
       ansible.builtin.shell: |
-        set -eu
+        set -euo pipefail
         api=http://127.0.0.1:9093/api/v2
         # Sourdines déjà posées par ce playbook et pas encore expirées : retirées (nouvelle programmation, annulation).
         curl -fsS "$api/silences" | python3 -c '
@@ -89,6 +89,8 @@
           \"comment\": \"Mise à jour du parc ({{ participants | join(', ') }})\"}"
         echo; echo "Sourdine de $debut à $fin (UTC)."
         {% endif %}
+      args:
+        executable: /bin/bash
       register: sourdine
       changed_when: true
       run_once: true
@@ -99,7 +101,7 @@
         msg: "{{ sourdine.stdout_lines + (verification_heure.stdout_lines | default([])) }}"
       run_once: true
 
-    # --- Hôte de Semaphore, depuis Semaphore : demande vérifiée par l'hôte (rôle mises_a_jour) ---------------------
+    # --- Hôte de Semaphore, depuis Semaphore : demande vérifiée par l'hôte (rôle mise_a_jour) ---------------------
     - name: Hôte de Semaphore (demande déposée, exécutée par l'hôte)
       when: par_guichet | bool
       become: false
@@ -136,9 +138,9 @@
       when: par_guichet | bool
 
     # --- Autres machines (et toutes, depuis le poste d'admin) -------------------------------------------------------
-    - name: Déposer le script de mise à jour (rôle mises_a_jour)
+    - name: Déposer le script de mise à jour (rôle mise_a_jour)
       ansible.builtin.copy:
-        src: ../roles/mises_a_jour/files/mise-a-jour.sh
+        src: ../roles/mise_a_jour/files/mise-a-jour.sh
         dest: /usr/local/sbin/mise-a-jour
         owner: root
         group: root
@@ -175,8 +177,11 @@
 
     - name: Redémarrage nécessaire ?
       ansible.builtin.shell: |
+        set -o pipefail
         recent=$(find /boot -maxdepth 1 -name 'vmlinuz-*' -printf '%f\n' | sed 's/^vmlinuz-//' | sort -V | tail -n 1)
         if [ -f /run/reboot-required ] || { [ -n "$recent" ] && [ "$recent" != "$(uname -r)" ]; }; then echo oui; fi
+      args:
+        executable: /bin/bash
       register: besoin_redemarrage
       changed_when: false
       when: quand == 'maintenant'

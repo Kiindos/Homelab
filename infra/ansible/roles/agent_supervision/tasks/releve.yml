@@ -1,6 +1,6 @@
 # Relevé périodique publié pour Prometheus (collecteur textfile) : script, configuration JSON, service et minuterie.
 # Variable : releve = { nom, script, fichier_conf, conf, periode, description }.
-- name: "{{ releve.nom }} : déposer le script"
+- name: "Relevé périodique, déposer le script : {{ releve.nom }}"
   ansible.builtin.copy:
     src: "{{ releve.script }}"
     dest: "/usr/local/sbin/{{ releve.nom }}"
@@ -8,7 +8,7 @@
     group: root
     mode: "0755"
 
-- name: "{{ releve.nom }} : écrire la configuration"
+- name: "Relevé périodique, écrire la configuration : {{ releve.nom }}"
   ansible.builtin.copy:
     content: "{{ releve.conf | to_nice_json }}\n"
     dest: "/etc/homelab/{{ releve.fichier_conf }}"
@@ -16,7 +16,7 @@
     group: root
     mode: "0644"
 
-- name: "{{ releve.nom }} : déclarer le service et la minuterie"
+- name: "Relevé périodique, déclarer le service et la minuterie : {{ releve.nom }}"
   ansible.builtin.copy:
     dest: "/etc/systemd/system/{{ releve.nom }}.{{ item.extension }}"
     content: "{{ item.contenu }}"
@@ -46,17 +46,18 @@
         WantedBy=timers.target
   loop_control:
     label: "{{ releve.nom }}.{{ item.extension }}"
-  register: agent_releve_unites
+  register: agent_supervision_releve_unites
 
-- name: "{{ releve.nom }} : activer la minuterie"
+- name: "Relevé périodique, activer la minuterie : {{ releve.nom }}"
   ansible.builtin.systemd_service:
     name: "{{ releve.nom }}.timer"
     state: started
     enabled: true
-    daemon_reload: "{{ agent_releve_unites is changed }}"
+    daemon_reload: "{{ agent_supervision_releve_unites is changed }}"
 
-- name: "{{ releve.nom }} : premier relevé"
+# Tout de suite, pas en gestionnaire : un gestionnaire sauté (échec plus loin) ne serait jamais rejoué.
+- name: "Relevé périodique, premier relevé : {{ releve.nom }}"  # noqa: no-handler
   ansible.builtin.systemd_service:
     name: "{{ releve.nom }}.service"
     state: started
-  when: agent_releve_unites is changed
+  when: agent_supervision_releve_unites is changed

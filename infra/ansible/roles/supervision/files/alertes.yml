@@ -87,7 +87,9 @@ groups:
         labels: { severite: critique }
         annotations:
           resume: "Sauvegarde non conforme : empreintes différentes ou dépôt abîmé"
-          description: "{{ $value }} : la copie relue chez l'hébergeur ne correspond pas à la source, ou le contrôle du dépôt restic a échoué. Ne pas se fier à cette sauvegarde : journalctl -u sauvegarde-homelab."
+          description: >-
+            {{ $value }} : la copie relue chez l'hébergeur ne correspond pas à la source, ou le contrôle du dépôt restic a
+            échoué. Ne pas se fier à cette sauvegarde : journalctl -u sauvegarde-homelab.
       - alert: SauvegardeVerificationEnRetard
         expr: time() - homelab_sauvegarde_verification_derniere_reussite_timestamp > 30 * 3600
         labels: { severite: critique }
@@ -110,7 +112,9 @@ groups:
         labels: { severite: avertissement }
         annotations:
           resume: "{{ $labels.jeu }} : stockage rempli à plus de 90 %"
-          description: "{{ $labels.jeu }} occupe {{ $value | humanizePercentage }} de la place permise (quota ou reste du pool) : faire de la place ou revoir le quota."
+          description: >-
+            {{ $labels.jeu }} occupe {{ $value | humanizePercentage }} de la place permise (quota ou reste du pool) : faire de
+            la place ou revoir le quota.
       - alert: StockagePoolPresquePlein
         expr: homelab_stockage_total_utilise_octets / (homelab_stockage_total_utilise_octets + homelab_stockage_total_disponible_octets) > 0.85
         for: 30m
@@ -123,7 +127,9 @@ groups:
         labels: { severite: avertissement }
         annotations:
           resume: "E-mails du homelab refusés par le relais"
-          description: "{{ $value | humanize }} e-mail(s) en échec chez Scaleway en une heure (adresse invalide, rejet) : console Scaleway, Transactional Email, activité."
+          description: >-
+            {{ $value | humanize }} e-mail(s) en échec chez Scaleway en une heure (adresse invalide, rejet) : console Scaleway,
+            Transactional Email, activité.
       - alert: CourrielsQuotaMensuel
         expr: sum(homelab_courriels{periode="mois"}) > 270
         labels: { severite: info }
@@ -262,24 +268,33 @@ groups:
         labels: { severite: veille }
         annotations:
           resume: "Import « {{ $labels.travail }} » en échec"
-          description: "Le travail s'est arrêté sur une erreur ({{ with query (printf \"homelab_import_erreurs{travail='%s'}\" $labels.travail) }}{{ . | first | value }}{{ end }} erreur(s) au total) : journalctl -u import-nuage-{{ $labels.travail }}, puis le relancer (il reprend où il s'était arrêté)."
+          description: >-
+            Le travail s'est arrêté sur une erreur ({{ with query (printf "homelab_import_erreurs{travail='%s'}"
+            $labels.travail) }}{{ . | first | value }}{{ end }} erreur(s) au total) : journalctl -u import-nuage-{{
+            $labels.travail }}, puis le relancer (il reprend où il s'était arrêté).
       - alert: ImportInterrompu
         expr: homelab_import_etat == 5
         for: 10m
         labels: { severite: veille }
         annotations:
           resume: "Import « {{ $labels.travail }} » interrompu avant la fin"
-          description: "Arrêté sans reprise prévue (arrêt manuel ?) : le relancer avec import-nuage lancer {{ $labels.travail }} (il reprend où il s'était arrêté)."
+          description: >-
+            Arrêté sans reprise prévue (arrêt manuel ?) : le relancer avec import-nuage lancer {{ $labels.travail }} (il reprend
+            où il s'était arrêté).
       - alert: ImportBloque
         expr: homelab_import_etat == 1 and delta(homelab_import_octets[2h]) == 0
         for: 30m
         labels: { severite: veille }
         annotations:
           resume: "Import « {{ $labels.travail }} » bloqué depuis 2 heures"
-          description: "Aucun octet copié depuis 2 heures alors que le travail tourne : jeton expiré, limite de l'API du fournisseur ? journalctl -u import-nuage-{{ $labels.travail }}."
+          description: >-
+            Aucun octet copié depuis 2 heures alors que le travail tourne : jeton expiré, limite de l'API du fournisseur ?
+            journalctl -u import-nuage-{{ $labels.travail }}.
       - alert: ImportTermine
         expr: homelab_import_etat == 2 and (time() - homelab_import_fin_timestamp) < 3600
         labels: { severite: info }
         annotations:
           resume: "Import « {{ $labels.travail }} » terminé"
-          description: "{{ with query (printf \"homelab_import_octets{travail='%s'}\" $labels.travail) }}{{ . | first | value | humanize1024 }}o copiés{{ end }}."
+          description: >-
+            {{ with query (printf "homelab_import_octets{travail='%s'}" $labels.travail) }}{{ . | first | value | humanize1024
+            }}o copiés{{ end }}.

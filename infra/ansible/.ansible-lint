@@ -1,0 +1,6 @@
+---
+# ansible-lint (CI et poste d'admin) : profil par défaut, une seule règle écartée, pour une raison écrite.
+skip_list:
+  # run_once ne change de sens qu'avec la stratégie « free », qu'aucune partie n'utilise : les playbooks qui
+  # posent une sourdine ou vérifient une demande le font une fois, sur un hôte désigné (delegate_to).
+  - run-once[task]

@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Demande de mise à jour déposée par Semaphore, sur l'hôte de Semaphore. Géré par Ansible (rôle mises_a_jour).
+"""Demande de mise à jour déposée par Semaphore, sur l'hôte de Semaphore. Géré par Ansible (rôle mise_a_jour).
 
 Semaphore ne se connecte pas à sa propre machine : il écrit une demande dans un dossier monté dans son conteneur.
 Ce script (root, lancé par demande-mise-a-jour.path) la lit sans suivre de lien, la vérifie strictement, puis

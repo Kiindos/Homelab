@@ -38,7 +38,7 @@
       loop:
         - extension: path
           contenu: |
-            # Géré par Ansible (rôle mises_a_jour)
+            # Géré par Ansible (rôle mise_a_jour)
             [Unit]
             Description=Demande de mise à jour déposée par Semaphore
             [Path]
@@ -47,7 +47,7 @@
             WantedBy=paths.target
         - extension: service
           contenu: |
-            # Géré par Ansible (rôle mises_a_jour)
+            # Géré par Ansible (rôle mise_a_jour)
             [Unit]
             Description=Vérifier et programmer une demande de mise à jour de Semaphore
             [Service]

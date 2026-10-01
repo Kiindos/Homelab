@@ -1,5 +1,5 @@
 #!/bin/bash
-# Géré par Ansible (rôle mises_a_jour). Met la machine à jour : paquets (apt), images des piles Docker pour la même
+# Géré par Ansible (rôle mise_a_jour). Met la machine à jour : paquets (apt), images des piles Docker pour la même
 # version, puis redémarrage si un paquet l'exige. Lancé tout de suite ou par une minuterie locale (playbook
 # mises-a-jour.yml) : ni Semaphore ni VPN ne sont nécessaires au moment de la maintenance.
 #

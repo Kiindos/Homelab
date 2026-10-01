@@ -16,7 +16,7 @@
     - role: docker
       when: docker_active | default(true)
     - agent_supervision
-    - mises_a_jour
+    - mise_a_jour
 
 - name: Identité (LLDAP, Authelia)
   hosts: auth01

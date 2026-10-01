@@ -41,3 +41,6 @@ __pycache__/
 .hugo_build.lock
 site/public/
 site/resources/_gen/
+
+# ansible-lint (cache local)
+.ansible/
