@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        stack: [proxmox, opnsense, cloudflare]
+        stack: [proxmox, opnsense, cloudflare, openbao]
     defaults:
       run:
         working-directory: infra/tofu/${{ matrix.stack }}

@@ -3,7 +3,6 @@
 ## Type
 
 - [ ] Infra (OpenTofu / Ansible)
-- [ ] Kubernetes
 - [ ] Documentation (ADR, runbook, post-mortem, journal)
 
 ## Vérifications

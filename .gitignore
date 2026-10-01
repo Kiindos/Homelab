@@ -36,3 +36,8 @@ CLAUDE.md
 
 # Python
 __pycache__/
+
+# Hugo (verrou de construction, résultats locaux)
+.hugo_build.lock
+site/public/
+site/resources/_gen/
