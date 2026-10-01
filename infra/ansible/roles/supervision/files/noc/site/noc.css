@@ -215,6 +215,9 @@ main { padding-block: 2.2rem 3rem; }
 .jauge__barre span { display: block; height: 100%; border-radius: inherit; background: var(--degrade); transition: width .6s ease; }
 .jauge[data-niveau="haut"] .jauge__barre span { background: var(--alerte); }
 .jauge[data-niveau="critique"] .jauge__barre span { background: var(--danger); }
+/* Jeux de données du stockage (un par jeu suivi, puis le total) : jauge, puis taille occupée sur la place permise. */
+.donnees { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .5rem 1.6rem; padding: .9rem 1.2rem 1rem; border-bottom: 1px solid var(--bordure); }
+.donnees p { margin: .15rem 0 0 5.8rem; font-size: .75rem; }
 .jauge__valeur { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 /* Avancement d'un transfert : couleur d'accent (100 % = terminé, pas un seuil d'alerte). */
 .progression { display: flex; align-items: center; gap: .6rem; min-width: 9rem; }

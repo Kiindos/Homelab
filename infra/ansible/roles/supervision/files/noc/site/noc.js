@@ -206,7 +206,8 @@ function rendreStockage(stockage) {
     el("div", {}, ...pools.map((p) => el("p", {},
       el("strong", { texte: `Pool ${p.nom} ` }),
       statut(p.etat === "online" ? true : false, "sain (ONLINE)", p.etat.toUpperCase())))),
-    stockage.occupation !== null ? jauge("Occupation", stockage.occupation) : null);
+    // Sans relevé de l'hyperviseur, repli sur l'occupation du stockage des VM (local-zfs) ; sinon, le total est plus bas.
+    !stockage.total && stockage.occupation !== null ? jauge("Occupation", stockage.occupation) : null);
   const lignes = (stockage.disques ?? []).map((d) => {
     const etat = !d.ok ? false : d.defauts > 0 ? "avert" : true;
     return el("tr", {},
@@ -216,7 +217,12 @@ function rendreStockage(stockage) {
       el("td", { classe: "nombre masque-mobile", texte: `${(d.heures / 8766).toFixed(1).replace(".", ",")} ans` }),
       el("td", { classe: "nombre", texte: String(d.defauts) }));
   });
-  remplacer("stockage", el("div", { classe: "panneau" }, tete,
+  // Jeux de données suivis (relevé de l'hyperviseur) et total du pool : place occupée sur la place permise.
+  const jeux = [...(stockage.donnees ?? []), ...(stockage.total ? [{ nom: "Total", ...stockage.total }] : [])];
+  const donnees = jeux.length ? el("div", { classe: "donnees" }, ...jeux.map((j) => el("div", {},
+    jauge(j.nom, j.ratio),
+    el("p", { classe: "discret", texte: `${octets(j.utilise)} sur ${octets(j.permis)}` })))) : null;
+  remplacer("stockage", el("div", { classe: "panneau" }, tete, donnees,
     el("table", {},
       el("thead", {}, el("tr", {},
         el("th", { texte: "Disque" }), el("th", { texte: "Santé" }), el("th", { classe: "nombre", texte: "Temp." }),

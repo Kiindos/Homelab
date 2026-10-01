@@ -169,10 +169,24 @@ def stockage():
     occupation = requete(
         'pve_disk_usage_bytes{id=~"storage/.*/local-zfs"} / pve_disk_size_bytes{id=~"storage/.*/local-zfs"}'
     )
+    # Jeux de données (relevé de l'hyperviseur) : occupé et place permise (quota, ou reste du pool), puis le total.
+    utilise = par("jeu", requete("homelab_stockage_utilise_octets"))
+    disponible = par("jeu", requete("homelab_stockage_disponible_octets"))
+    donnees = [{"nom": jeu, "utilise": int(utilise[jeu]), "permis": int(utilise[jeu] + disponible.get(jeu, 0)),
+                "ratio": arrondi(utilise[jeu] / (utilise[jeu] + disponible.get(jeu, 0)))}
+               for jeu in sorted(utilise) if utilise[jeu] + disponible.get(jeu, 0) > 0]
+    total_utilise = requete("sum(homelab_stockage_total_utilise_octets)")
+    total_libre = requete("sum(homelab_stockage_total_disponible_octets)")
+    total = None
+    if total_utilise and total_libre and total_utilise[0][1] + total_libre[0][1] > 0:
+        occupe, libre = total_utilise[0][1], total_libre[0][1]
+        total = {"utilise": int(occupe), "permis": int(occupe + libre), "ratio": arrondi(occupe / (occupe + libre))}
     return {
         "pools": pools,
         "disques": disques,
         "occupation": arrondi(occupation[0][1]) if occupation else None,
+        "donnees": donnees,
+        "total": total,
     }
 
 

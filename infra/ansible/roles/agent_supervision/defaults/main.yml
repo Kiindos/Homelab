@@ -13,3 +13,9 @@ agent_supervision_etat_mises_a_jour: true
 # SHA-256 en base64 de la clé publique du certificat de l'interface) }. Clé d'un compte limité aux privilèges
 # « Lobby: Dashboard » et « System: Deny config write ». Vide = non relevé.
 agent_supervision_opnsense: {}
+# Occupation du stockage (hyperviseur) : { pool: <pool>, jeux: { <libellé>: <jeu de données ZFS>, ... } }, relevée
+# toutes les 15 minutes (NOC, Grafana, alerte de remplissage). Vide = non relevé.
+agent_supervision_stockage: {}
+# E-mails du relais transactionnel (Scaleway TEM) : { region, projet, cle } ; clé d'API avec lecture des
+# statistiques. Relevé toutes les 15 minutes (envoyés, en échec, consommation du mois). Vide = non relevé.
+agent_supervision_courriels: {}

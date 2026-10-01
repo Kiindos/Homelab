@@ -1,0 +1,62 @@
+# Relevé périodique publié pour Prometheus (collecteur textfile) : script, configuration JSON, service et minuterie.
+# Variable : releve = { nom, script, fichier_conf, conf, periode, description }.
+- name: "{{ releve.nom }} : déposer le script"
+  ansible.builtin.copy:
+    src: "{{ releve.script }}"
+    dest: "/usr/local/sbin/{{ releve.nom }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: "{{ releve.nom }} : écrire la configuration"
+  ansible.builtin.copy:
+    content: "{{ releve.conf | to_nice_json }}\n"
+    dest: "/etc/homelab/{{ releve.fichier_conf }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: "{{ releve.nom }} : déclarer le service et la minuterie"
+  ansible.builtin.copy:
+    dest: "/etc/systemd/system/{{ releve.nom }}.{{ item.extension }}"
+    content: "{{ item.contenu }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - extension: service
+      contenu: |
+        # Géré par Ansible (rôle agent_supervision)
+        [Unit]
+        Description={{ releve.description }}
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/local/sbin/{{ releve.nom }}
+        Nice=10
+        IOSchedulingClass=idle
+    - extension: timer
+      contenu: |
+        # Géré par Ansible (rôle agent_supervision)
+        [Unit]
+        Description={{ releve.description }} (périodique)
+        [Timer]
+        OnBootSec=2min
+        OnUnitActiveSec={{ releve.periode }}
+        [Install]
+        WantedBy=timers.target
+  loop_control:
+    label: "{{ releve.nom }}.{{ item.extension }}"
+  register: agent_releve_unites
+
+- name: "{{ releve.nom }} : activer la minuterie"
+  ansible.builtin.systemd_service:
+    name: "{{ releve.nom }}.timer"
+    state: started
+    enabled: true
+    daemon_reload: "{{ agent_releve_unites is changed }}"
+
+- name: "{{ releve.nom }} : premier relevé"
+  ansible.builtin.systemd_service:
+    name: "{{ releve.nom }}.service"
+    state: started
+  when: agent_releve_unites is changed

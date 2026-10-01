@@ -102,6 +102,41 @@ groups:
           resume: "Stockage des sauvegardes rempli à plus de 80 %"
           description: "Le stockage distant des sauvegardes est rempli à {{ $value | humanizePercentage }} : revoir la rétention ou le périmètre."
 
+  - name: stockage_et_courriels
+    rules:
+      - alert: StockageDonneesPresquePlein
+        expr: homelab_stockage_utilise_octets / (homelab_stockage_utilise_octets + homelab_stockage_disponible_octets) > 0.9
+        for: 30m
+        labels: { severite: avertissement }
+        annotations:
+          resume: "{{ $labels.jeu }} : stockage rempli à plus de 90 %"
+          description: "{{ $labels.jeu }} occupe {{ $value | humanizePercentage }} de la place permise (quota ou reste du pool) : faire de la place ou revoir le quota."
+      - alert: StockagePoolPresquePlein
+        expr: homelab_stockage_total_utilise_octets / (homelab_stockage_total_utilise_octets + homelab_stockage_total_disponible_octets) > 0.85
+        for: 30m
+        labels: { severite: avertissement }
+        annotations:
+          resume: "Pool {{ $labels.pool }} rempli à plus de 85 %"
+          description: "Le pool occupe {{ $value | humanizePercentage }} de son espace utile ; au-delà de 80-90 %, ZFS ralentit."
+      - alert: CourrielsEnEchec
+        expr: increase(homelab_courriels{periode="total",etat="failed"}[1h]) > 0
+        labels: { severite: avertissement }
+        annotations:
+          resume: "E-mails du homelab refusés par le relais"
+          description: "{{ $value | humanize }} e-mail(s) en échec chez Scaleway en une heure (adresse invalide, rejet) : console Scaleway, Transactional Email, activité."
+      - alert: CourrielsQuotaMensuel
+        expr: sum(homelab_courriels{periode="mois"}) > 270
+        labels: { severite: info }
+        annotations:
+          resume: "Plus de 270 e-mails envoyés ce mois-ci"
+          description: "{{ $value | humanize }} e-mails depuis le 1er du mois ; l'offre gratuite de Scaleway en couvre 300, la suite est facturée à l'usage."
+      - alert: CourrielsReleveImpossible
+        expr: homelab_courriels_releve_reussi == 0
+        for: 1h
+        labels: { severite: avertissement }
+        annotations:
+          resume: "Relevé des e-mails impossible"
+          description: "L'API de Scaleway ne répond pas ou refuse la clé depuis une heure : journalctl -u releve-courriels sur mon01."
   - name: ressources
     rules:
       - alert: MemoireSaturee

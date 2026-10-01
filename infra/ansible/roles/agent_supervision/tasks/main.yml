@@ -222,3 +222,52 @@
       loop_control:
         label: "{{ item.dest }}"
       no_log: true
+
+# --- Relevés pour Prometheus : occupation du stockage (hyperviseur), e-mails du relais (supervision) ----------------
+- name: Créer le dossier de configuration des relevés
+  ansible.builtin.file:
+    path: /etc/homelab
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: agent_supervision_stockage.jeux | default({}) | length > 0
+        or agent_supervision_courriels.projet | default('') | length > 0
+
+- name: Relevé de l'occupation du stockage (jeux de données ZFS)
+  ansible.builtin.include_tasks: releve.yml
+  vars:
+    releve:
+      nom: releve-stockage
+      script: releve-stockage.py
+      fichier_conf: stockage.json
+      conf: "{{ agent_supervision_stockage }}"
+      periode: 15min
+      description: Relevé de l'occupation du stockage
+  when: agent_supervision_stockage.jeux | default({}) | length > 0
+
+- name: Relevé des e-mails du relais transactionnel
+  when: agent_supervision_courriels.projet | default('') | length > 0
+  block:
+    - name: Écrire la clé d'API du relais (lecture des statistiques)
+      ansible.builtin.copy:
+        content: "{{ agent_supervision_courriels.cle }}"
+        dest: /etc/homelab/courriels.cle
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+
+    - name: Installer le relevé des e-mails
+      ansible.builtin.include_tasks: releve.yml
+      vars:
+        releve:
+          nom: releve-courriels
+          script: releve-courriels.py
+          fichier_conf: courriels.json
+          conf:
+            region: "{{ agent_supervision_courriels.region | default('fr-par') }}"
+            projet: "{{ agent_supervision_courriels.projet }}"
+            cle_fichier: /etc/homelab/courriels.cle
+          periode: 15min
+          description: Relevé des e-mails du relais transactionnel

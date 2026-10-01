@@ -196,6 +196,7 @@
     - { src: noc.json, dest: grafana/tableaux/noc.json }
     - { src: veille.json, dest: grafana/tableaux/veille.json }
     - { src: transferts.json, dest: grafana/tableaux/transferts.json }
+    - { src: stockage.json, dest: grafana/tableaux/stockage.json }
   loop_control:
     label: "{{ item.dest }}"
   notify: Redémarrer la supervision
