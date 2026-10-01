@@ -85,6 +85,9 @@ storage:
 notifier:
   # Modèles d'e-mails en français, aux couleurs du homelab (templates/modeles du rôle).
   template_path: /config/modeles
+  # Le portail démarre même si le serveur d'e-mails est injoignable : sans cela, une panne SMTP coupait toute
+  # connexion SSO (01/10, 502 sur le portail). Les envois en échec restent visibles dans le journal d'Authelia.
+  disable_startup_check: true
 {% if identite_smtp is defined %}
   smtp:
     address: "submission://{{ identite_smtp.serveur }}:587"
