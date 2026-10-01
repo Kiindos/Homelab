@@ -1,6 +1,7 @@
 # {{ ansible_managed }}
 # Entrée des journaux (ADR 0020) : seule l'écriture par systemd-journal-upload est relayée vers VictoriaLogs.
-# Requêtes et interface restent inaccessibles depuis les machines (lecture par Grafana, réseau interne de la pile).
+# Requêtes et interface restent inaccessibles depuis les machines (lecture par Grafana, réseau interne de la pile),
+# sauf, en lecture seule, pour les sources de supervision_journaux_lecture_sources (proxy interne, qui impose le SSO).
 server {
     listen 8080;
     server_tokens off;
@@ -18,3 +19,34 @@ server {
         return 403;
     }
 }
+{% if supervision_journaux_lecture_sources | length > 0 %}
+
+# Lecture : interface web de VictoriaLogs (vmui) et API de requête, rien d'autre (ni écriture, ni suppression).
+server {
+    listen 8081;
+    server_tokens off;
+    # Redirections relatives : derrière le proxy, le port interne ne doit pas apparaître.
+    absolute_redirect off;
+{% for source in supervision_journaux_lecture_sources %}
+    allow {{ source }};
+{% endfor %}
+    deny all;
+
+    location = / {
+        return 302 /select/vmui/;
+    }
+
+    location /select/ {
+        limit_except GET POST { deny all; }
+        proxy_pass http://victorialogs:9428;
+        proxy_http_version 1.1;
+        # Suivi en direct (/select/logsql/tail) : flux continu, sans mise en tampon.
+        proxy_buffering off;
+        proxy_read_timeout 1h;
+    }
+
+    location / {
+        return 403;
+    }
+}
+{% endif %}

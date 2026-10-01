@@ -221,7 +221,7 @@ services:
 
 {% endif %}
 {% if supervision_journaux | bool %}
-  # Journaux centralisés (ADR 0020). Port HTTP non publié : lecture par Grafana seulement (réseau de la pile).
+  # Journaux centralisés (ADR 0020). Port HTTP non publié : lecture par Grafana, ou par le relais ci-dessous.
   victorialogs:
     image: {{ supervision_images.victorialogs }}
     restart: unless-stopped
@@ -241,7 +241,11 @@ services:
     image: {{ supervision_images.noc_web }}
     restart: unless-stopped
     depends_on: [victorialogs]
-    ports: ["{{ supervision_journaux_port }}:8080"]
+    ports:
+      - "{{ supervision_journaux_port }}:8080"
+{% if supervision_journaux_lecture_sources | length > 0 %}
+      - "{{ supervision_journaux_lecture_port }}:8081"   # lecture seule, proxy interne uniquement (SSO admins)
+{% endif %}
     volumes:
       - ./journaux/entree.conf:/etc/nginx/conf.d/default.conf:ro
     read_only: true

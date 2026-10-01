@@ -48,7 +48,15 @@ critique d'abord.
 
 ## Chercher dans les journaux
 
-Grafana → **Explore** → source **Journaux** (VictoriaLogs, LogsQL, 30 jours) :
+Grafana → tableau **« Journaux »** (volume et vraies erreurs par machine, lignes filtrables par machine, conteneur et
+recherche LogsQL), ou **Explore** → source **Journaux** pour une requête libre (30 jours d'historique). L'interface
+de VictoriaLogs elle-même, en lecture seule, est publiée derrière le proxy interne (VPN et SSO des
+administrateurs), pratique pour suivre des journaux en direct.
+
+Une ligne écrite sur la sortie d'erreur d'un conteneur n'est pas une erreur : Docker la classe en priorité 3 quoi
+qu'elle dise. Le tableau ne compte que les vrais niveaux d'erreur (priorité des services systemd, `level=error`,
+`[error]` de nginx, paniques).
+
 
 | Besoin | Requête |
 |---|---|

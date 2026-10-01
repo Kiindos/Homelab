@@ -34,6 +34,9 @@ journaux. La mémoire du serveur est comptée : 32 Go pour tout le homelab.
 - **Exposition minimale** : seules les routes d'**écriture** sont joignables depuis les machines, par un relais qui
   refuse la lecture ; la lecture se fait uniquement depuis Grafana, sur le réseau interne de la VM de supervision.
 - **Consultation** : Grafana (outil interne, VPN et SSO des administrateurs), source de données VictoriaLogs.
+  *Ajout du 02/10/2026* : un tableau « Journaux » (volume, vraies erreurs, lignes filtrables), et l'interface web de
+  VictoriaLogs en **lecture seule** derrière le proxy interne (VPN, SSO imposé, administrateurs). Le relais n'y
+  laisse passer que les requêtes (`/select/`), et seulement depuis le proxy ; l'écriture reste séparée.
 - **Alertes sur les journaux** (dans un second temps) : échecs de connexion répétés, erreurs de réinitialisation de mot
   de passe, via le gestionnaire d'alertes existant.
 - **Pare-feu** : un flux d'écriture des journaux par zone vers la supervision, et un flux syslog depuis le pare-feu.

@@ -1,0 +1,358 @@
+{
+ "uid": "journaux",
+ "title": "Journaux",
+ "tags": [
+  "journaux",
+  "victorialogs"
+ ],
+ "description": "Journaux centralisés (VictoriaLogs, ADR 0020) : volume et erreurs par machine, puis les lignes. Filtres : machine, conteneur, et une recherche LogsQL libre (* = tout). Le pare-feu (syslog) n'a pas de machine : il a son propre panneau.",
+ "timezone": "browser",
+ "schemaVersion": 41,
+ "version": 1,
+ "editable": false,
+ "refresh": "",
+ "time": {
+  "from": "now-1h",
+  "to": "now"
+ },
+ "templating": {
+  "list": [
+   {
+    "name": "machine",
+    "label": "Machine",
+    "type": "query",
+    "datasource": {
+     "type": "victoriametrics-logs-datasource",
+     "uid": "victorialogs"
+    },
+    "query": {
+     "type": "fieldValue",
+     "field": "_HOSTNAME",
+     "query": "*",
+     "limit": 100,
+     "refId": "VictoriaLogsVariableQueryEditor-VariableQuery"
+    },
+    "refresh": 2,
+    "multi": true,
+    "includeAll": true,
+    "allValue": "*",
+    "sort": 1,
+    "current": {
+     "text": [
+      "All"
+     ],
+     "value": [
+      "$__all"
+     ]
+    }
+   },
+   {
+    "name": "conteneur",
+    "label": "Conteneur",
+    "type": "query",
+    "datasource": {
+     "type": "victoriametrics-logs-datasource",
+     "uid": "victorialogs"
+    },
+    "query": {
+     "type": "fieldValue",
+     "field": "CONTAINER_NAME",
+     "query": "*",
+     "limit": 100,
+     "refId": "VictoriaLogsVariableQueryEditor-VariableQuery"
+    },
+    "refresh": 2,
+    "multi": true,
+    "includeAll": true,
+    "allValue": "*",
+    "sort": 1,
+    "current": {
+     "text": [
+      "All"
+     ],
+     "value": [
+      "$__all"
+     ]
+    }
+   },
+   {
+    "name": "recherche",
+    "label": "Recherche (LogsQL)",
+    "type": "textbox",
+    "query": "*",
+    "current": {
+     "text": "*",
+     "value": "*"
+    },
+    "description": "Exemples : i(timeout) · \"connexion refusée\" · SYSLOG_IDENTIFIER:sshd · -i(health)"
+   }
+  ]
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "timeseries",
+   "title": "Volume par machine",
+   "description": "Lignes de journal reçues, par machine.",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "_HOSTNAME:$machine CONTAINER_NAME:$conteneur $recherche | stats by (_HOSTNAME) count() lignes",
+     "queryType": "statsRange",
+     "legendFormat": "{{_HOSTNAME}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 70,
+      "lineWidth": 1,
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 2,
+   "type": "timeseries",
+   "title": "Erreurs par machine",
+   "description": "Vraies erreurs seulement : priorité syslog des services, niveau error/fatal des applications, crochets [error] et plus de nginx, paniques. Les conteneurs écrivant tout sur stderr, leur priorité n'est pas retenue.",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "_HOSTNAME:$machine CONTAINER_NAME:$conteneur $recherche ((PRIORITY:<=3 !CONTAINER_NAME:*) OR \"level=error\" OR \"level=ERROR\" OR \"level=fatal\" OR \"[error]\" OR \"[crit]\" OR \"[alert]\" OR \"[emerg]\" OR \"\\\"level\\\":\\\"error\\\"\" OR i(panic) OR i(erreur)) | stats by (_HOSTNAME) count() erreurs",
+     "queryType": "statsRange",
+     "legendFormat": "{{_HOSTNAME}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 70,
+      "lineWidth": 1,
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 3,
+   "type": "logs",
+   "title": "Erreurs",
+   "description": "Les dernières erreurs (mêmes règles que le panneau « Erreurs par machine »).",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 7,
+    "w": 24,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "_HOSTNAME:$machine CONTAINER_NAME:$conteneur $recherche ((PRIORITY:<=3 !CONTAINER_NAME:*) OR \"level=error\" OR \"level=ERROR\" OR \"level=fatal\" OR \"[error]\" OR \"[crit]\" OR \"[alert]\" OR \"[emerg]\" OR \"\\\"level\\\":\\\"error\\\"\" OR i(panic) OR i(erreur))",
+     "queryType": "instant",
+     "maxLines": 500
+    }
+   ],
+   "options": {
+    "showTime": true,
+    "wrapLogMessage": true,
+    "sortOrder": "Descending",
+    "enableLogDetails": true,
+    "dedupStrategy": "none",
+    "prettifyLogMessage": false,
+    "showCommonLabels": false,
+    "showLabels": false
+   }
+  },
+  {
+   "id": 4,
+   "type": "logs",
+   "title": "Tous les journaux",
+   "description": "Toutes les lignes correspondant aux filtres, les plus récentes d'abord.",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 16,
+    "w": 24,
+    "h": 14
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "_HOSTNAME:$machine CONTAINER_NAME:$conteneur $recherche",
+     "queryType": "instant",
+     "maxLines": 1000
+    }
+   ],
+   "options": {
+    "showTime": true,
+    "wrapLogMessage": true,
+    "sortOrder": "Descending",
+    "enableLogDetails": true,
+    "dedupStrategy": "none",
+    "prettifyLogMessage": false,
+    "showCommonLabels": false,
+    "showLabels": false
+   }
+  },
+  {
+   "id": 5,
+   "type": "timeseries",
+   "title": "Pare-feu : paquets refusés",
+   "description": "Paquets bloqués par OPNsense (syslog, filterlog).",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 30,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "app_name:filterlog block | stats count() refuses",
+     "queryType": "statsRange",
+     "legendFormat": "refusés"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 70,
+      "lineWidth": 1,
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 6,
+   "type": "table",
+   "title": "Connexions SSH acceptées",
+   "description": "Sur la période affichée, par machine.",
+   "datasource": {
+    "type": "victoriametrics-logs-datasource",
+    "uid": "victorialogs"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 30,
+    "w": 12,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "victoriametrics-logs-datasource",
+      "uid": "victorialogs"
+     },
+     "expr": "_SYSTEMD_UNIT:ssh.service Accepted | stats by (_HOSTNAME) count() connexions",
+     "queryType": "stats"
+    }
+   ],
+   "options": {
+    "showHeader": true
+   }
+  }
+ ]
+}
