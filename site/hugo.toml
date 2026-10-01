@@ -39,5 +39,5 @@ disableKinds = ["rss"]
 [[module.mounts]]
   source = "../docs"
   target = "content"
-  # Hors site : le mode d'emploi du dossier, les modèles et les sections encore vides.
-  files = ["! README.md", "! **/_template.md", "! runbooks/**", "! postmortems/**"]
+  # Hors site : le mode d'emploi du dossier et les modèles.
+  files = ["! README.md", "! **/_template.md"]
