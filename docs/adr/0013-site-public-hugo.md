@@ -34,3 +34,5 @@ pages. Le site est servi par nginx sur une VM dédiée et publié par **Cloudfla
 - Aucun cookie ni traceur ; une politique de sécurité du contenu (CSP) n'autorise que le site lui-même et la
   bibliothèque de schémas, chargée uniquement sur les pages qui en contiennent et vérifiée par empreinte (SRI).
 - Le thème est à maintenir soi-même : pas de mises à jour gratuites d'un thème communautaire.
+- *Ajout du 02/10/2026* : le site est bilingue. Les pages anglaises sont dans `docs/en/`, avec les mêmes noms
+  de fichiers que les originaux français, pour que chaque page renvoie à sa traduction.

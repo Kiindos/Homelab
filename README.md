@@ -1,14 +1,15 @@
 # Homelab
 
 [![CI](https://github.com/maximebertrand-dev/Homelab/actions/workflows/ci.yml/badge.svg)](https://github.com/maximebertrand-dev/Homelab/actions/workflows/ci.yml)
-[![Website](https://img.shields.io/badge/site-maximebertrand.net-0f766e)](https://maximebertrand.net)
+[![Website](https://img.shields.io/badge/site-maximebertrand.net-0f766e)](https://maximebertrand.net/en/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 A single-server homelab run like a small production platform: everything is described as code, every structural
 choice is written down as an ADR, and the services are used every day by my family (photos, files). Real
 incidents are written up as post-mortems.
 
-The documentation is in French and is also published at **[maximebertrand.net](https://maximebertrand.net)**.
+The documentation is written in French, with a full English translation in [`docs/en/`](docs/en/). Both are
+published at **[maximebertrand.net](https://maximebertrand.net/en/)** (FR / EN switch in the header).
 This README is the English entry point.
 
 ## Architecture
@@ -61,33 +62,34 @@ flowchart LR
 
 ## Decisions worth reading
 
-The [23 ADRs](docs/adr/) record the context, the options considered, the decision and its consequences. A few that
+The [23 ADRs](docs/en/adr/) record the context, the options considered, the decision and its consequences. A few that
 show the trade-offs best:
 
-- [ADR 0008](docs/adr/0008-exposition-directe-waf.md): exposing services directly behind a WAF rather than
+- [ADR 0008](docs/en/adr/0008-exposition-directe-waf.md): exposing services directly behind a WAF rather than
   through Cloudflare, and what that costs (no IP allow-listing, home IP visible in DNS).
-- [ADR 0010](docs/adr/0010-serveur-unique.md): one server with a virtualised firewall instead of a cluster and a
+- [ADR 0010](docs/en/adr/0010-serveur-unique.md): one server with a virtualised firewall instead of a cluster and a
   dedicated firewall box, and what that single point of failure implies (out-of-band access, off-site backups).
-- [ADR 0019](docs/adr/0019-sauvegardes-hors-site.md): what is backed up off-site, what is deliberately not, and how
+- [ADR 0019](docs/en/adr/0019-sauvegardes-hors-site.md): what is backed up off-site, what is deliberately not, and how
   backups are verified.
-- [ADR 0022](docs/adr/0022-certificats-internes.md): an internal certificate authority with an offline root, and
+- [ADR 0022](docs/en/adr/0022-certificats-internes.md): an internal certificate authority with an offline root, and
   why the intermediate lives on the firewall rather than in the secrets vault.
 
 ## Operations
 
-- **Runbooks** used in practice: [responding to an alert](docs/runbooks/reagir-alerte.md),
-  [verifying and restoring backups](docs/runbooks/sauvegardes.md) (with an honest list of what has and has not been
+- **Runbooks** used in practice: [responding to an alert](docs/en/runbooks/reagir-alerte.md),
+  [verifying and restoring backups](docs/en/runbooks/sauvegardes.md) (with an honest list of what has and has not been
   tested yet).
 - **Post-mortems** of real incidents: a WAF running out of memory on large uploads and a CrowdSec outage
-  ([30/09](docs/postmortems/2026-09-30-coupures-du-waf.md)), a security test that banned my own household
-  ([29/09](docs/postmortems/2026-09-29-maison-bannie-par-le-waf.md)), a backup cut by the hosting provider's
-  maintenance ([01/10](docs/postmortems/2026-10-01-sauvegarde-maintenance-hebergeur.md)).
-- **Journal**: the [build log](docs/journal/), step by step.
+  ([30/09](docs/en/postmortems/2026-09-30-coupures-du-waf.md)), a security test that banned my own household
+  ([29/09](docs/en/postmortems/2026-09-29-maison-bannie-par-le-waf.md)), a backup cut by the hosting provider's
+  maintenance ([01/10](docs/en/postmortems/2026-10-01-sauvegarde-maintenance-hebergeur.md)).
+- **Journal**: the [build log](docs/en/journal/), step by step.
 
 ## Repository layout
 
 ```text
 docs/            ADRs, architecture, runbooks, post-mortems, journal (French); also the website content
+docs/en/         The same pages in English, same file names
 infra/tofu/      OpenTofu stacks: proxmox, opnsense, cloudflare, openbao
 infra/ansible/   Roles and playbooks: platform, hypervisor, fleet updates, backup checks
 site/            Hugo theme of maximebertrand.net, built from docs/
@@ -98,16 +100,16 @@ VLAN IDs), the encrypted secrets and the encrypted OpenTofu state live in a priv
 inject them at run time. Examples use documentation ranges (`192.0.2.0/24`).
 
 CI on every push: secret scanning (gitleaks), `tofu fmt` and `tofu validate` on all four stacks, `yamllint`,
-`ansible-lint`, `markdownlint`, a front-matter contract check between `docs/` and the site, and a strict Hugo build
-(any warning fails the build).
+`ansible-lint`, `markdownlint`, a front-matter contract check between `docs/` and the site, a check that every page
+exists in both languages, and a strict Hugo build (any warning fails the build).
 
 ## Not built yet
 
 Listed so that nothing above over-promises:
 
 - Network intrusion detection (Suricata) on the firewall and firewall-level blocking shared by CrowdSec
-  ([ADR 0021](docs/adr/0021-detection-intrusions.md)); log-based detection rules are already live.
-- The internal certificate authority of [ADR 0022](docs/adr/0022-certificats-internes.md) (accepted, not deployed).
+  ([ADR 0021](docs/en/adr/0021-detection-intrusions.md)); log-based detection rules are already live.
+- The internal certificate authority of [ADR 0022](docs/en/adr/0022-certificats-internes.md) (accepted, not deployed).
 - A monthly full VM restore drill: the procedure is written, the first drill has not been run.
 - A second, on-demand server for lab work (Dell PowerEdge R610).
 - SMS alerting: the relay is written but not enabled.

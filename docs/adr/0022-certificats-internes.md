@@ -62,7 +62,7 @@ autorité sous elle (`pathlen:0`). Elle est remplacée, certificat par certifica
 4. **Usurpation d'adresse bloquée en parallèle** :
    - le résolveur du pare-feu valide déjà DNSSEC et refuse les réponses privées pour les noms publics (audit du
      29/09) ; il résout lui-même depuis les serveurs racine, sans intermédiaire à chiffrer ;
-   - reste à couper LLMNR sur les VM (résolution de noms par diffusion, facile à empoisonner) ;
+   - LLMNR et mDNS coupés sur les VM (résolution de noms par diffusion, facile à empoisonner ; fait le 29/09) ;
    - et à activer le pare-feu de l'hyperviseur par VM avec filtre IP et MAC : une VM ne peut plus se faire passer
      pour une voisine, ni pour la passerelle.
 
@@ -79,7 +79,7 @@ autorité sous elle (`pathlen:0`). Elle est remplacée, certificat par certifica
 ## Mise en œuvre
 
 1. Blocage de l'usurpation dans une zone :
-   - LLMNR coupé sur les VM ;
+   - LLMNR et mDNS coupés sur les VM (**fait le 29/09**, rôle commun) ;
    - pare-feu de l'hyperviseur par VM (OpenTofu) avec filtre IP et MAC, en mode journal d'abord, puis entrée refusée
      par défaut sauf les flux de la matrice.
 2. Autorité : racine hors ligne et intermédiaire sur le pare-feu (script de création), compte d'API limité aux

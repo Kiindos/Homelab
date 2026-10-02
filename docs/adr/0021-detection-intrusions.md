@@ -64,9 +64,9 @@ Par étapes, la moins coûteuse d'abord ; chaque règle est observée en « aver
 
 1. **Fait le 29/09** : l'adresse de la maison n'est plus jamais bannie par CrowdSec (liste « postoverflow » du WAF,
    remise en place automatiquement après chaque recréation du conteneur).
-2. Règles de détection sur les journaux centralisés (vmalert sur VictoriaLogs) : connexions SSH, sudo, clés
-   ajoutées, rafales d'échecs de connexion (portail, applications mobiles).
-3. auditd sur toutes les machines (rôle commun), vers le journal systemd.
+2. **Fait le 29/09** : règles de détection sur les journaux centralisés (vmalert sur VictoriaLogs) : connexions SSH,
+   sudo, clés ajoutées, rafales d'échecs de connexion (portail, applications mobiles).
+3. **Fait le 29/09** : auditd sur toutes les machines (rôle commun), vers le journal systemd.
 4. CrowdSec partagé : API locale sur la VM de supervision, agents sur les machines, greffon d'OPNsense (après sa
    mise à jour).
 5. Suricata sur OPNsense, en détection puis en prévention sur le WAN (après sa mise à jour ; mémoire du pare-feu

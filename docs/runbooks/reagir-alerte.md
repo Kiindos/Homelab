@@ -57,10 +57,9 @@ Une ligne écrite sur la sortie d'erreur d'un conteneur n'est pas une erreur : D
 qu'elle dise. Le tableau ne compte que les vrais niveaux d'erreur (priorité des services systemd, `level=error`,
 `[error]` de nginx, paniques).
 
-
 | Besoin | Requête |
 |---|---|
-| Erreurs de la dernière heure, par machine | `_time:1h (error OR erreur OR "level=error") \| stats by (_HOSTNAME) count()` |
+| Vraies erreurs de la dernière heure, par machine | `_time:1h ("level=error" OR "[error]" OR (PRIORITY:<=3 !CONTAINER_NAME:*)) \| stats by (_HOSTNAME) count()` |
 | Connexions SSH de la semaine | `_time:7d _SYSTEMD_UNIT:ssh.service Accepted` |
 | Paquets refusés par le pare-feu | `_time:15m app_name:filterlog block` |
 | Un conteneur précis | `_time:30m CONTAINER_NAME:<nom>` |

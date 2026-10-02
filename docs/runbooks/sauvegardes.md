@@ -85,7 +85,7 @@ déposée depuis sa console) et par le mot de passe du dépôt restic.
 
 | Ce qui est éprouvé | Comment | Dernier résultat |
 |---|---|---|
-| Lecture des données chez l'hébergeur | Empreintes SHA-256 de chaque export de VM et d'un échantillon de fichiers, chaque nuit | Conforme le 30/09/2026 |
+| Lecture des données chez l'hébergeur | Empreintes SHA-256 de chaque export de VM et d'un échantillon de fichiers, chaque nuit | Conforme le 02/10/2026 (49 fichiers) |
 | Intégrité du dépôt | Un septième relu chaque nuit ; contrôle rapide à la demande | Contrôle rapide conforme le 01/10/2026 |
 | Restauration complète d'une VM | `qmrestore` sous un identifiant libre, démarrage, puis suppression | **Pas encore faite** ; prévue une fois par mois |
 | Reprise après sinistre | — | Jamais exercée |

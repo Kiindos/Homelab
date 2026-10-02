@@ -42,3 +42,13 @@ sa source.
 - La clé SSH disparaît avec le serveur : la reprise après sinistre passe par l'accès au compte du stockage distant.
 - Les instantanés automatiques du stockage distant protègent contre une suppression, y compris depuis le homelab.
 - Une restauration de test par mois (une petite VM sous un identifiant libre) garde la procédure éprouvée.
+
+## Évolutions
+
+- *29/09/2026* : stockage distant porté à **5 To** (données importées de Google Drive et Proton Drive).
+  Vérification **chaque nuit** : empreintes SHA-256 de chaque export de VM et d'un échantillon de fichiers, relus
+  chez l'hébergeur, et un septième du dépôt relu (tout le dépôt en une semaine).
+- *01/10/2026* : contrôle à la demande depuis Semaphore, rapide ou complet ; retrait des verrous orphelins
+  ([post-mortem](../postmortems/2026-10-01-sauvegarde-maintenance-hebergeur.md)).
+- La restauration de test mensuelle d'une VM n'a **pas encore** été faite : voir l'état des tests dans le
+  [runbook des sauvegardes](../runbooks/sauvegardes.md).

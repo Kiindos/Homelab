@@ -48,4 +48,5 @@ passagère de l'hébergeur devenait ainsi une panne durable de la sauvegarde.
   des données relues) ou **complet** (tout le dépôt relu, chaque export de VM comparé octet pour octet à sa copie).
   Il attend son tour si une sauvegarde tourne (verrou commun). Voir le
   [runbook des sauvegardes](../runbooks/sauvegardes.md).
-- [ ] Confirmer que le passage suivant réussit malgré le volume des imports, puis lancer un contrôle complet.
+- [x] Passage suivant réussi malgré le volume des imports : 02/10, 2 h 30 → 7 h 08, vérification conforme.
+- [ ] Lancer un contrôle complet du dépôt (tout relire), une nuit hors de la fenêtre de sauvegarde.
