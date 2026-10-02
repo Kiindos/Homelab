@@ -1,0 +1,51 @@
+# Site interface strings (templates). The content itself comes from docs/en/ and content-en/.
+aller_contenu: Skip to content
+accueil: Home
+navigation_principale: Main navigation
+decisions: Decisions
+changer_theme: Switch theme (light / dark)
+langue_autre: FR
+langue_autre_titre: Lire en français
+pied_note: >-
+  Built by Hugo from the repository's documentation, served by the homelab itself through an outbound tunnel.
+  No cookies, no trackers.
+code_source: Source code
+procedures: Runbooks
+incidents: Incidents
+lecture: "{{ .Count }} min read"
+sommaire: Contents
+sur_cette_page: On this page
+pages_voisines: Adjacent pages
+precedent: Previous
+suivant: Next
+lire: Read
+filtrer_decisions: Filter decisions
+toutes: All
+statut_propose: proposed
+statut_accepte: accepted
+statut_remplace: superseded
+statut_abandonne: abandoned
+etiquettes: Tags
+informations_legales: Legal information
+mise_a_jour_le: Updated on
+erreur_404: Error 404
+erreur_404_titre: This page does not exist.
+erreur_404_texte: It may have been superseded — like some architecture decisions.
+retour_accueil: Back to the home page
+voir_architecture: See the architecture
+lire_decisions: "Read the {{ .Count }} decisions"
+terminal_description: "Command output: the infrastructure matches the code"
+chiffres_cles: Key figures
+parcours_surtitre: Defence in depth
+parcours_titre: The path of a request
+parcours_texte: Each layer stops what the previous one let through. If one gives way, the next one holds.
+principes_surtitre: Method
+principes_titre: Four principles, applied everywhere
+pile_surtitre: Tools
+pile_titre: The tech stack
+pile_texte: Open-source tools, each chosen for a written reason — the ADRs explain every choice.
+derniers_choix: Latest decisions
+toutes_decisions: All decisions
+journal_surtitre: Journal
+journal_titre: Along the way
+tout_journal: The whole journal

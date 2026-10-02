@@ -55,14 +55,17 @@
       cibles.forEach((c) => obs.observe(c));
     }
 
-    // Bouton « copier » sur les blocs de code
+    // Bouton « copier » sur les blocs de code, dans la langue de la page
+    const libelles = racine.lang === "en"
+      ? { copier: "copy", copie: "copied ✓", echec: "failed" }
+      : { copier: "copier", copie: "copié ✓", echec: "échec" };
     document.querySelectorAll(".prose pre:not(.mermaid)").forEach((pre) => {
       const b = document.createElement("button");
-      b.type = "button"; b.className = "copier"; b.textContent = "copier";
+      b.type = "button"; b.className = "copier"; b.textContent = libelles.copier;
       b.addEventListener("click", async () => {
-        try { await navigator.clipboard.writeText(pre.innerText.replace(/copier$/, "").trim()); b.textContent = "copié ✓"; }
-        catch { b.textContent = "échec"; }
-        setTimeout(() => { b.textContent = "copier"; }, 1600);
+        try { await navigator.clipboard.writeText(pre.innerText.slice(0, -b.innerText.length).trim()); b.textContent = libelles.copie; }
+        catch { b.textContent = libelles.echec; }
+        setTimeout(() => { b.textContent = libelles.copier; }, 1600);
       });
       pre.appendChild(b);
     });

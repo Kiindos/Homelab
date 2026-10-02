@@ -1,0 +1,55 @@
+# Home page content (English). Public repository rule: no IP address, VLAN, version or access procedure.
+
+accroche:
+  surtitre: Homelab · Infrastructure as Code
+  titre: A personal infrastructure, run like production.
+  texte: >-
+    One server, one firewall, sealed network zones and services my family uses every day.
+    Everything is described as code, reviewed before it is applied, and documented — mistakes included.
+
+terminal:
+  - { invite: "$", commande: "tofu plan", sortie: "No changes. Your infrastructure matches the configuration.", etat: ok }
+  - { invite: "$", commande: "ansible-playbook plateforme.yml", sortie: "changed=0  failed=0", etat: ok }
+  - { invite: "$", commande: "curl -I https://photos.…", sortie: "WAF → SSO → application · TLS verified", etat: ok }
+  - { invite: "$", commande: "netbox-synchro --simulation", sortie: "0 created, 0 modified", etat: ok }
+
+chiffres:
+  - { valeur: "1", libelle: "server", detail: "hypervisor, storage and firewall" }
+  - { valeur: "7", libelle: "network zones", detail: "everything between them denied by default" }
+  - { valeur: "100 %", libelle: "as code", detail: "machines, firewall, DNS, services" }
+  - { valeur: "2FA", libelle: "wherever possible", detail: "single sign-on portal" }
+
+parcours:
+  - { etape: "Internet", detail: "A single inbound port, no other door open." }
+  - { etape: "Firewall", detail: "Forwards only to the WAF, isolates every zone." }
+  - { etape: "WAF", detail: "OWASP rules, geo-filtering, rate limiting." }
+  - { etape: "SSO", detail: "One directory, two-factor authentication." }
+  - { etape: "Application", detail: "In its own zone, with no access to the rest." }
+
+principes:
+  - titre: Everything as code
+    texte: No machine or rule created by hand. OpenTofu describes the infrastructure, Ansible configures it; a second run must change nothing.
+    icone: code
+  - titre: Minimal exposure
+    texte: Anything public goes through a firewall, a WAF and a sign-in portal. Administration is reachable only over VPN.
+    icone: bouclier
+  - titre: Sealed zones
+    texte: Each service lives in its own zone. A compromise stays contained; every allowed flow is justified in a matrix.
+    icone: zones
+  - titre: Everything can be restored
+    texte: Automatic snapshots, encrypted and versioned secrets, written procedures — so nothing depends on memory or on a single person.
+    icone: restauration
+
+pile:
+  - categorie: Hypervisor & storage
+    outils: [Proxmox VE, ZFS RAIDZ2, virtiofs, sanoid]
+  - categorie: Network & security
+    outils: [OPNsense, WireGuard, BunkerWeb, CrowdSec, DNSSEC]
+  - categorie: Identity
+    outils: [LLDAP, Authelia, OpenID Connect, WebAuthn]
+  - categorie: Infrastructure as Code
+    outils: [OpenTofu, Ansible, SOPS + age, GitHub Actions]
+  - categorie: Services
+    outils: [Docker Compose, Traefik, Let's Encrypt, NetBox]
+  - categorie: Publishing
+    outils: [Cloudflare DNS, Cloudflare Tunnel, Hugo]

@@ -20,10 +20,10 @@
       </ol>
     {{ else if eq .Section "adr" }}
       {{ $pages := .RegularPages.ByTitle.Reverse }}
-      <div class="filtres" role="group" aria-label="Filtrer les décisions">
-        <button type="button" class="filtre" data-filtre="tout" aria-pressed="true">Toutes <span>{{ len $pages }}</span></button>
+      <div class="filtres" role="group" aria-label="{{ T "filtrer_decisions" }}">
+        <button type="button" class="filtre" data-filtre="tout" aria-pressed="true">{{ T "toutes" }} <span>{{ len $pages }}</span></button>
         {{ range ($pages.GroupByParam "status") }}
-        <button type="button" class="filtre" data-filtre="{{ .Key | lower | replaceRE "[éèê]" "e" }}" aria-pressed="false">{{ .Key }} <span>{{ len .Pages }}</span></button>
+        <button type="button" class="filtre" data-filtre="{{ .Key | lower | replaceRE "[éèê]" "e" }}" aria-pressed="false">{{ T (printf "statut_%s" (.Key | lower | replaceRE "[éèê]" "e")) | default .Key }} <span>{{ len .Pages }}</span></button>
         {{ end }}
       </div>
       <div class="grille grille--2 cartes-adr">
@@ -33,7 +33,7 @@
             <span class="liste-adr__num">ADR {{ index (split .File.BaseFileName "-") 0 }}</span>
             {{ partial "badge-statut.html" . }}
           </div>
-          <h2>{{ replaceRE `^ADR \d+ : ` "" .Title }}</h2>
+          <h2>{{ replaceRE `^ADR \d+ ?: ` "" .Title }}</h2>
           <p>{{ .Description }}</p>
           {{ with .Date }}<time datetime="{{ .Format "2006-01-02" }}">{{ . | time.Format ":date_medium" }}</time>{{ end }}
         </a>
@@ -45,7 +45,7 @@
         <a class="carte carte--lien revele" href="{{ .RelPermalink }}">
           <h2>{{ .Title }}</h2>
           <p>{{ .Description }}</p>
-          <span class="lien-fleche">Lire</span>
+          <span class="lien-fleche">{{ T "lire" }}</span>
         </a>
         {{ end }}
       </div>

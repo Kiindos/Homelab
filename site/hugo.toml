@@ -1,16 +1,29 @@
 # Site public (portfolio) du homelab : thème écrit sur mesure, contenu tiré de ../docs.
 # Construction : hugo --source site --destination <dossier>   (voir docs interne, rôle Ansible « web »)
+# Deux langues : le français à la racine, l'anglais sous /en/ (contenu tiré de ../docs/en, même arborescence).
 baseURL = "https://maximebertrand.net/"
-locale = "fr-FR"
 defaultContentLanguage = "fr"
 title = "Homelab — Maxime Bertrand"
 enableRobotsTXT = true
 disableKinds = ["rss"]
 
+[languages.fr]
+  weight = 1
+  label = "Français"
+  locale = "fr-FR"
+  [languages.fr.params]
+    description = "Un homelab géré comme une infrastructure de production : code, sécurité, documentation."
+    metier = "Administrateur systèmes et réseaux, orienté DevOps"
+[languages.en]
+  weight = 2
+  label = "English"
+  locale = "en-GB"
+  [languages.en.params]
+    description = "A homelab run like production infrastructure: code, security, documentation."
+    metier = "Systems and network administrator, DevOps-minded"
+
 [params]
-  description = "Un homelab géré comme une infrastructure de production : code, sécurité, documentation."
   auteur = "Maxime Bertrand"
-  metier = "Administrateur systèmes et réseaux, orienté DevOps"
   depot = "https://github.com/maximebertrand-dev/Homelab"
   # Adresse de contact publiée dans les pages légales (alias de la messagerie du domaine).
   contact = "contact@maximebertrand.net"
@@ -32,12 +45,28 @@ disableKinds = ["rss"]
   startLevel = 2
   endLevel = 3
 
-# Le contenu vient de ../docs (source unique), complété par les pages propres au site (content/).
+# Le contenu vient de ../docs (source unique), complété par les pages propres au site (content/ et content-en/).
+# Une page et sa traduction ont le même chemin : docs/adr/x.md et docs/en/adr/x.md.
 [[module.mounts]]
   source = "content"
   target = "content"
+  [module.mounts.sites.matrix]
+    languages = ["fr"]
+[[module.mounts]]
+  source = "content-en"
+  target = "content"
+  [module.mounts.sites.matrix]
+    languages = ["en"]
 [[module.mounts]]
   source = "../docs"
   target = "content"
-  # Hors site : le mode d'emploi du dossier et les modèles.
+  # Hors site : le mode d'emploi du dossier, les modèles, et la traduction (montée à part).
+  files = ["! README.md", "! **/_template.md", "! en/**"]
+  [module.mounts.sites.matrix]
+    languages = ["fr"]
+[[module.mounts]]
+  source = "../docs/en"
+  target = "content"
   files = ["! README.md", "! **/_template.md"]
+  [module.mounts.sites.matrix]
+    languages = ["en"]

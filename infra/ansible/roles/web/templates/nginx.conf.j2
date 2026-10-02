@@ -74,6 +74,13 @@ server {
     }
 {% endif %}
 {% endif %}
+{% for langue in site.langues | default([]) %}
+    # Site traduit : la page d'erreur de la langue demandée.
+    location /{{ langue }}/ {
+        error_page 404 /{{ langue }}/404.html;
+        try_files $uri $uri/ =404;
+    }
+{% endfor %}
     error_page 404 /404.html;
     location / {
         try_files $uri $uri/ =404;

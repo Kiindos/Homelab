@@ -1,0 +1,51 @@
+# Textes de l'interface du site (gabarits). Le contenu, lui, vient de docs/ et de content/.
+aller_contenu: Aller au contenu
+accueil: Accueil
+navigation_principale: Navigation principale
+decisions: Décisions
+changer_theme: Changer de thème (clair / sombre)
+langue_autre: EN
+langue_autre_titre: Read in English
+pied_note: >-
+  Site généré par Hugo à partir de la documentation du dépôt, servi par le homelab lui-même via un tunnel sortant.
+  Aucun cookie, aucun traceur.
+code_source: Code source
+procedures: Procédures
+incidents: Incidents
+lecture: "{{ .Count }} min de lecture"
+sommaire: Sommaire
+sur_cette_page: Sur cette page
+pages_voisines: Pages voisines
+precedent: Précédent
+suivant: Suivant
+lire: Lire
+filtrer_decisions: Filtrer les décisions
+toutes: Toutes
+statut_propose: proposé
+statut_accepte: accepté
+statut_remplace: remplacé
+statut_abandonne: abandonné
+etiquettes: Étiquettes
+informations_legales: Informations légales
+mise_a_jour_le: Mise à jour le
+erreur_404: Erreur 404
+erreur_404_titre: Cette page n'existe pas.
+erreur_404_texte: Elle a peut-être été remplacée — comme certaines décisions d'architecture.
+retour_accueil: Retour à l'accueil
+voir_architecture: Voir l'architecture
+lire_decisions: "Lire les {{ .Count }} décisions"
+terminal_description: "Sortie de commandes : l'infrastructure correspond au code"
+chiffres_cles: Chiffres clés
+parcours_surtitre: Défense en profondeur
+parcours_titre: Le parcours d'une requête
+parcours_texte: Chaque couche arrête ce que la précédente a laissé passer. Si l'une cède, la suivante tient.
+principes_surtitre: Méthode
+principes_titre: Quatre principes, appliqués partout
+pile_surtitre: Outils
+pile_titre: La pile technique
+pile_texte: Des outils libres, choisis pour une raison écrite — les ADR expliquent chaque choix.
+derniers_choix: Les derniers choix
+toutes_decisions: Toutes les décisions
+journal_surtitre: Journal
+journal_titre: Au fil du projet
+tout_journal: Tout le journal

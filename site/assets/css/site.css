@@ -108,6 +108,7 @@ p { margin: 0 0 1em; }
 .navigation { display: flex; align-items: center; gap: .25rem; }
 .navigation a { color: var(--texte-doux); font-size: .95rem; font-weight: 550; padding: .45rem .8rem; border-radius: 10px; }
 .navigation a:hover, .navigation a[aria-current="page"] { color: var(--texte); background: var(--accent-fond); text-decoration: none; }
+.navigation a.navigation__langue { font: 600 .8rem/1 var(--mono); letter-spacing: .04em; padding: .5rem .6rem; border: 1px solid var(--bordure-forte); }
 .bascule-theme {
   display: grid; place-items: center; width: 38px; height: 38px; margin-left: .4rem;
   border-radius: 10px; border: 1px solid var(--bordure-forte); background: transparent; color: var(--texte); cursor: pointer;
@@ -338,6 +339,7 @@ a.carte:hover, .carte--principe:hover { transform: translateY(-4px); border-colo
   body { font-size: 16px; }
   .marque__tag, .navigation__externe { display: none; }
   .navigation a { padding: .4rem .5rem; font-size: .9rem; }
+  .entete__barre { gap: .5rem; }
   .grille--2, .grille--4, .pile { grid-template-columns: 1fr; }
   .parcours { grid-template-columns: 1fr; gap: 1.4rem; }
   .parcours::before { top: 0; bottom: 0; left: 27px; right: auto; width: 2px; height: auto; background: linear-gradient(180deg, var(--accent), var(--accent-2)); }
@@ -347,4 +349,11 @@ a.carte:hover, .carte--principe:hover { transform: translateY(-4px); border-colo
   .liste-adr a .badge { display: none; }
   .suite { flex-direction: column; }
   .suite__lien { max-width: none; }
+}
+@media (max-width: 520px) {
+  /* Téléphone : le logo seul mène à l'accueil, pour que tout le menu (et la langue) tienne sur une ligne. */
+  .marque__nom { display: none; }
+  .navigation { gap: 0; }
+  .navigation a { padding: .4rem .4rem; font-size: .85rem; }
+  .navigation a.navigation__langue { padding: .45rem .45rem; }
 }

@@ -3,7 +3,7 @@ title: Confidentialité
 description: Quelles données sont traitées, pourquoi, combien de temps, et comment exercer vos droits.
 layout: juridique
 date: 2026-09-27
-lastmod: 2026-09-28
+lastmod: 2026-10-02
 ---
 
 ## En bref
@@ -36,6 +36,10 @@ diffusion jsDelivr : votre navigateur lui communique alors son adresse IP, comme
 **Cookies.** Aucun : le site n'en dépose pas et n'utilise aucun traceur. Aucune bannière de consentement n'est donc
 nécessaire.
 
+**Écrire à l'adresse de contact.** Les messages envoyés à {{< contact >}} transitent par le service de routage
+d'e-mails de Cloudflare, qui les transfère à la messagerie personnelle de l'éditeur ; ils y sont conservés le temps
+de traiter la demande.
+
 ## Services privés
 
 Photos, fichiers, médias, notifications et portail de connexion sont réservés aux personnes invitées par
@@ -60,8 +64,8 @@ l'Union européenne.
 
 **Destinataires et sous-traitants** :
 
-- les e-mails du service (invitation, choix du mot de passe, codes de vérification) sont envoyés par
-  **Proton AG** (Suisse, pays reconnu comme offrant un niveau de protection adéquat) ;
+- les e-mails du service (invitation, choix du mot de passe, codes de vérification, notifications) sont envoyés
+  par **Scaleway SAS** (France, service Transactional Email, hébergé dans l'Union européenne) ;
 - le pare-feu applicatif utilise **CrowdSec** : l'adresse IP d'un visiteur qui se comporte comme un attaquant
   (analyse de ports, tentatives d'intrusion) est partagée avec le réseau communautaire de CrowdSec, pour protéger
   d'autres serveurs. Ces alertes sont conservées 7 jours sur le serveur ;

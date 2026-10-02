@@ -1,1 +1,2 @@
-{{ with .Params.status }}<span class="badge badge--{{ . | lower | replaceRE "[éèê]" "e" }}">{{ . }}</span>{{ end }}
+{{/* Statut : valeur du contrat (en français, dans les deux langues), libellé traduit. */}}
+{{ with .Params.status }}{{ $cle := . | lower | replaceRE "[éèê]" "e" }}<span class="badge badge--{{ $cle }}">{{ T (printf "statut_%s" $cle) | default . }}</span>{{ end }}

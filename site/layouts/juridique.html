@@ -2,16 +2,16 @@
 <article class="article">
   <header class="entete-page entete-page--article">
     <div class="enveloppe">
-      <p class="surtitre">Informations légales</p>
+      <p class="surtitre">{{ T "informations_legales" }}</p>
       <h1>{{ .Title }}</h1>
       {{ with .Description }}<p class="entete-page__lead">{{ . }}</p>{{ end }}
-      <p class="meta">{{ with .Lastmod }}Mise à jour le <time datetime="{{ .Format "2006-01-02" }}">{{ . | time.Format ":date_long" }}</time>{{ end }}</p>
+      <p class="meta">{{ with .Lastmod }}{{ T "mise_a_jour_le" }} <time datetime="{{ .Format "2006-01-02" }}">{{ . | time.Format ":date_long" }}</time>{{ end }}</p>
     </div>
   </header>
   <div class="enveloppe article__grille">
     <div class="prose">{{ .Content | replaceRE `(?s)^\s*<h1[^>]*>.*?</h1>` "" | safeHTML }}</div>
     {{ with .TableOfContents }}{{ if gt (len (findRE "<li>" .)) 1 }}
-    <aside class="sommaire" aria-label="Sommaire"><p>Sur cette page</p>{{ . }}</aside>
+    <aside class="sommaire" aria-label="{{ T "sommaire" }}"><p>{{ T "sur_cette_page" }}</p>{{ . }}</aside>
     {{ end }}{{ end }}
   </div>
 </article>

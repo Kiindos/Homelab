@@ -69,6 +69,16 @@ jobs:
             done
           done
           exit $status
+      - name: Vérifier que chaque page a sa traduction anglaise (docs/en/, mêmes noms de fichiers)
+        run: |
+          fr=$(cd docs && find . -path ./en -prune -o -name '*.md' ! -name '_*' ! -name 'README.md' -print | sort)
+          en=$(cd docs/en && find . -name '*.md' ! -name '_*' ! -name 'README.md' | sort)
+          ecart=$(comm -3 <(echo "$fr") <(echo "$en"))
+          if [ -n "$ecart" ]; then
+            echo "::error::Pages sans équivalent dans l'autre langue (colonne 1 : français seul, colonne 2 : anglais seul)"
+            echo "$ecart"
+            exit 1
+          fi
 
   site:
     name: Site public (Hugo)

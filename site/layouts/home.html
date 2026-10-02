@@ -1,5 +1,5 @@
 {{ define "main" }}
-{{ $d := hugo.Data.homelab }}
+{{ $d := index hugo.Data.homelab .Lang }}
 {{ $adr := where site.RegularPages "Section" "adr" }}
 {{ $journal := where site.RegularPages "Section" "journal" }}
 
@@ -11,12 +11,12 @@
       <h1>{{ $d.accroche.titre }}</h1>
       <p class="accroche__lead">{{ $d.accroche.texte }}</p>
       <div class="actions">
-        <a class="bouton bouton--plein" href="{{ "/architecture/" | relURL }}">Voir l'architecture</a>
-        <a class="bouton" href="{{ "/adr/" | relURL }}">Lire les {{ len $adr }} décisions</a>
+        <a class="bouton bouton--plein" href="{{ "/architecture/" | relLangURL }}">{{ T "voir_architecture" }}</a>
+        <a class="bouton" href="{{ "/adr/" | relLangURL }}">{{ T "lire_decisions" (len $adr) }}</a>
       </div>
     </div>
 
-    <div class="terminal revele" role="img" aria-label="Sortie de commandes : l'infrastructure correspond au code">
+    <div class="terminal revele" role="img" aria-label="{{ T "terminal_description" }}">
       <div class="terminal__barre"><span></span><span></span><span></span><em>poste-admin — homelab</em></div>
       <div class="terminal__corps">
         {{ range $i, $l := $d.terminal }}
@@ -31,7 +31,7 @@
   </div>
 </section>
 
-<section class="chiffres" aria-label="Chiffres clés">
+<section class="chiffres" aria-label="{{ T "chiffres_cles" }}">
   <div class="enveloppe chiffres__grille">
     {{ range $d.chiffres }}
     <div class="chiffre revele">
@@ -46,9 +46,9 @@
 <section class="bloc">
   <div class="enveloppe">
     <header class="bloc__entete revele">
-      <p class="surtitre">Défense en profondeur</p>
-      <h2>Le parcours d'une requête</h2>
-      <p>Chaque couche arrête ce que la précédente a laissé passer. Si l'une cède, la suivante tient.</p>
+      <p class="surtitre">{{ T "parcours_surtitre" }}</p>
+      <h2>{{ T "parcours_titre" }}</h2>
+      <p>{{ T "parcours_texte" }}</p>
     </header>
     <ol class="parcours revele">
       {{ range $i, $e := $d.parcours }}
@@ -65,8 +65,8 @@
 <section class="bloc bloc--teinte">
   <div class="enveloppe">
     <header class="bloc__entete revele">
-      <p class="surtitre">Méthode</p>
-      <h2>Quatre principes, appliqués partout</h2>
+      <p class="surtitre">{{ T "principes_surtitre" }}</p>
+      <h2>{{ T "principes_titre" }}</h2>
     </header>
     <div class="grille grille--4">
       {{ range $d.principes }}
@@ -83,9 +83,9 @@
 <section class="bloc">
   <div class="enveloppe">
     <header class="bloc__entete revele">
-      <p class="surtitre">Outils</p>
-      <h2>La pile technique</h2>
-      <p>Des outils libres, choisis pour une raison écrite — les ADR expliquent chaque choix.</p>
+      <p class="surtitre">{{ T "pile_surtitre" }}</p>
+      <h2>{{ T "pile_titre" }}</h2>
+      <p>{{ T "pile_texte" }}</p>
     </header>
     <div class="pile">
       {{ range $d.pile }}
@@ -102,26 +102,26 @@
   <div class="enveloppe deux-colonnes">
     <div>
       <header class="bloc__entete bloc__entete--gauche revele">
-        <p class="surtitre">Décisions</p>
-        <h2>Les derniers choix</h2>
+        <p class="surtitre">{{ T "decisions" }}</p>
+        <h2>{{ T "derniers_choix" }}</h2>
       </header>
       <ul class="liste-adr">
         {{ range first 6 ($adr.ByTitle.Reverse) }}
         <li class="revele">
           <a href="{{ .RelPermalink }}">
             <span class="liste-adr__num">{{ index (split .File.BaseFileName "-") 0 }}</span>
-            <span class="liste-adr__titre">{{ replaceRE `^ADR \d+ : ` "" .Title }}</span>
+            <span class="liste-adr__titre">{{ replaceRE `^ADR \d+ ?: ` "" .Title }}</span>
             {{ partial "badge-statut.html" . }}
           </a>
         </li>
         {{ end }}
       </ul>
-      <a class="lien-fleche" href="{{ "/adr/" | relURL }}">Toutes les décisions</a>
+      <a class="lien-fleche" href="{{ "/adr/" | relLangURL }}">{{ T "toutes_decisions" }}</a>
     </div>
     <div>
       <header class="bloc__entete bloc__entete--gauche revele">
-        <p class="surtitre">Journal</p>
-        <h2>Au fil du projet</h2>
+        <p class="surtitre">{{ T "journal_surtitre" }}</p>
+        <h2>{{ T "journal_titre" }}</h2>
       </header>
       <ol class="frise">
         {{ range first 4 $journal.ByDate.Reverse }}
@@ -132,7 +132,7 @@
         </li>
         {{ end }}
       </ol>
-      <a class="lien-fleche" href="{{ "/journal/" | relURL }}">Tout le journal</a>
+      <a class="lien-fleche" href="{{ "/journal/" | relLangURL }}">{{ T "tout_journal" }}</a>
     </div>
   </div>
 </section>
