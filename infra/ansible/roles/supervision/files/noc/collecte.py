@@ -251,6 +251,9 @@ def transferts(libelles):
             "nom": libelles.get(travail, travail), "etat": etat,
             "octets": int(s.get("octets", 0)), "total": int(s.get("total_octets", 0)),
             "pourcentage": s.get("pourcentage"), "debit": int(s.get("debit_octets", 0)),
+            # Travaux comptés en fichiers (envoi des photos) : pas de volume connu à l'avance.
+            "fichiers": int(s.get("fichiers", 0)), "fichiers_total": int(s.get("fichiers_total", 0)),
+            "debit_fichiers": round(s.get("debit_fichiers", 0), 2),
             "eta_s": int(s["eta_secondes"]) if s.get("eta_secondes", -1) >= 0 else None,
             "erreurs": int(s.get("erreurs", 0)),
             "depuis_mesure_s": int(maintenant - mesure) if mesure else None,

@@ -281,7 +281,10 @@ function rendreTransferts(liste) {
   }
   const lignes = liste.map((t) => {
     const [ok, libelle] = ETATS_TRANSFERT[t.etat] ?? ["avert", "inconnu"];
-    const part = t.total > 0 ? t.octets / t.total : 0;
+    // Avancement en volume (copie de fichiers) ou, à défaut, en nombre de fichiers (envoi des photos).
+    const enFichiers = !(t.total > 0) && t.fichiers_total > 0;
+    const part = t.total > 0 ? t.octets / t.total : enFichiers ? t.fichiers / t.fichiers_total : 0;
+    const nombre = (n) => n.toLocaleString("fr-FR");
     const barre = el("span");
     barre.style.width = `${Math.min(part, 1) * 100}%`;
     const fin = t.etat === 1 ? (t.eta_s === null ? "–" : `dans ${duree(t.eta_s)}`)
@@ -293,8 +296,10 @@ function rendreTransferts(liste) {
         el("span", { classe: "progression__barre", role: "progressbar", "aria-valuemin": 0, "aria-valuemax": 100,
           "aria-valuenow": Math.round(part * 100), "aria-label": t.nom }, barre),
         el("span", { classe: "progression__valeur", texte: pourcent(part) }))),
-      el("td", { classe: "nombre", texte: t.total > 0 ? `${octets(t.octets)} / ${octets(t.total)}` : "–" }),
-      el("td", { classe: "nombre", texte: t.etat === 1 ? `${octets(t.debit)}/s` : "–" }),
+      el("td", { classe: "nombre", texte: t.total > 0 ? `${octets(t.octets)} / ${octets(t.total)}`
+        : enFichiers ? `${nombre(t.fichiers)} / ${nombre(t.fichiers_total)} fichiers` : "–" }),
+      el("td", { classe: "nombre", texte: t.etat !== 1 ? "–"
+        : enFichiers ? `${nombre(Math.round(t.debit_fichiers * 60))} fichiers/min` : `${octets(t.debit)}/s` }),
       el("td", { classe: "nombre", texte: fin }),
       el("td", { classe: "nombre", texte: String(t.erreurs) }));
   });
